@@ -1,0 +1,26 @@
+@forward 'element-plus/theme-chalk/src/common/var.scss' with (
+  $colors: (
+    'primary': (
+      'base': #ff0000,
+    ),
+  ),
+  $font-size: (
+    'extra-large': 18px,
+    'large': 14px,
+    'medium': 12px,
+    'base': 12px,
+    'small': 11px,
+    'extra-small': 10px,
+  ),
+  $text-color: ()
+);
+@use 'element-plus/theme-chalk/src/index.scss' as *;
+
+.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
+  background-color: #2d72d2 !important;
+  color: #fff;
+}
+.el-input__wrapper {
+  background-color: var(--el-bg-color) !important;
+  box-shadow: none !important;
+}
