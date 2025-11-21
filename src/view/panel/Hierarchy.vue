@@ -1,11 +1,16 @@
 <template>
-    <BasePanel title="层级">
+    <BasePanel :title="$t('view.hierarchy')">
         <div class="hierarchy-panel">
-            <ElInput size="small" placeholder="搜索">
-
+            <ElInput size="small" placeholder="搜索" v-model="searchText">
+                <template #prefix>
+                    <el-icon>
+                        <Search />
+                    </el-icon>
+                </template>
             </ElInput>
-            <ElTree ref="treeRef" :data="hierarchy" highlight-current :props="treeProps" node-key="id"
-                :default-expanded="true" :default-active="true" @node-click="handleNodeClick">
+            <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)" :data="hierarchy"
+                highlight-current :props="treeProps" node-key="id" :default-expanded="true" :default-active="true"
+                @node-click="handleNodeClick">
             </ElTree>
         </div>
     </BasePanel>
@@ -13,10 +18,13 @@
 <script setup lang='ts'>
 import BasePanel from '@/component/common/BasePanel.vue'
 import { useScene } from '@/store/useScene';
-import { ElInput, type ElTree } from 'element-plus';
-import { storeToRefs } from 'pinia';
-import { ref } from 'vue';
+import { ElInput, type ElTree, type TreeNodeData } from 'element-plus';
+import { Search } from '@element-plus/icons-vue'
 
+import { storeToRefs } from 'pinia';
+import { ref, watch } from 'vue';
+
+const searchText = ref('');
 const treeProps = {
     label: 'name',
 }
@@ -26,8 +34,27 @@ const { hierarchy, currentSelected } = storeToRefs(useScene());
 const treeRef = ref<InstanceType<typeof ElTree>>()
 
 const handleNodeClick = (node: HierarchyNode) => {
-    currentSelected.value = [node.id];
+    currentSelected.value = node ? [node.id] : [];
+    if (node) {
+        treeRef.value?.setCurrentKey(node.id);
+    } else {
+        treeRef.value?.setCurrentKey(null);
+    }
 }
+watch(searchText, (val) => {
+    treeRef.value!.filter(val)
+})
+
+
+function filterHierarchy(value: any, data: TreeNodeData, child: any) {
+    if (!value) {
+        return true;
+    }
+    return data.name.includes(value);
+}
+
+
+
 </script>
 <style scoped lang='scss'>
 .hierarchy-panel {

@@ -15,12 +15,12 @@
                         </ElSplitter>
                     </ElSplitterPanel>
                     <ElSplitterPanel min="280px" size="280px">
-                        动画
+                        <Animation />
                     </ElSplitterPanel>
                 </ElSplitter>
             </ElSplitterPanel>
             <ElSplitterPanel min="280px" size="280px" collapsible>
-                属性
+                <Inspector />
             </ElSplitterPanel>
 
         </ElSplitter>
@@ -30,6 +30,10 @@
 import { onMounted, } from 'vue';
 import Header from './Header.vue'
 import Scene from './panel/Scene.vue'
+import Animation from './panel/Animation.vue'
+import Inspector from './panel/Inspector.vue'
+
+
 import Hierarchy from './panel/Hierarchy.vue'
 
 onMounted(() => {

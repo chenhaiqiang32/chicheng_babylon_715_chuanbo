@@ -24,7 +24,6 @@ const props = defineProps<{
         height: 32px;
         line-height: 32px;
         padding: 0 12px;
-        border-bottom: 1px solid var(--el-border-color);
     }
 
     .panel-content {

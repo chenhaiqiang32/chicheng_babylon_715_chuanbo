@@ -11,7 +11,6 @@ import {
   PBRMaterial,
   Scene,
   SceneLoader,
-  TransformNode,
   Vector3,
   Node,
 } from '@babylonjs/core';
@@ -93,7 +92,7 @@ export class Editor {
     });
 
     const sun = new DirectionalLight('sun', new Vector3(0, -1, 0), this.scene);
-    // 2. 推荐！用 CascadedShadowGenerator（远景阴影不拉跨 + 超柔和）
+    //2. 推荐！用 CascadedShadowGenerator（远景阴影不拉跨 + 超柔和）
     this.shadowGenerator = new CascadedShadowGenerator(2048, sun); // 1024 或 2048 看性能
     this.shadowGenerator.shadowMaxZ = 1000; // 阴影最远距离
     this.shadowGenerator.lambda = 0.98; // 越接近1越柔和（推荐 0.9~0.98）
@@ -133,7 +132,7 @@ export class Editor {
     const rootNodes = result.meshes;
     rootNodes.forEach((mesh) => {
       mesh.receiveShadows = true;
-      this.shadowGenerator.addShadowCaster(mesh as AbstractMesh);
+      //this.shadowGenerator.addShadowCaster(mesh as AbstractMesh);
     });
 
     useScene().setHierarchy(this.scene.rootNodes);
