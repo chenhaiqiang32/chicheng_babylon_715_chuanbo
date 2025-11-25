@@ -93,11 +93,19 @@ export class Editor {
     this.gizmoManager.gizmos.boundingBoxGizmo = boundingBoxGizmo;
     this.gizmoManager.boundingBoxGizmoEnabled = false;
 
+    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() =>{
+      // TODO:监听BoundingBoxGizmos拖拽开始
+    });
+
+    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {
+      // TODO:监听BoundingBoxGizmos拖拽结束
+    });
+
     this.gizmoManager.gizmos.positionGizmo.onDragStartObservable.add(()=> {
-      // TODO:监听拖拽开始
+      // TODO:监听gizmos位移开始
     })
     this.gizmoManager.gizmos.positionGizmo.onDragEndObservable.add(() => {
-      // TODO:监听拖拽结束
+      // TODO:监听gizmos位移结束
     })
 
     // 非等比例下无法缩放，需要将 update... 设置为 false
