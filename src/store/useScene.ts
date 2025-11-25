@@ -11,9 +11,17 @@ function buildHierarchy(node: Node): HierarchyNode {
   };
 }
 
+export enum ControlMode {
+    Select = "Select",
+    Move = "Move",
+    Rotate = "Rotate",
+    Scale = "Scale"
+}
+
 export const useScene = defineStore('scene', () => {
   const hierarchy = ref<HierarchyNode[]>([]);
   const currentSelected = ref<Array<string>>([]);
+  const currentControlMode = ref<ControlMode>();
 
   function setHierarchy(rootNodes: Node[]) {
     hierarchy.value = rootNodes.map(buildHierarchy);
@@ -23,5 +31,9 @@ export const useScene = defineStore('scene', () => {
     currentSelected.value = objectIds ?? [];
   }
 
-  return { hierarchy, setHierarchy, currentSelected, setCurrentSelect };
+  function setCurrentControlMode(mode : ControlMode){
+    currentControlMode.value = mode;
+  }
+
+  return { hierarchy, setHierarchy, currentSelected, setCurrentSelect, currentControlMode, setCurrentControlMode };
 });

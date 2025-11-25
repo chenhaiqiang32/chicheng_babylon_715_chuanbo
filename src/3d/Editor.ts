@@ -1,4 +1,4 @@
-import { useScene } from '@/store/useScene';
+import { ControlMode, useScene } from '@/store/useScene';
 import {
   ArcRotateCamera,
   CascadedShadowGenerator,
@@ -13,6 +13,9 @@ import {
   SceneLoader,
   Vector3,
   Node,
+  BoundingBoxGizmo,
+  Color3,
+  TransformNode,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -39,9 +42,14 @@ export class Editor {
   set selectNodes(v: Node[]) {
     this._selectNodes = v;
     if (v[0] instanceof AbstractMesh) {
-      this.gizmoManager.attachToMesh(v[0]);
+        this.gizmoManager.boundingBoxGizmoEnabled = true;
+        this.gizmoManager.attachToMesh(v[0]);
     } else {
-      this.gizmoManager.attachToNode(v[0]);
+      // 如果子节点没有 mesh，则不显示 gizmo
+      if(v[0].getChildMeshes().length > 0)
+        this.gizmoManager.attachToNode(v[0]);
+      else 
+        this.gizmoManager.boundingBoxGizmoEnabled = false;
     }
   }
 
@@ -73,8 +81,29 @@ export class Editor {
       this.scene,
     );
 
+    // 修改 boundingboxgizmo 样式
+    let boundingBoxGizmo = new BoundingBoxGizmo();
+    boundingBoxGizmo.setColor(Color3.Red());
+    boundingBoxGizmo.setEnabledScaling(false);
+    boundingBoxGizmo.setEnabledRotationAxis("");
+
     this.gizmoManager = new GizmoManager(this.scene);
     this.gizmoManager.positionGizmoEnabled = true;
+    this.gizmoManager.boundingBoxGizmoEnabled = true;
+    this.gizmoManager.gizmos.boundingBoxGizmo = boundingBoxGizmo;
+    this.gizmoManager.boundingBoxGizmoEnabled = false;
+
+    this.gizmoManager.gizmos.positionGizmo.onDragStartObservable.add(()=> {
+      // TODO:监听拖拽开始
+    })
+    this.gizmoManager.gizmos.positionGizmo.onDragEndObservable.add(() => {
+      // TODO:监听拖拽结束
+    })
+
+    // 非等比例下无法缩放，需要将 update... 设置为 false
+    this.gizmoManager.rotationGizmoEnabled = true;
+    this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+
     this.scene.createDefaultSkybox(texuture, true, 100, 0, true);
 
     this.scene.activeCamera.position.set(50, 50, 5);
@@ -103,6 +132,8 @@ export class Editor {
     resizeObserver.observe(canvas);
     this.loadFbx();
     this.initWatch();
+
+    this.switchControlType(ControlMode.Select);
   }
 
   initWatch() {
@@ -112,7 +143,14 @@ export class Editor {
         this.selectNodes = v?.map((x) => this.getNodeById(x)) ?? [];
       },
     );
+    const controlModeWatcher = watch(
+      () => useScene().currentControlMode,
+      (v) => {
+        this.switchControlType(v);
+      }
+    );
     this.watcher.push(selectWatcher);
+    this.watcher.push(controlModeWatcher);
   }
 
   async loadFbx() {
@@ -148,5 +186,40 @@ export class Editor {
    */
   getNodeById(id: string): Node {
     return this.scene.getNodeById(id);
+  }
+
+  // 切换控制模式：选择/移动/旋转/缩放
+  switchControlType(mode : ControlMode)
+  {
+    switch(mode)
+    {
+      case ControlMode.Select:
+        this.gizmoManager.positionGizmoEnabled = true;
+        this.gizmoManager.rotationGizmoEnabled = false;
+        this.gizmoManager.scaleGizmoEnabled = false;
+        this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = true;
+        break;
+
+      case ControlMode.Move:
+        this.gizmoManager.positionGizmoEnabled = true;
+        this.gizmoManager.rotationGizmoEnabled = false;
+        this.gizmoManager.scaleGizmoEnabled = false;
+        this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = true;
+        break;
+
+      case ControlMode.Rotate:
+        this.gizmoManager.positionGizmoEnabled = false;
+        this.gizmoManager.rotationGizmoEnabled = true;
+        this.gizmoManager.scaleGizmoEnabled = false;
+        this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+        break;
+
+      case ControlMode.Scale:
+        this.gizmoManager.positionGizmoEnabled = false;
+        this.gizmoManager.rotationGizmoEnabled = false;
+        this.gizmoManager.scaleGizmoEnabled = true;
+        this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = true;
+        break;
+    }
   }
 }
