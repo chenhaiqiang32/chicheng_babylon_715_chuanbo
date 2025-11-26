@@ -21,6 +21,10 @@
   color: #fff;
 }
 .el-input__wrapper {
-  background-color: var(--el-bg-color) !important;
+  background-color: var(--input-color) !important;
+  box-shadow: none !important;
+}
+.el-input__inner {
+  color: var(--title--color) !important;
   box-shadow: none !important;
 }

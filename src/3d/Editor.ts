@@ -132,6 +132,7 @@ export class Editor {
     const rootNodes = result.meshes;
     rootNodes.forEach((mesh) => {
       mesh.receiveShadows = true;
+      
       //this.shadowGenerator.addShadowCaster(mesh as AbstractMesh);
     });
 

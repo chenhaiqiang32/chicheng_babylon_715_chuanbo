@@ -20,7 +20,7 @@
                 </ElSplitter>
             </ElSplitterPanel>
             <ElSplitterPanel min="280px" size="280px" collapsible>
-                <Inspector />
+                <Inspector :editor="Editor.Instance" />
             </ElSplitterPanel>
 
         </ElSplitter>
@@ -30,9 +30,10 @@
 import { onMounted, } from 'vue';
 import Header from './Header.vue'
 import Scene from './panel/Scene.vue'
+
 import Animation from './panel/Animation.vue'
 import Inspector from './panel/Inspector.vue'
-
+import { Editor } from '@/3d/Editor';
 
 import Hierarchy from './panel/Hierarchy.vue'
 

@@ -11,6 +11,9 @@ importers:
       '@babylonjs/core':
         specifier: ^8.37.1
         version: 8.37.1
+      '@babylonjs/gui':
+        specifier: ^8.38.0
+        version: 8.38.0(@babylonjs/core@8.37.1)
       '@babylonjs/loaders':
         specifier: ^8.37.1
         version: 8.37.1(@babylonjs/core@8.37.1)(babylonjs-gltf2interface@8.37.1)
@@ -223,6 +226,11 @@ packages:
 
   '@babylonjs/core@8.37.1':
     resolution: {integrity: sha512-f+u7e9dVR1+88zooEuo3LRYQxMWw9NfOOVkcsOziEzstlwm4ZZhrJamGlWM96ykufdoHH0IocyEFkueyzzEeGg==}
+
+  '@babylonjs/gui@8.38.0':
+    resolution: {integrity: sha512-X8Bdbe8EemDtFUUXbHQPT79+k+p/z2Gq+kGTC4JElU+ef00jHU2+RRq9/ACBYHubDmV9ywOxy8wo0nYPAH+k3g==}
+    peerDependencies:
+      '@babylonjs/core': ^8.0.0
 
   '@babylonjs/loaders@8.37.1':
     resolution: {integrity: sha512-MtXMfKLlpVmZnldOxeayEHLo/P+XylUbbGZOmHYGjdnouSceAHJKT2SAO+Z7TXj82itl/N2VjIq5c3dfMmHSCQ==}
@@ -1604,6 +1612,10 @@ snapshots:
       '@babel/helper-validator-identifier': 7.28.5
 
   '@babylonjs/core@8.37.1': {}
+
+  '@babylonjs/gui@8.38.0(@babylonjs/core@8.37.1)':
+    dependencies:
+      '@babylonjs/core': 8.37.1
 
   '@babylonjs/loaders@8.37.1(@babylonjs/core@8.37.1)(babylonjs-gltf2interface@8.37.1)':
     dependencies:

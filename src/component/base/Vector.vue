@@ -1,0 +1,112 @@
+<template>
+	<div class="vector-field" @mouseenter="pointerOver = true" @mouseleave="pointerOver = false">
+		<div class="vector-field__label" :class="{ 'is-muted': grayLabel && !pointerOver }">
+			<div class="vector-field__label-inner">
+				<slot name="label">{{ label }}</slot>
+				<el-tooltip v-if="tooltip" :content="tooltip" placement="top">
+					<el-icon>
+						<InfoFilled />
+					</el-icon>
+				</el-tooltip>
+			</div>
+		</div>
+
+		<div class="vector-field__inputs">
+			<el-input-number v-model="vx" :step="step" :min="axisMin(0)" :max="axisMax(0)" :controls="false"
+				@change="(val: number) => onAxisChange('x', val as number)" @blur="() => onFinishChange()" />
+			<el-input-number v-model="vy" :step="step" :min="axisMin(1)" :max="axisMax(1)" :controls="false"
+				@change="(val: number) => onAxisChange('y', val as number)" @blur="() => onFinishChange()" />
+			<el-input-number v-if="hasZ" v-model="vz" :step="step" :min="axisMin(2)" :max="axisMax(2)" :controls="false"
+				@change="(val: number) => onAxisChange('z', val as number)" @blur="() => onFinishChange()" />
+			<el-input-number v-if="hasW" v-model="vw" :step="step" :min="axisMin(3)" :max="axisMax(3)" :controls="false"
+				@change="(val: number) => onAxisChange('w', val as number)" @blur="() => onFinishChange()" />
+		</div>
+	</div>
+</template>
+
+<script setup lang="ts">
+import { ref, watch, computed } from "vue"
+import { InfoFilled } from "@element-plus/icons-vue"
+
+const props = defineProps<{
+	object: any
+	property: string
+	label?: any
+	tooltip?: any
+	step?: number
+	asDegrees?: boolean
+	grayLabel?: boolean
+	min?: number | number[]
+	max?: number | number[]
+}>()
+const emit = defineEmits<{ (e: "change"): void; (e: "finishChange"): void }>()
+
+const pointerOver = ref(false)
+
+const hasZ = computed(() => props.object?.[props.property]?.z !== undefined || props.object?.[props.property]?.w !== undefined)
+const hasW = computed(() => props.object?.[props.property]?.w !== undefined)
+
+const toDisplay = (v: number) => (props.asDegrees ? (v * 180) / Math.PI : v)
+const toStore = (v: number) => (props.asDegrees ? (v * Math.PI) / 180 : v)
+
+const vx = ref<number>(toDisplay(props.object?.[props.property]?.x ?? 0))
+const vy = ref<number>(toDisplay(props.object?.[props.property]?.y ?? 0))
+const vz = ref<number>(toDisplay(props.object?.[props.property]?.z ?? 0))
+const vw = ref<number>(toDisplay(props.object?.[props.property]?.w ?? 0))
+
+watch(() => [props.object, props.property], () => {
+	vx.value = toDisplay(props.object?.[props.property]?.x ?? 0)
+	vy.value = toDisplay(props.object?.[props.property]?.y ?? 0)
+	vz.value = toDisplay(props.object?.[props.property]?.z ?? 0)
+	vw.value = toDisplay(props.object?.[props.property]?.w ?? 0)
+})
+
+const axisMin = (i: number) => (Array.isArray(props.min) ? props.min[i] : props.min)
+const axisMax = (i: number) => (Array.isArray(props.max) ? props.max[i] : props.max)
+
+const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
+	const storeVal = toStore(val)
+	if (props.object?.[props.property]) {
+		props.object[props.property][axis] = storeVal
+	}
+	emit("change")
+}
+
+const onFinishChange = () => {
+	emit("finishChange")
+}
+</script>
+
+<style scoped>
+.vector-field {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	padding: 8px;
+}
+
+.vector-field__label {
+	width: 8rem;
+	transition: color .3s ease-in-out;
+	color: var(--title--color);
+
+}
+
+.vector-field__label-inner {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+
+}
+
+.vector-field__label.is-muted {
+	color: var(--el-text-color-secondary);
+
+}
+
+.vector-field__inputs {
+	display: flex;
+	gap: 8px;
+
+}
+</style>
