@@ -1,5 +1,13 @@
 {
   "view": {
     "hierarchy": "层级"
+  },
+  "menu": {
+    "file": {
+      "title": "文件",
+      "export": "导出场景",
+      "import": "导入模型",
+      "save": "保存场景"
+    }
   }
 }
