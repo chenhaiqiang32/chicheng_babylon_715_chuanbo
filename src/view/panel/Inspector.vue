@@ -7,13 +7,24 @@
                 </Field>
             </Block>
         </div>
-
     </BasePanel>
 </template>
 <script setup lang='ts'>
 import BasePanel from '@/component/common/BasePanel.vue'
 import Block from '@/component/common/Block.vue'
 import Field from '@/component/common/Field.vue'
+import { onMounted } from 'vue'
+
+
+onMounted(() => {
+
+})
+
+
+
+
+
+
 </script>
 <style scoped lang='scss'>
 .block-list {
