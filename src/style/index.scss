@@ -20,3 +20,8 @@ html {
   --bg-color-3: #3f3f3f;
   --border-radius: 5px;
 }
+* {
+  &:focus-visible {
+    outline: none !important;
+  }
+}

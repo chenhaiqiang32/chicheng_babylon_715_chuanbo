@@ -30,7 +30,71 @@ const menuItems: MenuItem[] = [
                 callback: importScene
             }
         ]
-    }
+    },
+    {
+        name: 'menu.editor.title',
+        children: [
+            {
+                name: 'menu.editor.redo',
+            },
+            {
+                name: 'menu.editor.undo',
+            },
+            {
+                name: 'menu.editor.cut',
+            },
+            {
+                name: 'menu.editor.copy',
+            },
+        ]
+    },
+    {
+        name: 'menu.setting.title',
+        children: [
+            {
+                name: 'menu.setting.language.title',
+                children: [
+                    {
+                        name: 'menu.setting.language.zh',
+                        callback: toggleDark
+                    },
+                    {
+                        name: 'menu.setting.language.en',
+                        callback: () => toggleDark(false)
+                    }
+                ]
+            },
+            {
+                name: 'menu.setting.theme.title',
+                children: [
+                    {
+                        name: 'menu.setting.theme.dark',
+                        callback: toggleDark
+                    },
+                    {
+                        name: 'menu.setting.theme.light',
+                        callback: () => toggleDark(false)
+                    }
+                ]
+
+            },
+
+        ]
+    },
+    {
+        name: 'menu.help.title',
+        children: [
+            {
+                name: 'menu.help.guide',
+            },
+            {
+                name: 'menu.help.feedback',
+            },
+            {
+                name: 'menu.help.about',
+            }
+        ]
+    },
 ]
 
 function exportScene() {
@@ -44,7 +108,7 @@ function importScene() {
 <style scoped lang='scss'>
 .editor-header {
     width: 100%;
-    height: 60px;
+    height: 40px;
     border-bottom: 1px solid var(--el-border-color);
     display: flex;
     align-items: center;

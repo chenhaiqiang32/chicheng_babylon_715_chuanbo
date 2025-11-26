@@ -8,6 +8,32 @@
       "export": "导出场景",
       "import": "导入模型",
       "save": "保存场景"
+    },
+    "editor": {
+      "title": "编辑",
+      "redo": "重做",
+      "undo": "撤销",
+      "cut": "剪切",
+      "copy": "复制"
+    },
+    "setting": {
+      "title": "设置",
+      "language": {
+        "title": "语言",
+        "zh": "中文",
+        "en": "英文"
+      },
+      "theme": {
+        "title": "主题",
+        "dark": "暗黑",
+        "light": "亮色"
+      }
+    },
+    "help": {
+      "title": "帮助",
+      "guide": "使用指南",
+      "feedback": "反馈",
+      "about": "关于"
     }
   }
 }

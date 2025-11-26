@@ -13,11 +13,10 @@
     </div>
 </template>
 <script setup lang='ts'>
-import { onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { Plus, Minus } from '@element-plus/icons-vue'
 
 const isCollapse = ref(true);
-// ==================== Emits ====================
 defineProps<{
     title: string
 }>();

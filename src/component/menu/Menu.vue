@@ -19,7 +19,7 @@ const props = defineProps<{
 <style lang='scss'>
 .menu-btn {
 	width: 30px;
-	margin-right: 26px;
+	margin-right: 15px;
 	font-weight: 600;
 	text-align: center;
 }

@@ -16,7 +16,6 @@ import {
   Mesh,
   DirectionalLight,
   MeshBuilder,
-  StandardMaterial,
   Texture,
 } from '@babylonjs/core';
 
@@ -56,6 +55,8 @@ export class Editor {
     if (this._selectNodes?.length > 0) {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
+          item.renderOverlay = false;
+
           this.highLightLayer.removeMesh(item);
         }
       });
@@ -70,7 +71,10 @@ export class Editor {
     if (this._selectNodes.length > 0) {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
-          this.highLightLayer.addMesh(item, new Color3(0, 0, 1));
+          item.overlayColor = new Color3(1, 0, 0);
+          item.overlayAlpha = 0.2;
+          item.renderOverlay = true;
+          // this.highLightLayer.addMesh(item, new Color3(0, 0, 1));
         }
       });
     }
@@ -80,16 +84,17 @@ export class Editor {
     this.engine = new Engine(canvas, true, {
       adaptToDeviceRatio: true,
       limitDeviceRatio: 2,
+      stencil: true,
     });
-    this.scene = await AssetsManager.Instance.loadFile(
-      '18a508e08481489d89ed4a4f3f18eff2.zip',
-      this.engine,
-    );
+    // this.scene = await AssetsManager.Instance.loadFile(
+    //   '18a508e08481489d89ed4a4f3f18eff2.zip',
+    //   this.engine,
+    // );
 
-    this.scene.activeCamera.attachControl();
-    // this.loadFbx();
+    // this.scene.activeCamera.attachControl();
+    // // this.loadFbx();
 
-    // this.scene = await this.createScene();
+    this.scene = await this.createScene();
 
     const env = CubeTexture.CreateFromPrefilteredData(
       './abandoned_factory_canteen_01.env',
@@ -99,7 +104,8 @@ export class Editor {
     this.scene.iblIntensity = 0.5;
     // this.scene.debugLayer.show();
     this.gizmoManager = new GizmoManager(this.scene);
-    // this.gizmoManager.rotationGizmoEnabled = true;
+    this.gizmoManager.enableAutoPicking = false;
+    this.gizmoManager.positionGizmoEnabled = true;
     this.engine.runRenderLoop(() => {
       this.scene.render();
     });
@@ -107,7 +113,9 @@ export class Editor {
     const resizeObserver = new ResizeObserver((entries) => {
       this.resize();
     });
+
     this.highLightLayer = new HighlightLayer('hl1', this.scene, {});
+    this.highLightLayer.needStencil();
     // const sun = new HemisphericLight('sun', new Vector3(0, 1, 0), this.scene);
     resizeObserver.observe(canvas);
     this.initWatch();
@@ -186,6 +194,10 @@ export class Editor {
     mat.albedoTexture = new Texture('./img/Avocado_baseColor.png', scene);
     mat.metallic = 0.3;
     mat.roughness = 0.7;
+
+    const sphere = MeshBuilder.CreateSphere('sphere', {}, scene);
+    sphere.position.set(0, 1, 0);
+
     // await this.loadFbx();
     return scene;
   }
