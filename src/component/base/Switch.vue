@@ -1,18 +1,14 @@
 <template>
-  <div class="inspector-switch" @click="onToggle">
-    <div class="inspector-switch__label">
-      <slot name="label">{{ label }}</slot>
-    </div>
-    <div class="inspector-switch__control">
-      <el-switch :model-value="value" @change="onToggle" @click.stop />
-    </div>
-  </div>
+  <Field :title="label">
+    <el-switch style="margin-left: auto;" :model-value="value" @change="onToggle" @click.stop />
+  </Field>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from "vue"
 import { registerSimpleUndoRedo } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
+import Field from "../common/Field.vue";
 const props = defineProps<{ object: any; property: string; label?: any; noUndoRedo?: boolean }>()
 const emit = defineEmits<{ (e: "change", value: boolean): void }>()
 
@@ -61,7 +57,7 @@ const onToggle = () => {
   gap: 8px;
   justify-content: center;
   align-items: center;
-  padding: 8px;
+  padding: 0 8px;
   cursor: pointer;
   border-radius: 8px;
   transition: all .3s;

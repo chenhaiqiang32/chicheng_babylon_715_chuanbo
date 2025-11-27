@@ -55,6 +55,11 @@ const opened = ref(true)
   border-radius: 8px;
   padding: 8px;
   background-color: var(--bg-color-1);
+
+  &+& {
+    margin-top: 4px;
+  }
+
   /* background: var(--el-color-info-light-9); */
 }
 

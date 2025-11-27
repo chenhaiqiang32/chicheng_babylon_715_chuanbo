@@ -1,7 +1,6 @@
 <template>
   <SectionField title="Collisions" :isProcessing="computingCollisionMesh">
-    <Switch label="Check Collisions" :object="mesh" property="checkCollisions" @change="onCheckCollisionsChanged" />
-
+    <Switch label="Enable" :object="mesh" property="checkCollisions" @change="onCheckCollisionsChanged" />
     <div v-if="mesh.checkCollisions" class="collision-types" @mousemove="setTemporaryCollisionMeshVisible(true)"
       @mouseleave="setTemporaryCollisionMeshVisible(false)">
       <div class="collision-type" :class="{ active: collisionMesh?.type === 'cube' }"
@@ -119,7 +118,7 @@ onBeforeUnmount(() => {
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 8px;
-  background: var( --bg-color-2);
+  background: var(--bg-color-2);
   cursor: pointer;
   transition: background .3s ease-in-out;
 }

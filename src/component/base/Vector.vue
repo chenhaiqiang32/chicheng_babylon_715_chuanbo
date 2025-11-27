@@ -1,36 +1,23 @@
 <template>
-	<div class="vector-field" @mouseenter="pointerOver = true" @mouseleave="pointerOver = false">
-		<div class="vector-field__label" :class="{ 'is-muted': grayLabel && !pointerOver }">
-			<div class="vector-field__label-inner">
-				<slot name="label">{{ label }}</slot>
-				<el-tooltip v-if="tooltip" :content="tooltip" placement="top">
-					<el-icon>
-						<InfoFilled />
-					</el-icon>
-				</el-tooltip>
-			</div>
-		</div>
-
-		<div class="vector-field__inputs">
-			<el-input-number v-model="vx" :step="step" :min="axisMin(0)" :max="axisMax(0)" :controls="false"
-				@update:modelValue="val => onAxisChange('x', val as number)" @change="onFinishChange"
-				@blur="onFinishChange" />
-			<el-input-number v-model="vy" :step="step" :min="axisMin(1)" :max="axisMax(1)" :controls="false"
-				@update:modelValue="val => onAxisChange('y', val as number)" @change="onFinishChange"
-				@blur="onFinishChange" />
-			<el-input-number v-if="hasZ" v-model="vz" :step="step" :min="axisMin(2)" :max="axisMax(2)" :controls="false"
-				@update:modelValue="val => onAxisChange('z', val as number)" @change="onFinishChange"
-				@blur="onFinishChange" />
-			<el-input-number v-if="hasW" v-model="vw" :step="step" :min="axisMin(3)" :max="axisMax(3)" :controls="false"
-				@update:modelValue="val => onAxisChange('w', val as number)" @change="onFinishChange"
-				@blur="onFinishChange" />
-		</div>
-	</div>
+	<Field :title="label" :tooltip="tooltip" :text-width="60">
+		<el-input-number class="vector-input" size="small" v-model="vx" :step="step" :min="axisMin(0)" :max="axisMax(0)"
+			:controls="false" @update:modelValue="val => onAxisChange('x', val as number)" @change="onFinishChange"
+			@blur="onFinishChange" />
+		<el-input-number class="vector-input" size="small" v-model="vy" :step="step" :min="axisMin(1)" :max="axisMax(1)"
+			:controls="false" @update:modelValue="val => onAxisChange('y', val as number)" @change="onFinishChange"
+			@blur="onFinishChange" />
+		<el-input-number class="vector-input" size="small" v-if="hasZ" v-model="vz" :step="step" :min="axisMin(2)"
+			:max="axisMax(2)" :controls="false" @update:modelValue="val => onAxisChange('z', val as number)"
+			@change="onFinishChange" @blur="onFinishChange" />
+		<el-input-number class="vector-input" size="small" v-if="hasW" v-model="vw" :step="step" :min="axisMin(3)"
+			:max="axisMax(3)" :controls="false" @update:modelValue="val => onAxisChange('w', val as number)"
+			@change="onFinishChange" @blur="onFinishChange" />
+	</Field>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from "vue"
-import { InfoFilled } from "@element-plus/icons-vue"
+import Field from "@/component/common/Field.vue"
 import { registerSimpleUndoRedo } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
 const props = defineProps<{
@@ -74,9 +61,9 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 	if (props.object?.[props.property]) {
 		props.object[props.property][axis] = storeVal
 
-			}
-			const oldValue=ref<number>(getInspectorPropertyValue(props.object, `${props.property}.${axis}`) ?? 0)
-			//const oldValue = props.object?.[props.property]?.[axis] ?? 0;
+	}
+	const oldValue = ref<number>(getInspectorPropertyValue(props.object, `${props.property}.${axis}`) ?? 0)
+	//const oldValue = props.object?.[props.property]?.[axis] ?? 0;
 	setInspectorEffectivePropertyValue(props.object, `${props.property}.${axis}`, val)
 	const newValue = storeVal;
 	registerSimpleUndoRedo({
@@ -85,8 +72,8 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 		oldValue,
 		newValue
 	})
-	console.log(oldValue+"12122"+newValue+axis);
-	
+	console.log(oldValue + "12122" + newValue + axis);
+
 	emit("change")
 }
 
@@ -96,36 +83,19 @@ const onFinishChange = () => {
 }
 </script>
 
-<style scoped>
-.vector-field {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-	padding: 8px;
-}
+<style lang="scss">
+.vector-input {
+	flex: 1;
+	width: 0;
 
-.vector-field__label {
-	width: 8rem;
-	transition: color .3s ease-in-out;
-	color: var(--title--color);
+	&+& {
+		margin-left: 8px;
+	}
 
-}
-
-.vector-field__label-inner {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-
-}
-
-.vector-field__label.is-muted {
-	color: var(--el-text-color-secondary);
-
-}
-
-.vector-field__inputs {
-	display: flex;
-	gap: 8px;
+	.el-input__wrapper {
+		padding-left: 6px !important;
+		padding-right: 6px !important;
+	}
 
 }
 </style>

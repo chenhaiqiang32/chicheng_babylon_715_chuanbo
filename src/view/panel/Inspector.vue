@@ -1,18 +1,23 @@
 <template>
     <BasePanel title="属性">
-        <KeepAlive>
-            <Common v-if="selectedObject" :object="selectedObject" />
-        </KeepAlive>
-        <KeepAlive>
-            <Transform :editor="props.editor" :object="selectedObject" />
-        </KeepAlive>
-        <KeepAlive>
-            <Collision v-if="selectedObject?.geometry" :editor="props.editor" :object="selectedObject" />
-        </KeepAlive>
-        <KeepAlive>
-            <MaterialInspectorRouter v-if="selectedObject?.geometry" :mesh="selectedObject"
-                :material="selectedObject.material" :editor="props.editor" />
-        </KeepAlive>
+        <el-scrollbar class="scrollbar">
+            <div style="padding:  0 10px;">
+                <KeepAlive>
+                    <Common v-if="selectedObject" :object="selectedObject" />
+                </KeepAlive>
+                <KeepAlive>
+                    <Transform :editor="props.editor" :object="selectedObject" />
+                </KeepAlive>
+                <KeepAlive>
+                    <Collision v-if="selectedObject?.geometry" :editor="props.editor" :object="selectedObject" />
+                </KeepAlive>
+                <KeepAlive>
+                    <MaterialInspectorRouter v-if="selectedObject?.geometry" :mesh="selectedObject"
+                        :material="selectedObject.material" :editor="props.editor" />
+                </KeepAlive>
+            </div>
+        </el-scrollbar>
+
     </BasePanel>
 </template>
 <script setup lang='ts'>

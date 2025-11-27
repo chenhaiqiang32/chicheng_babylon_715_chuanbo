@@ -1,23 +1,12 @@
 <template>
-    <div class="common-list">
-        <SectionField title="Common">
-            <div class="mesh-type-row">
-                <div class="mesh-type-left">Type</div>
-                <div class="mesh-type-right">
-                    <div class="mesh-type-label">{{ objectType }}</div>
-                    <el-button v-if="isInstanced" type="text" @click="">
-                        <el-icon>
-                        </el-icon>
-                    </el-button>
-                </div>
-            </div>
-            <StringField :object="props.object" property="name" label="Name"
-                @change="() => onNodeModifiedObservable.notifyObservers(object)" />
-            <Switch :object="props.object" property="isPickable" label="Pickable" />
-            <Switch :object="props.object" property="isVisible" label="Visible" />
-        </SectionField>
-
-    </div>
+    <SectionField title="Common">
+        <Field title="Type">
+            <div class="mesh-type-label">{{ objectType }}</div>
+        </Field>
+        <StringField :object="props.object" property="name" label="Name"
+            @change="() => onNodeModifiedObservable.notifyObservers(object)" />
+        <Switch :object="props.object" property="isVisible" label="Visible" />
+    </SectionField>
 </template>
 <script setup lang='ts'>
 import { computed, ref, watch } from "vue"
@@ -30,6 +19,7 @@ import {
     Node,
     InstancedMesh,
 } from '@babylonjs/core';
+import Field from "../common/Field.vue";
 const props = defineProps<{ object: any | null }>()
 //const objectType = ref<string>("");
 // 计算属性：获取物体类型信息
