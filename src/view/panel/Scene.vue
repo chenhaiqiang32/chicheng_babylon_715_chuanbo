@@ -1,16 +1,17 @@
 <template>
     <div class="scene-panel">
-        <control-bar class="control-bar"></control-bar>
-        <canvas ref="canvasRef">
-        </canvas>
+        <canvas ref="canvasRef"></canvas>
+        <ToolBar />
     </div>
 </template>
 <script setup lang='ts'>
 import { Editor } from '@/3d/Editor';
 import { nextTick, onMounted, ref } from 'vue';
-import ControlBar from '@/component/common/ControlBar.vue';
+import ToolBar from './scene/ToolBar.vue'
 
 const canvasRef = ref<HTMLCanvasElement>()
+
+
 
 
 onMounted(() => {
@@ -23,6 +24,7 @@ onMounted(() => {
 .scene-panel {
     width: 100%;
     height: 100%;
+    position: relative;
 
     .control-bar {
         display: block;

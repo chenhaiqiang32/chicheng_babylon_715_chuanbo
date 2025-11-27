@@ -10,3 +10,8 @@ export const i18n = createI18n({
     en,
   },
 });
+
+export function $i18nT(key: string) {
+  return i18n.global.t(key);
+}
+globalThis.$i18nT = $i18nT;

@@ -4,3 +4,5 @@ declare interface HierarchyNode {
   name: string;
   children?: HierarchyNode[];
 }
+
+declare type FileInfo = [string, ArrayBuffer];
