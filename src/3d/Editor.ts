@@ -15,7 +15,6 @@ import {
   Node,
   BoundingBoxGizmo,
   Color3,
-  TransformNode,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -187,6 +186,7 @@ export class Editor {
   resize = () => {
     this.engine.resize();
   };
+
   /**
    * 获取场景中指定ID的节点
    * @param id 节点的唯一ID
