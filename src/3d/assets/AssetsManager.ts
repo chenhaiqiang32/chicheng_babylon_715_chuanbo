@@ -3,29 +3,24 @@ import {
   CubeTexture,
   Engine,
   Geometry,
+  ImportMeshAsync,
   InternalTexture,
-  LoadSceneAsync,
   Material,
-  PBRMaterial,
   Scene,
-  SceneSerializer,
   Texture,
   Tools,
-  VertexData,
   type Scene as BabylonScene,
 } from '@babylonjs/core';
+
 import { readZip, zipFiles } from '@/utils/Zip';
 import { deserializeScene, serializeScene } from './serialze/Scene';
 import { ID } from '@/utils/id';
 import { CC } from './BaseRes';
 import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import JSZip from 'jszip';
+import { deserializeNode, serializeNode } from './serialze/node/Node';
 
 export interface IAssets {
-  cubeTexture: CubeTexture[];
-  texture: BaseTexture[];
-  material: Material[];
-  geometry: Geometry[];
   addCubeTexture(cubeTexture: CubeTexture): void;
   addTexture(texture: BaseTexture): void;
   addMaterial(material: Material): void;
@@ -39,7 +34,6 @@ export interface IAssets {
 
 export class AssetsManager implements IAssets {
   private static instance: AssetsManager;
-
   cubeTexture: CubeTexture[] = [];
   texture: BaseTexture[] = [];
   material: Material[] = [];
@@ -71,6 +65,7 @@ export class AssetsManager implements IAssets {
     if (this.material.find((m) => m.uuid === material.uuid)) {
       return;
     }
+
     this.material.push(material);
   }
 
@@ -81,6 +76,7 @@ export class AssetsManager implements IAssets {
     if (this.texture.find((t) => t.uuid === texture.uuid)) {
       return;
     }
+
     this.texture.push(texture);
   }
   addCubeTexture(cubeTexture: CubeTexture) {
@@ -208,7 +204,6 @@ export class AssetsManager implements IAssets {
       const url = URL.createObjectURL(new Blob([file]));
       element.data.url = url;
       const texture = Texture.Parse(element.data, rootScene, '');
-      console.log(element);
       texture.gammaSpace = element.data.gammaSpace;
       texture.uuid = element.uuid;
       this.addTexture(texture);
@@ -232,6 +227,24 @@ export class AssetsManager implements IAssets {
     });
     const sceneObj = await deserializeScene(scene, engine, this, rootScene);
     return sceneObj;
+  }
+
+  importTexture(file: File, scene: Scene) {
+    const texture = new Texture(
+      file.name,
+      scene,
+      false,
+      true,
+      null,
+      () => {},
+      () => {},
+      file,
+    );
+
+    this.addTexture(texture);
+  }
+  importGeomertry(file: File, scene: Scene) {
+    ImportMeshAsync(file, scene);
   }
 }
 

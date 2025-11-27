@@ -6,8 +6,11 @@
     </div>
 </template>
 <script setup lang='ts'>
+import { AssetsManager } from '@/3d/assets/AssetsManager';
+import { RuntimeAssets } from '@/3d/assets/RuntimeAssets';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
+import { Utils } from '@/utils';
 import { useDark, useToggle } from '@vueuse/core'
 
 const isDark = useDark({
@@ -101,7 +104,12 @@ function exportScene() {
     Editor.Instance.export();
 }
 function importScene() {
-    Editor.Instance.loadScene('2.zip');
+    Utils.chooseFile().then((fileList) => {
+        if (fileList[0]) {
+            RuntimeAssets.Instance.importMesh(fileList[0])
+        }
+    })
+
 }
 
 </script>

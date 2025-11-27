@@ -26,6 +26,7 @@
 	</template>
 </template>
 <script lang='ts' setup>
+import SVG from '@/component/common/SVG.vue';
 const props = defineProps<{
 	data: MenuItem;
 }>();
