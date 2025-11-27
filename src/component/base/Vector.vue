@@ -75,8 +75,9 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 		props.object[props.property][axis] = storeVal
 
 			}
+			const oldValue=ref<number>(getInspectorPropertyValue(props.object, `${props.property}.${axis}`) ?? 0)
+			//const oldValue = props.object?.[props.property]?.[axis] ?? 0;
 	setInspectorEffectivePropertyValue(props.object, `${props.property}.${axis}`, val)
-	const oldValue = props.object?.[props.property]?.[axis] ?? 0;
 	const newValue = storeVal;
 	registerSimpleUndoRedo({
 		object: props.object,

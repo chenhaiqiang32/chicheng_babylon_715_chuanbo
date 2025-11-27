@@ -24,7 +24,7 @@ window.addEventListener('keydown', (event) => {
     undo();
   }
   else if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
-   // event.preventDefault();
+    event.preventDefault();
     redo();
   }
 
