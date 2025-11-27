@@ -1,7 +1,8 @@
 <template>
-  <SectionField title="Alpha Mode">
     <Number :object="object" property="alphaMode" :min="0" :max="10" :step="1" />
-  </SectionField>
+  <!-- <SectionField title="Alpha Mode">
+    <Number :object="object" property="alphaMode" :min="0" :max="10" :step="1" />
+  </SectionField> -->
 </template>
 
 <script setup lang="ts">

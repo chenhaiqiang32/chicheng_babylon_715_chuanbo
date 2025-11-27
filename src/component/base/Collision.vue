@@ -78,7 +78,7 @@ const configureCollisionMesh = async (type: CollisionMeshType) => {
   collisionMesh.value = cm
   await cm.setType(type, mesh.value)
 
-  props.editor.layout.graph.refresh()
+  //props.editor.layout.graph.refresh()
   computingCollisionMesh.value = false
 
   setTemporaryCollisionMeshVisible(collisionMesh.value.isVisible)
@@ -119,17 +119,17 @@ onBeforeUnmount(() => {
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 8px;
-  background: var(--el-color-info-light-9);
+  background: var( --bg-color-2);
   cursor: pointer;
   transition: background .3s ease-in-out;
 }
 
 .collision-type:hover {
-  background: var(--el-color-info-light-7);
+  background: var(--bg-color-3);
 }
 
 .collision-type.active {
-  background: var(--el-color-primary-light-7);
+  background: var(--bg-color-3);
 }
 
 .icon {

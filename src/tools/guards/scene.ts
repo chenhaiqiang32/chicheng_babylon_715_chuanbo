@@ -1,4 +1,4 @@
-// import { Scene } from "@babylonjs/core";
+ import { Scene } from "@babylonjs/core";
 
 // import { SceneLinkNode } from "../../editor/nodes/scene-link";
 
@@ -6,9 +6,9 @@
 //  * Returns wether or not the given object is a Scene.
 //  * @param object defines the reference to the object to test its class name.
 //  */
-// export function isScene(object: any): object is Scene {
-// 	return object.getClassName?.() === "Scene";
-// }
+ export function isScene(object: any): object is Scene {
+ 	return object.getClassName?.() === "Scene";
+ }
 
 // /**
 //  * Returns wether or not the given object is a SceneLinkNode.

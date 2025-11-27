@@ -18,19 +18,40 @@ const emit = defineEmits<{ (e: "change", value: boolean): void }>()
 
 const value = ref<boolean>(getInspectorPropertyValue(props.object, props.property) ?? false)
 
-watch(() => [props.object, props.property], () => {
-  value.value = getInspectorPropertyValue(props.object, props.property) ?? false
-})
+// 使用更强大的watch来深度监听对象属性变化
+watch(
+  () => props.object ? getInspectorPropertyValue(props.object, props.property) : false,
+  (newVal) => {
+    value.value = newVal ?? false
+    // 注意：只有在外部修改（如撤销操作）时才更新oldValue
+    // 组件内部的修改已经在onToggle中处理了oldValue的更新
+  },
+  { immediate: true, deep: true }
+)
+
+const handleClick = (event: MouseEvent) => {
+  event.stopPropagation();
+
+  const oldValue = value.value;
+  const newValue = !oldValue;
+
+  value.value = newValue;
+  setInspectorEffectivePropertyValue(props.object, props.property, newValue);
+  emit("change", newValue);
+
+  if (!props.noUndoRedo) {
+    registerSimpleUndoRedo({
+      object: props.object,
+      property: props.property,
+      oldValue: oldValue,
+      newValue: newValue
+    })
+  }
+}
 
 const onToggle = () => {
-  const oldVal = value.value
-  const newVal = !oldVal
-  value.value = newVal
-  setInspectorEffectivePropertyValue(props.object, props.property, newVal)
-  emit("change", newVal)
-  if (!props.noUndoRedo) {
-    registerSimpleUndoRedo({ object: props.object, property: props.property, oldValue: oldVal, newValue: newVal })
-  }
+  // 当switch组件自身状态改变时也触发相同的逻辑
+  handleClick(new MouseEvent('click'));
 }
 </script>
 

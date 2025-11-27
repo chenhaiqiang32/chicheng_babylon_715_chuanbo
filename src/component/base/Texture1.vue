@@ -28,7 +28,7 @@
                             </template>
                         </div>
                     </template>
-                    <template #default>
+                    <!-- <template #default>
                         <div class="popover-content">
                             <template v-if="isCube">
                                 <SectionField title="Common">
@@ -122,7 +122,7 @@
                                 </SectionField>
                             </template>
                         </div>
-                    </template>
+                    </template> -->
                 </el-popover>
                 <div v-else class="texture-preview-inner"><el-icon>
                         <QuestionFilled />
@@ -132,7 +132,7 @@
             <div class="texture-details">
                 <div class="title">{{ title }}</div>
 
-                <template v-if="textureUrl && !loadingError">
+                <!-- <template v-if="textureUrl && !loadingError">
                     <div class="field-block">
                         <EditorInspectorNumberField v-if="!hideLevel" label="Level" :object="textureRef"
                             property="level" @change="emitChange(textureRef)" @finishChange="emitChange(textureRef)" />
@@ -151,7 +151,7 @@
                     <div class="error-text">Failed to load texture<br />Please ensure the file exists at the specified
                         path: <b>{{ textureUrl }}</b></div>
                     <el-button type="default" @click="reloadTexture">Reload</el-button>
-                </template>
+                </template> -->
             </div>
 
             <div class="texture-actions" @click="clear">
@@ -167,7 +167,6 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue"
-//import { pathExists } from "fs-extra"
 
 //mport sharp from "sharp"
 import { Texture, CubeTexture, ColorGradingTexture } from "@babylonjs/core"
@@ -195,13 +194,13 @@ import { Loading, QuestionFilled } from "@element-plus/icons-vue"
 import SectionField from "./SectionField.vue"
 import Switch from "./Switch.vue"
 import Number from "./Number.vue"
-//import { isScene } from "../../editor/tools/guards/scene"
-//import { registerUndoRedo } from "../../editor/tools/undoredo"
+import { isScene } from "../../tools/guards/scene"
+import { registerUndoRedo } from "@/tools/undoredo"
 //import { updateIblShadowsRenderPipeline } from "../../editor/tools/light/ibl"
 import { onSelectedAssetChanged, onTextureAddedObservable } from "@/tools/observables"
 import { isColorGradingTexture, isCubeTexture, isTexture } from "@/tools/guards/texture"
 import { projectConfiguration } from "@/tools/configuration"
-//import { configureImportedTexture } from "../../editor/layout/preview/import/import"
+import { configureImportedTexture } from "@/tools/preview/import"
 
 const props = defineProps<{
     object: any
@@ -282,7 +281,7 @@ const clear = () => {
     props.object[props.property] = null
     emitChange(null)
     if (!props.noUndoRedo) {
-        //   registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = null) })
+           registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = null) })
     }
 }
 
@@ -291,11 +290,11 @@ const handleDragLeave = (ev: DragEvent) => { dragOver.value = false }
 
 const reloadTexture = () => {
     const texture = textureRef.value as Texture | CubeTexture
-    //  if (!projectConfiguration.path || !texture?.url) return
+      if (!projectConfiguration.path || !texture?.url) return
     const wasError = texture.loadingError
     const projectDir = getDirname(projectConfiguration.path!)
     const texturePath = texture.url.startsWith(projectDir) ? texture.url : joinPaths(projectDir, texture.url)
-    // texture.updateURL(texturePath, undefined, () => { texture["_loadingError"] = false; if (wasError) computeTemporaryPreview() })
+     texture.updateURL(texturePath, undefined, () => { texture["_loadingError"] = false; if (wasError) computeTemporaryPreview() })
     texture.url = texturePath.replace(joinPaths(projectDir, "/"), "")
 }
 
@@ -313,15 +312,13 @@ const handleDrop = (ev: DragEvent) => {
         case ".bmp":
         case ".exr": {
             const oldTexture = props.object[props.property]
-            //  const scene = props.scene ?? (isScene(props.object) ? props.object : props.object.getScene())
-            const scene = props.scene
-            //   const newTexture = configureImportedTexture(new Texture(absolutePath, scene))
-            const newTexture = new Texture(absolutePath, scene)
+      const scene = props.scene ?? (isScene(props.object) ? props.object : props.object.getScene())
+      const newTexture = configureImportedTexture(new Texture(absolutePath, scene))
             if (oldTexture !== newTexture) {
                 props.object[props.property] = newTexture
                 emitChange(newTexture)
                 if (!props.noUndoRedo) {
-                    //  registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = newTexture), onLost: () => newTexture?.dispose() })
+                      registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = newTexture), onLost: () => newTexture?.dispose() })
                 }
                 onTextureAddedObservable.notifyObservers(newTexture)
             }
@@ -339,7 +336,7 @@ const handleDrop = (ev: DragEvent) => {
                     props.object[props.property] = newTexture
                     emitChange(newTexture)
                     if (!props.noUndoRedo) {
-                        //  registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = newTexture), onLost: () => newTexture?.dispose() })
+                          registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = newTexture), onLost: () => newTexture?.dispose() })
                     }
                     onTextureAddedObservable.notifyObservers(newTexture)
                 }
@@ -358,7 +355,7 @@ const handleDrop = (ev: DragEvent) => {
                 // if (sc) updateIblShadowsRenderPipeline(sc, true)
                 emitChange(props.object[props.property])
                 if (oldTexture !== newTexture && !props.noUndoRedo) {
-                    // registerUndoRedo({ executeRedo: true, undo: () => { props.object[props.property] = oldTexture; if (sc) updateIblShadowsRenderPipeline(sc, true) }, redo: () => { props.object[props.property] = newTexture; if (sc) updateIblShadowsRenderPipeline(sc, true) }, onLost: () => newTexture?.dispose() })
+                   //  registerUndoRedo({ executeRedo: true, undo: () => { props.object[props.property] = oldTexture; if (sc) updateIblShadowsRenderPipeline(sc, true) }, redo: () => { props.object[props.property] = newTexture; if (sc) updateIblShadowsRenderPipeline(sc, true) }, onLost: () => newTexture?.dispose() })
                 }
             }
             break
@@ -369,20 +366,79 @@ const handleDrop = (ev: DragEvent) => {
 const computeTemporaryPreview = async () => {
     const texture: any = props.object[props.property]
     if (!texture?.url || getExtname(texture.url).toLowerCase() === ".exr") return
-    const path = joinPaths(getDirname(projectConfiguration.path!), texture.url)
-    //if (!(await pathExists(path))) {
-    //   previewError.value = true
-    //   return
-    //  }
+    // In browser environment, we can't access the file system directly
+    // Instead, try to fetch the texture to check if it exists
+    const textureUrl = texture.url.startsWith('http') ? texture.url : `/public/${texture.url}`;
+    try {
+      const response = await fetch(textureUrl, {
+        method: 'HEAD', // Only request headers, not the entire file
+        cache: 'no-cache'
+      });
+      
+      if (!response.ok) {
+        previewError.value = true;
+        return;
+      }
+    } catch (error) {
+      // If fetch fails, assume the texture is not available
+      previewError.value = true;
+      return;
+    }
     if (!isTexture(texture)) {
         previewError.value = false
         return
     }
-    //const buffer = await sharp(path).resize(128, 128).toBuffer()
-    const buffer = "";
+    
+    // Use browser Canvas API for image resizing (replaces sharp)
+    const buffer = await resizeImageInBrowser(textureUrl, 128, 128);
     if (previewTemporaryUrl.value) URL.revokeObjectURL(previewTemporaryUrl.value)
     previewError.value = false
     previewTemporaryUrl.value = URL.createObjectURL(new Blob([buffer]))
+  }
+  
+  // Helper function to resize image using Canvas API in browser
+  async function resizeImageInBrowser(url: string, width: number, height: number): Promise<ArrayBuffer> {
+    console.log(url);
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // Allow loading images from different origins
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        
+        // Draw image with the desired size
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert canvas to Blob and then to ArrayBuffer
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Could not create blob from canvas'));
+            return;
+          }
+          
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result as ArrayBuffer);
+          };
+          reader.onerror = reject;
+          reader.readAsArrayBuffer(blob);
+        }, 'image/png');
+      };
+      
+      img.onerror = () => {
+        reject(new Error(`Failed to load image: ${url}`));
+      };
+      
+      img.src = url;
+    });
 }
 
 watch(textureRef, () => computeTemporaryPreview())

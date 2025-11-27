@@ -13,13 +13,17 @@
 
 		<div class="vector-field__inputs">
 			<el-input-number v-model="vx" :step="step" :min="axisMin(0)" :max="axisMax(0)" :controls="false"
-				@change="(val: number) => onAxisChange('x', val as number)" @blur="() => onFinishChange()" />
+				@update:modelValue="val => onAxisChange('x', val as number)" @change="onFinishChange"
+				@blur="onFinishChange" />
 			<el-input-number v-model="vy" :step="step" :min="axisMin(1)" :max="axisMax(1)" :controls="false"
-				@change="(val: number) => onAxisChange('y', val as number)" @blur="() => onFinishChange()" />
+				@update:modelValue="val => onAxisChange('y', val as number)" @change="onFinishChange"
+				@blur="onFinishChange" />
 			<el-input-number v-if="hasZ" v-model="vz" :step="step" :min="axisMin(2)" :max="axisMax(2)" :controls="false"
-				@change="(val: number) => onAxisChange('z', val as number)" @blur="() => onFinishChange()" />
+				@update:modelValue="val => onAxisChange('z', val as number)" @change="onFinishChange"
+				@blur="onFinishChange" />
 			<el-input-number v-if="hasW" v-model="vw" :step="step" :min="axisMin(3)" :max="axisMax(3)" :controls="false"
-				@change="(val: number) => onAxisChange('w', val as number)" @blur="() => onFinishChange()" />
+				@update:modelValue="val => onAxisChange('w', val as number)" @change="onFinishChange"
+				@blur="onFinishChange" />
 		</div>
 	</div>
 </template>
@@ -27,7 +31,8 @@
 <script setup lang="ts">
 import { ref, watch, computed } from "vue"
 import { InfoFilled } from "@element-plus/icons-vue"
-
+import { registerSimpleUndoRedo } from "../../tools/undoredo"
+import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
 const props = defineProps<{
 	object: any
 	property: string
@@ -68,11 +73,24 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 	const storeVal = toStore(val)
 	if (props.object?.[props.property]) {
 		props.object[props.property][axis] = storeVal
-	}
+
+			}
+	setInspectorEffectivePropertyValue(props.object, `${props.property}.${axis}`, val)
+	const oldValue = props.object?.[props.property]?.[axis] ?? 0;
+	const newValue = storeVal;
+	registerSimpleUndoRedo({
+		object: props.object,
+		property: `${props.property}.${axis}`,
+		oldValue,
+		newValue
+	})
+	console.log(oldValue+"12122"+newValue+axis);
+	
 	emit("change")
 }
 
 const onFinishChange = () => {
+
 	emit("finishChange")
 }
 </script>

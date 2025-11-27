@@ -1,10 +1,14 @@
 <template>
-  <SectionField title="Utils">
+      <div class="utils-row">
+      <el-button type="default" class="w-full" @click="handleExport">Export...</el-button>
+      <el-button v-if="mesh" type="danger" class="w-full" @click="handleRemove">Remove</el-button>
+    </div>
+  <!-- <SectionField title="Utils">
     <div class="utils-row">
       <el-button type="default" class="w-full" @click="handleExport">Export...</el-button>
       <el-button v-if="mesh" type="danger" class="w-full" @click="handleRemove">Remove</el-button>
     </div>
-  </SectionField>
+  </SectionField> -->
 </template>
 
 <script setup lang="ts">

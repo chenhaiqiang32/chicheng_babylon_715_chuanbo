@@ -1,10 +1,11 @@
 <template>
-	<SectionField title="Transform">
-		<Vector :label="label('Position')" :object="object" property="position"
-			@finishChange="handleTransformsUpdated" />
-		<Vector :label="label('Rotation')" :object="object" property="rotation" :asDegrees="true"
-			@finishChange="handleTransformsUpdated" />
-		<Vector :label="label('Scaling')" :object="object" property="scaling" @finishChange="handleTransformsUpdated" />
+	<SectionField title="Transforms">
+		<Vector :label="label('Position')" :object="object" property="position" @change="notifyNodeModified" />
+		<Vector v-if="hasQuaternion" :label="label('Rotation')" :object="rotationProxyObj" property="proxy"
+			:asDegrees="true" :step="0.1" @change="applyRotationProxy" @finishChange="applyRotationProxy" />
+		<Vector v-else :label="label('Rotation')" :object="object" property="rotation" :asDegrees="true" :step="0.1"
+			@change="notifyNodeModified" />
+		<Vector :label="label('Scaling')" :object="object" property="scaling" @change="notifyNodeModified" />
 	</SectionField>
 </template>
 
@@ -22,15 +23,27 @@ import {
 	Scene,
 	Vector3,
 	Node,
+	Quaternion
 } from '@babylonjs/core';
-import { inject, toRaw } from 'vue';
+import { inject, toRaw, computed } from 'vue';
 import { reactive, watch, ref, onMounted, onUnmounted } from 'vue';
 import Vector from '@/component/base/Vector.vue'
 import SectionField from '@/component/base/SectionField.vue'
 import { isMesh } from '@/tools/guards/nodes';
+import { onNodeModifiedObservable } from "@/tools/observables"
 
-const props = defineProps<{ editor: any; object: AbstractMesh }>();
+const props = defineProps<{ editor: any; object: any }>();
 const label = (t: string) => t;
+const hasQuaternion = computed(() => !!props.object?.rotationQuaternion)
+const rotationProxy = ref({ x: 0, y: 0, z: 0 })
+const rotationProxyObj = computed(() => ({ proxy: rotationProxy.value }))
+
+const initRotationProxy = () => {
+	if (hasQuaternion.value) {
+		const e = props.object.rotationQuaternion.toEulerAngles()
+		rotationProxy.value = { x: e.x, y: e.y, z: e.z }
+	}
+}
 const nodeName = ref(props.object?.name);
 const size = ref({
 	x: 0,
@@ -70,26 +83,6 @@ const scale = reactive<Vector>({
 });
 
 const visible = ref(false);
-function changePosition() {
-	let obj = props.object;
-
-}
-
-function recordCommand(type: 'p' | 's' | 'r', o: Vector, n: Vector) {
-	let obj = props.object;
-
-}
-
-function changeRotate() {
-}
-
-function changeScale() {
-	const x = scale.x;
-	const y = scale.y;
-	const z = scale.z;
-	const obj = props.object;
-}
-
 
 
 watch(() => props.object, (e, o) => {
@@ -97,27 +90,17 @@ watch(() => props.object, (e, o) => {
 	immediate: true,
 });
 
-
-function changeName() {
-	if (props.object) {
-		const oldValue = props.object.name;
-		const value = nodeName.value;
-		const obj = props.object;
-
-	}
-}
 onMounted(() => {
 
 });
-
-function visibleChanged(data: { visible: boolean; uuid: string; o: Node; }) {
-
+const applyRotationProxy = () => {
+	if (!hasQuaternion.value) return
+	const q = Quaternion.FromEulerAngles(rotationProxy.value.x, rotationProxy.value.y, rotationProxy.value.z)
+	props.object.rotationQuaternion.copyFrom(q)
 }
-
-const handleTransformsUpdated = () => {
-	//if (isMesh(props.object)) updateIblShadowsRenderPipeline(props.object.getScene())
+const notifyNodeModified = () => {
+	onNodeModifiedObservable.notifyObservers(props.object)
 }
-
 onUnmounted(() => {
 });
 

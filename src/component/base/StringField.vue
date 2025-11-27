@@ -32,21 +32,40 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ (e: "change", value: string): void }>()
 const value = ref<string>(getInspectorPropertyValue(props.object, props.property) ?? "")
-const oldValue = ref<string>(getInspectorPropertyValue(props.object, props.property) ?? "")
+  const oldValue = ref<string>(getInspectorPropertyValue(props.object, props.property) ?? "")
 
-watch(() => [props.object, props.property], () => {
-  value.value = getInspectorPropertyValue(props.object, props.property) ?? ""
-  oldValue.value = getInspectorPropertyValue(props.object, props.property) ?? ""
-}, { immediate: true })
+  watch(
+    () => props.object ? getInspectorPropertyValue(props.object, props.property) : '',
+    (newVal) => {
+      if (newVal !== value.value) {
+        value.value = newVal ?? ''
+        oldValue.value = newVal ?? ''
+      }
+    },
+    { immediate: true, deep: true }
+  )
 
-const onInput = (newValue: string) => {
-  value.value = newValue
-  setInspectorEffectivePropertyValue(props.object, props.property, newValue)
-  emit("change", newValue)
-}
+  const onInput = (newValue: string) => {
+    if (newValue !== value.value) {
+      const oldVal = value.value
+      value.value = newValue
+      setInspectorEffectivePropertyValue(props.object, props.property, newValue)
+      
+      if (!props.noUndoRedo) {
+        registerSimpleUndoRedo({
+          object: props.object,
+          property: props.property,
+          oldValue: oldVal,
+          newValue: newValue
+        })
+      }
+      
+      emit("change", newValue)
+    }
+  }
 
 const onEnter = () => {
-  ; (document.activeElement as HTMLElement)?.blur()
+  (document.activeElement as HTMLElement)?.blur()
 }
 
 const onBlur = () => {

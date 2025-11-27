@@ -65,6 +65,7 @@ export function registerUndoRedo(configuration: UndoRedoStackItem) {
 }
 
 export function registerSimpleUndoRedo(configuration: SimpleUndoRedoStackItem) {
+	
 	registerUndoRedo({
 		undo: () => {
 			setInspectorEffectivePropertyValue(configuration.object, configuration.property, configuration.oldValue);
@@ -78,8 +79,10 @@ export function registerSimpleUndoRedo(configuration: SimpleUndoRedoStackItem) {
 }
 
 export function undo() {
+	console.log('撤销操作:', index);
 	if (index < 0) {
 		//return shell.beep();
+		return;
 	}
 
 	stack[index].undo();
@@ -91,8 +94,10 @@ export function undo() {
 }
 
 export function redo() {
+	console.log('重做操作:', index);
 	if (index >= stack.length - 1) {
 		//return shell.beep();
+		return;
 	}
 
 	++index;

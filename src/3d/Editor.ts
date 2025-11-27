@@ -116,7 +116,7 @@ export class Editor {
   }
 
   async loadFbx() {
-    const modelUrl = './bust_demo.glb';
+    const modelUrl = './BoomBox.glb';
     const result = await SceneLoader.ImportMeshAsync(
       '',
       '',

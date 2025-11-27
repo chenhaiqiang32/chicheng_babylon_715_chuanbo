@@ -6,34 +6,34 @@
 import { computed } from "vue"
 import PBRMaterial from "@/component/material/PBRMaterial.vue"
 import StandardMaterial from "@/component/material/StandardMaterial.vue"
-import NodeMaterialInspector from "@/component/material/NodeMaterialInspector.vue"
-import MultiMaterialInspector from "@/component/material/MultiMaterialInspector.vue"
-import SkyMaterialInspector from "@/component/material/SkyMaterialInspector.vue"
-import GridMaterialInspector from "@/component/material/GridMaterialInspector.vue"
-import NormalMaterialInspector from "@/component/material/NormalMaterialInspector.vue"
-import WaterMaterialInspector from "@/component/material/WaterMaterialInspector.vue"
-import LavaMaterialInspector from "@/component/material/LavaMaterialInspector.vue"
-import TriPlanarMaterialInspector from "@/component/material/TriPlanarMaterialInspector.vue"
-import CellMaterialInspector from "@/component/material/CellMaterialInspector.vue"
-import FireMaterialInspector from "@/component/material/FireMaterialInspector.vue"
-import GradientMaterialInspector from "@/component/material/GradientMaterialInspector.vue"
+import NodeMaterial from "@/component/material/NodeMaterial.vue"
+import MultiMaterial from "@/component/material/MultiMaterial.vue"
+import SkyMaterial from "@/component/material/SkyMaterial.vue"
+import GridMaterial from "@/component/material/GridMaterial.vue"
+import NormalMaterial from "@/component/material/NormalMaterial.vue"
+import WaterMaterial from "@/component/material/WaterMaterial.vue"
+import LavaMaterial from "@/component/material/LavaMaterial.vue"
+import TriPlanarMaterial from "@/component/material/TriPlanarMaterial.vue"
+import CellMaterial from "@/component/material/CellMaterial.vue"
+import FireMaterial from "@/component/material/FireMaterial.vue"
+import GradientMaterial from "@/component/material/GradientMaterial.vue"
 
 const props = defineProps<{ mesh?: any; material: any; editor: any }>()
 
 const mapping: Record<string, any> = {
   PBRMaterial: PBRMaterial,
   StandardMaterial: StandardMaterial,
-  NodeMaterial: NodeMaterialInspector,
-  MultiMaterial: MultiMaterialInspector,
-  SkyMaterial: SkyMaterialInspector,
-  GridMaterial: GridMaterialInspector,
-  NormalMaterial: NormalMaterialInspector,
-  WaterMaterial: WaterMaterialInspector,
-  LavaMaterial: LavaMaterialInspector,
-  TriPlanarMaterial: TriPlanarMaterialInspector,
-  CellMaterial: CellMaterialInspector,
-  FireMaterial: FireMaterialInspector,
-  GradientMaterial: GradientMaterialInspector,
+  NodeMaterial: NodeMaterial,
+  MultiMaterial: MultiMaterial,
+  SkyMaterial: SkyMaterial,
+  GridMaterial: GridMaterial,
+  NormalMaterial: NormalMaterial,
+  WaterMaterial: WaterMaterial,
+  LavaMaterial: LavaMaterial,
+  TriPlanarMaterial: TriPlanarMaterial,
+  CellMaterial: CellMaterial,
+  FireMaterial: FireMaterial,
+  GradientMaterial: GradientMaterial,
 }
 
 const componentName = computed(() => mapping[props.material?.getClassName?.()] ?? StandardMaterial)
