@@ -14,7 +14,7 @@
     <Texture :object="material" title="Albedo Texture" property="albedoTexture" @change="force">
       <template v-if="material.albedoTexture">
         <Switch label="Use Alpha" :object="material" property="useAlphaFromDiffuseTexture" />
-        <Number label="Alpha Cut Off" :object="material" property="alphaCutOff" :min="0" :max="1" />
+        <Slider label="Alpha Cut Off" :object="material" property="alphaCutOff" :min="0" :max="1" />
       </template>
     </Texture>
 
@@ -26,7 +26,7 @@
         <Switch label="Use Parallax" :object="material" property="useParallax" @change="force" />
         <template v-if="material.useParallax">
           <Switch label="Use Parallax Occlusion" :object="material" property="useParallaxOcclusion" />
-          <Number label="Parallax Scale Bias" :object="material" property="parallaxScaleBias" />
+          <Slider label="Parallax Scale Bias" :object="material" property="parallaxScaleBias" />
         </template>
         <Switch label="Disable Bump Map" :object="material" property="disableBumpMap" @change="force" />
       </template>
@@ -40,8 +40,8 @@
     <Texture :object="material" title="Ambient Texture" property="ambientTexture" @change="force">
       <template v-if="material.ambientTexture">
         <Switch label="Use Gray Scale" :object="material" property="useAmbientInGrayScale" />
-        <Number label="Strength" :object="material" property="ambientTextureStrength" :min="0" />
-        <Number label="Impact On Analytical Lights" :object="material" property="ambientTextureImpactOnAnalyticalLights"
+        <Slider label="Strength" :object="material" property="ambientTextureStrength" :min="0" />
+        <Slider label="Impact On Analytical Lights" :object="material" property="ambientTextureImpactOnAnalyticalLights"
           :min="0" :max="1" />
       </template>
     </Texture>
