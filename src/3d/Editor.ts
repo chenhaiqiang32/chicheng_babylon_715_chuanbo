@@ -33,7 +33,8 @@ import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
 import { hasViewFlag } from '@/core/ViewFlagsMode';
 import { RuntimeAssets } from './assets/RuntimeAssets';
-import { registerLeftClick } from '@/core/InputManager/registerLeftClick';
+import { registerLeftClick } from '@/core/utils/registerLeftClick';
+import { focusOnNode } from '@/core/utils/focusOnNode';
 
 export class Editor {
   loadScene(arg0: string) {}
@@ -160,6 +161,8 @@ export class Editor {
     this.initGizmos();
     this.initViewMode();
     this.initPointerObservale();
+    this.initFocus();
+    MeshBuilder.CreateSphere("Sphere");
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -338,6 +341,14 @@ export class Editor {
       dragThreshold:3,
       onClick: () => {this.raycastSelect()}
     });
+  }
+
+  initFocus(){
+    window.addEventListener("keydown", (k) => {
+      if(k.key == "f"){
+        focusOnNode(this.camera, this._selectNodes[0], this.scene);
+      }
+    })
   }
 
   /** 射线检测选中的 object */
