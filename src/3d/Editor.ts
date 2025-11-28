@@ -22,6 +22,8 @@ import {
   TransformNode,
   Matrix,
   Camera,
+  PointerEventTypes,
+  PointerInfo,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -31,6 +33,7 @@ import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
 import { hasViewFlag } from '@/core/ViewFlagsMode';
 import { RuntimeAssets } from './assets/RuntimeAssets';
+import { registerLeftClick } from '@/core/InputManager/registerLeftClick';
 
 export class Editor {
   loadScene(arg0: string) {}
@@ -94,6 +97,11 @@ export class Editor {
     }
 
     this._selectNodes = v;
+    if(v.length <= 0){
+      this.gizmoManager.attachToMesh(undefined);
+      this.gizmoManager.boundingBoxGizmoEnabled = false;
+      return;
+    }
     if (v[0] instanceof AbstractMesh) {
       this.gizmoManager.attachToMesh(v[0]);
       if(this.enableGizmo)
@@ -151,7 +159,7 @@ export class Editor {
 
     this.initGizmos();
     this.initViewMode();
-    this.initRaycast();
+    this.initPointerObservale();
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -285,6 +293,7 @@ export class Editor {
     return this.scene.getNodeById(id);
   }
 
+  /** 初始化 gizmo */
   initGizmos(){
     // 修改 boundingboxgizmo 样式
     let boundingBoxGizmo = new BoundingBoxGizmo();
@@ -317,26 +326,35 @@ export class Editor {
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
   }
 
+  /** 初始化模型试图模型 */
   initViewMode(){
     // 默认开始 Gizmos 和 Mask
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
   }
 
-  initRaycast(){
-    // 鼠标点击后执行射线检测
-    this.scene.onPointerDown = () => {
-      const ray = this.scene.createPickingRay(
-        this.scene.pointerX,
-        this.scene.pointerY,
-        Matrix.Identity(),
-        this.camera
-      );
+  /** 初始化光标事件 */
+  initPointerObservale(){
+    registerLeftClick(this.scene, {
+      dragThreshold:3,
+      onClick: () => {this.raycastSelect()}
+    });
+  }
 
-      const raycastHit = this.scene.pickWithRay(ray);
-      // 赋值当前选中的 Object
-      if(raycastHit.hit){
-        useScene().setCurrentSelect([raycastHit.pickedMesh.id]);
-      }
+  /** 射线检测选中的 object */
+  raycastSelect(){
+    const ray = this.scene.createPickingRay(
+      this.scene.pointerX,
+      this.scene.pointerY,
+      Matrix.Identity(),
+      this.camera
+    );
+    const raycastHit = this.scene.pickWithRay(ray);
+    // 赋值当前选中的 Object
+    if(raycastHit.hit){
+      useScene().setCurrentSelect([raycastHit.pickedMesh.id]);
+    }
+    else {
+      useScene().setCurrentSelect();
     }
   }
 
