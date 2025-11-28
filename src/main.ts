@@ -6,6 +6,8 @@ import router from './router';
 import './style/index.scss';
 import './style/dark.css';
 import './style/element.scss';
+import 'virtual:svg-icons-register';
+
 import { i18n } from './i18n';
 import { undo, redo, onUndoObservable, onRedoObservable } from './tools/undoredo';
 

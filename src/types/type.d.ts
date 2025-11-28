@@ -5,8 +5,10 @@ declare interface HierarchyNode {
   children?: HierarchyNode[];
 }
 declare interface Vector {
-	x?: number;
-	y?: number;
-	z?: number;
-	w?: number;
+  x?: number;
+  y?: number;
+  z?: number;
+  w?: number;
 }
+
+declare type FileInfo = [string, ArrayBuffer];
