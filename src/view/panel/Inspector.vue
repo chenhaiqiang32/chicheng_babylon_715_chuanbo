@@ -8,11 +8,11 @@
                 <KeepAlive>
                     <Transform :object="selectedObject" />
                 </KeepAlive>
-                <KeepAlive>
+                <!-- <KeepAlive>
                     <Collision v-if="selectedObject?.geometry" :object="selectedObject" />
-                </KeepAlive>
+                </KeepAlive> -->
                 <KeepAlive>
-                    <MaterialInspectorRouter v-if="selectedObject?.geometry" :mesh="selectedObject"
+                    <MaterialInspectorRouter v-if="selectedObject?.material" :mesh="selectedObject"
                         :material="selectedObject.material" />
                 </KeepAlive>
             </div>
@@ -32,8 +32,6 @@ import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
 import Collision from './inspector/Collision.vue'
 const { currentSelected } = storeToRefs(useScene());
-const activeTab = ref("entity")
-const search = ref("")
 const editedObject = ref<any | null>(null)
 
 const disabled = computed(() => !!(editedObject.value && isNode(editedObject.value)))

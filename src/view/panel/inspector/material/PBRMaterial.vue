@@ -1,79 +1,101 @@
 <template>
-  <SectionField :title="'Material'" :label="material.getClassName()">
-    <StringField label="Name" :object="material" property="name" />
-    <Switch label="Back Face Culling" :object="material" property="backFaceCulling" />
-    <Slider label="Alpha" :object="material" property="alpha" :min="0" :max="1" />
-    <Slider label="Direct Intensity" :object="material" property="directIntensity" :min="0" />
-    <Slider label="Environment Intensity" :object="material" property="environmentIntensity" :min="0" />
-    <Slider label="Emissive Intensity" :object="material" property="emissiveIntensity" :min="0" />
-    <Slider label="Specular Intensity" :object="material" property="specularIntensity" :min="0" />
+  <SectionField :title="$t('component.material.title')" :label="material.getClassName()">
+    <StringField :label="$t('component.material.name')" :object="material" property="name" />
+    <Switch :label="$t('component.material.backFaceCulling')" :object="material" property="backFaceCulling" />
+    <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
+    <Slider :label="$t('component.material.directIntensity')" :object="material" property="directIntensity" :min="0" />
+    <Slider :label="$t('component.material.environmentIntensity')" :object="material" property="environmentIntensity"
+      :min="0" />
+    <Slider :label="$t('component.material.emissiveIntensity')" :object="material" property="emissiveIntensity"
+      :min="0" />
+    <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity"
+      :min="0" />
     <!-- <AlphaModeField :object="material" /> -->
     <!-- <TransparencyModeField :object="material" /> -->
     <!-- <MaterialInspectorUtils :mesh="mesh" :material="material" /> -->
-    <Color :label="'Albedo'" :object="material" property="albedoColor" />
-    <Texture :object="material" title="Albedo Texture" property="albedoTexture" @change="force">
+    <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
+    <Texture :object="material" :title="$t('component.material.albedoTexture')" property="albedoTexture"
+      @change="force">
       <template v-if="material.albedoTexture">
-        <Switch label="Use Alpha" :object="material" property="useAlphaFromDiffuseTexture" />
-        <Slider label="Alpha Cut Off" :object="material" property="alphaCutOff" :min="0" :max="1" />
+        <Switch :label="$t('component.material.useAlphaFromDiffuseTexture')" :object="material"
+          property="useAlphaFromDiffuseTexture" />
+        <Slider :label="$t('component.material.alphaCutOff')" :object="material" property="alphaCutOff" :min="0"
+          :max="1" />
       </template>
     </Texture>
 
-    <Texture :object="material" title="Bump Texture" property="bumpTexture" @change="force">
+    <Texture :object="material" :title="$t('component.material.bumpTexture')" property="bumpTexture" @change="force">
       <template v-if="material.bumpTexture">
-        <Switch label="Inverse X" :object="material" property="invertNormalMapX" />
-        <Switch label="Inverse Y" :object="material" property="invertNormalMapY" />
-        <Switch label="Use Object Space Normal Map" :object="material" property="useObjectSpaceNormalMap" />
-        <Switch label="Use Parallax" :object="material" property="useParallax" @change="force" />
+        <Switch :label="$t('component.material.invertNormalMapX')" :object="material" property="invertNormalMapX" />
+        <Switch :label="$t('component.material.invertNormalMapY')" :object="material" property="invertNormalMapY" />
+        <Switch :label="$t('component.material.useObjectSpaceNormalMap')" :object="material"
+          property="useObjectSpaceNormalMap" />
+        <Switch :label="$t('component.material.useParallax')" :object="material" property="useParallax"
+          @change="force" />
         <template v-if="material.useParallax">
-          <Switch label="Use Parallax Occlusion" :object="material" property="useParallaxOcclusion" />
-          <Slider label="Parallax Scale Bias" :object="material" property="parallaxScaleBias" />
+          <Switch :label="$t('component.material.useParallaxOcclusion')" :object="material"
+            property="useParallaxOcclusion" />
+          <Slider :label="$t('component.material.parallaxScaleBias')" :object="material" property="parallaxScaleBias" />
         </template>
-        <Switch label="Disable Bump Map" :object="material" property="disableBumpMap" @change="force" />
+        <Switch :label="$t('component.material.disableBumpMap')" :object="material" property="disableBumpMap"
+          @change="force" />
       </template>
     </Texture>
 
     <template v-if="!material.metallicTexture">
-      <Texture :object="material" title="Reflectivity Texture" property="reflectivityTexture" @change="force" />
-      <Texture :object="material" title="Micro Surface Texture" property="microSurfaceTexture" @change="force" />
+      <Texture :object="material" :title="$t('component.material.reflectivityTexture')" property="reflectivityTexture"
+        @change="force" />
+      <Texture :object="material" :title="$t('component.material.microSurfaceTexture')" property="microSurfaceTexture"
+        @change="force" />
     </template>
 
-    <Texture :object="material" title="Ambient Texture" property="ambientTexture" @change="force">
+    <Texture :object="material" :title="$t('component.material.ambientTexture')" property="ambientTexture"
+      @change="force">
       <template v-if="material.ambientTexture">
-        <Switch label="Use Gray Scale" :object="material" property="useAmbientInGrayScale" />
-        <Slider label="Strength" :object="material" property="ambientTextureStrength" :min="0" />
-        <Slider label="Impact On Analytical Lights" :object="material" property="ambientTextureImpactOnAnalyticalLights"
-          :min="0" :max="1" />
+        <Switch :label="$t('component.material.useAmbientInGrayScale')" :object="material"
+          property="useAmbientInGrayScale" />
+        <Slider :label="$t('component.material.ambientTextureStrength')" :object="material"
+          property="ambientTextureStrength" :min="0" />
+        <Slider :label="$t('component.material.ambientTextureImpactOnAnalyticalLights')" :object="material"
+          property="ambientTextureImpactOnAnalyticalLights" :min="0" :max="1" />
       </template>
     </Texture>
 
-    <Texture :object="material" title="Opacity Texture" property="opacityTexture" />
-    <Texture :object="material" title="Reflection Texture" property="reflectionTexture" @change="force" />
+    <Texture :object="material" :title="$t('component.material.opacityTexture')" property="opacityTexture" />
+    <Texture :object="material" :title="$t('component.material.reflectionTexture')" property="reflectionTexture"
+      @change="force" />
 
-    <Texture :object="material" title="Metallic Texture" property="metallicTexture" @change="force">
+    <Texture :object="material" :title="$t('component.material.metallicTexture')" property="metallicTexture"
+      @change="force">
       <template v-if="material.metallicTexture">
-        <Switch label="Use Roughness from alpha" :object="material" property="useRoughnessFromMetallicTextureAlpha" />
-        <Switch label="Use Roughness from green" :object="material" property="useRoughnessFromMetallicTextureGreen" />
-        <Switch label="Use Metallness From Blue" :object="material" property="useMetallnessFromMetallicTextureBlue" />
-        <Switch label="Use Ambient From Red" :object="material" property="useAmbientOcclusionFromMetallicTextureRed"
-          @change="force" />
+        <Switch :label="$t('component.material.useRoughnessFromMetallicTextureAlpha')" :object="material"
+          property="useRoughnessFromMetallicTextureAlpha" />
+        <Switch :label="$t('component.material.useRoughnessFromMetallicTextureGreen')" :object="material"
+          property="useRoughnessFromMetallicTextureGreen" />
+        <Switch :label="$t('component.material.useMetallnessFromMetallicTextureBlue')" :object="material"
+          property="useMetallnessFromMetallicTextureBlue" />
+        <Switch :label="$t('component.material.useAmbientOcclusionFromMetallicTextureRed')" :object="material"
+          property="useAmbientOcclusionFromMetallicTextureRed" @change="force" />
         <template v-if="material.useAmbientOcclusionFromMetallicTextureRed">
-          <Number label="Ambient Strength" :object="material" property="ambientTextureStrength" :min="0" />
+          <Slider :label="$t('component.material.ambientTextureStrength')" :object="material"
+            property="ambientTextureStrength" :min="0" />
         </template>
       </template>
     </Texture>
 
-    <Texture :object="material" title="Metallic Reflectance Texture" property="metallicReflectanceTexture"
-      @change="force">
+    <Texture :object="material" :title="$t('component.material.metallicReflectanceTexture')"
+      property="metallicReflectanceTexture" @change="force">
       <template v-if="material.metallicReflectanceTexture">
-        <Switch label="Use Only Metallic From Metallic Reflectance Texture" :object="material"
+        <Switch :label="$t('component.material.useOnlyMetallicFromMetallicReflectanceTexture')" :object="material"
           property="useOnlyMetallicFromMetallicReflectanceTexture" @change="force" />
       </template>
     </Texture>
 
-    <Texture :object="material" title="Emissive Texture" property="emissiveTexture" />
-    <Texture :object="material" title="Lightmap Texture" property="lightmapTexture">
+    <Texture :object="material" :title="$t('component.material.emissiveTexture')" property="emissiveTexture" />
+    <Texture :object="material" :title="$t('component.material.lightmapTexture')" property="lightmapTexture">
       <template v-if="material.lightmapTexture">
-        <Switch label="Use Lightmap As Shadowmap" :object="material" property="useLightmapAsShadowmap" />
+        <Switch :label="$t('component.material.useLightmapAsShadowmap')" :object="material"
+          property="useLightmapAsShadowmap" />
       </template>
     </Texture>
   </SectionField>
@@ -215,8 +237,6 @@ import Texture from "@/component/base/Texture.vue"
 import Color from "@/component/base/Color.vue"
 import Slider from "@/component/base/Slider.vue"
 const props = defineProps<{ mesh?: any; material: any; }>()
-console.log(props.material);
-
 const labelDiv = (t: string) => ({ render: () => t }) as any
 const force = () => { }
 const metallicToggle = computed(() => ({ checked: props.material.metallic !== null }))

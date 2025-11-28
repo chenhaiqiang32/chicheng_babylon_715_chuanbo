@@ -1,11 +1,12 @@
 <template>
-    <SectionField title="Common">
-        <Field title="Type">
+    <SectionField :title="$t('component.common.title')">
+        <Field :title="$t('component.common.type')">
             <div class="mesh-type-label">{{ objectType }}</div>
         </Field>
-        <StringField :object="props.object" property="name" label="Name"
+        <StringField :object="props.object" property="name" :label="$t('component.common.name')"
             @change="() => onNodeModifiedObservable.notifyObservers(object)" />
-        <Switch :object="props.object" property="isVisible" label="Visible" />
+        <Switch :object="props.object" property="isVisible" :label="$t('component.common.visible')"
+            @change="setVisible" />
     </SectionField>
 </template>
 <script setup lang='ts'>
@@ -14,29 +15,21 @@ import SectionField from '@/component/common/SectionField.vue'
 import StringField from '@/component/base/StringField.vue'
 import Switch from "@/component/base/Switch.vue";
 import { onNodeModifiedObservable } from "@/tools/observables"
-import {
-    Vector3,
-    Node,
-    InstancedMesh,
-} from '@babylonjs/core';
 import Field from "@/component/common/Field.vue";
 const props = defineProps<{ object: any | null }>()
 //const objectType = ref<string>("");
 // 计算属性：获取物体类型信息
 const objectType = computed(() => {
-    console.log(props.object);
-
     if (!props.object) return 'None';
-
     return props.object.getClassName?.() || 'Unknown';
 });
-
-const isInstanced = computed(() => props.object instanceof InstancedMesh)
-function isInstancedMesh(object: any): object is InstancedMesh {
-    return object.getClassName?.() === "InstancedMesh";
+function setVisible(visible: boolean) {
+    props.object.setEnabled(visible)
+    onNodeModifiedObservable.notifyObservers(props.object)
 }
+
+
 watch(() => props.object, (newObject) => {
-    console.log(newObject);
     if (!newObject) return;
 }, { immediate: true })
 </script>

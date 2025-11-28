@@ -19,8 +19,6 @@ watch(
   () => props.object ? getInspectorPropertyValue(props.object, props.property) : false,
   (newVal) => {
     value.value = newVal ?? false
-    // 注意：只有在外部修改（如撤销操作）时才更新oldValue
-    // 组件内部的修改已经在onToggle中处理了oldValue的更新
   },
   { immediate: true, deep: true }
 )
@@ -30,11 +28,9 @@ const handleClick = (event: MouseEvent) => {
 
   const oldValue = value.value;
   const newValue = !oldValue;
-
   value.value = newValue;
   setInspectorEffectivePropertyValue(props.object, props.property, newValue);
   emit("change", newValue);
-
   if (!props.noUndoRedo) {
     registerSimpleUndoRedo({
       object: props.object,

@@ -35,5 +35,48 @@
       "feedback": "反馈",
       "about": "关于"
     }
+  },
+  "component": {
+    "common": {
+      "title": "常规",
+      "type": "类型",
+      "name": "名称",
+      "visible": "可见性"
+    },
+    "transform": {
+      "title": "矩阵信息",
+      "position": "位置",
+      "rotation": "旋转",
+      "scaling": "缩放"
+    },
+    "material": {
+      "title": "材质",
+      "name": "材质名称",
+      "backFaceCulling": "背面裁剪",
+      "alpha": "透明度",
+      "directIntensity": "光照强度",
+      "environmentIntensity": "环境光强度",
+      "emissiveIntensity": "自发光强度",
+      "emissiveTexture": "自发光纹理",
+      "specularIntensity": "镜面反射强度",
+      "albedo": "基础颜色",
+      "albedoTexture": "基础颜色纹理",
+      "useAlphaFromDiffuseTexture": "使用透明度通道",
+      "alphaCutOff": "透明度阈值",
+      "bumpTexture": "凹凸贴图",
+      "invertNormalMapX": "反转X轴",
+      "invertNormalMapY": "反转Y轴",
+      "useObjectSpaceNormalMap": "空间法线贴图",
+      "useParallax": "使用视差贴图",
+      "parallaxOcclusion": "视差遮挡",
+      "parallaxScaleBias": "视差缩放偏置",
+      "disableBumpMap": "禁用凹凸贴图",
+      "metallicTexture": "金属纹理",
+      "opacityTexture": "透明度纹理",
+      "reflectionTexture": "反射纹理",
+      "lightmapTexture": "光照贴图纹理",
+      "useLightmapAsShadowmap": "将光照贴图作为阴影贴图",
+      "useOnlyMetallicFromMetallicReflectanceTexture": "仅使用反射纹理的金属通道"
+    }
   }
 }
