@@ -3,13 +3,16 @@
         <div style="margin-left: 20px;">
         </div>
         <Menu :data="menuItems"></Menu>
-        <input ref="fileInput" type="file" @change="HandleFileChange" style="display: none;"/>
+        <!-- <input ref="fileInput" type="file" @change="HandleFileChange" style="display: none;"/> -->
     </div>
 </template>
 <script setup lang='ts'>
+import { AssetsManager } from '@/3d/assets/AssetsManager';
+import { RuntimeAssets } from '@/3d/assets/RuntimeAssets';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
 import { ModelLoader } from '@/core/modelLoader/modelLoader';
+import { Utils } from '@/utils';
 import { useDark, useToggle } from '@vueuse/core'
 import { ref } from 'vue'
 
@@ -105,17 +108,14 @@ function exportScene() {
     Editor.Instance.export();
 }
 function importScene() {
-    //Editor.Instance.loadScene('2.zip');
-    fileInput?.value.click();
-}
+    Utils.chooseFile().then((fileList) => {
+        if (fileList[0]) {
+            //RuntimeAssets.Instance.importMesh(fileList[0])
+            const modelLoader = new ModelLoader(fileList);
+            modelLoader.load();
+        }
+    })
 
-async function HandleFileChange(event: Event){
-    const input = event.target as HTMLInputElement;
-
-    // TODO:根据导入文件类型不同，执行不同的加载逻辑
-    // 目前只支持单文件：.glb, .zip(gltf)
-    const modelLoader = new ModelLoader(input.files);
-    modelLoader.load();
 }
 
 </script>

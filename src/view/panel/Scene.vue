@@ -10,10 +10,6 @@ import { nextTick, onMounted, ref } from 'vue';
 import ToolBar from './scene/ToolBar.vue'
 
 const canvasRef = ref<HTMLCanvasElement>()
-
-
-
-
 onMounted(() => {
     nextTick(() => {
         Editor.Instance.init(canvasRef.value)

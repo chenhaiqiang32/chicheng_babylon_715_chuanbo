@@ -1,7 +1,7 @@
 @forward 'element-plus/theme-chalk/src/common/var.scss' with (
   $colors: (
     'primary': (
-      'base': #ff0000,
+      'base': #ff4000,
     ),
   ),
   $font-size: (
@@ -21,6 +21,10 @@
   color: #fff;
 }
 .el-input__wrapper {
-  background-color: var(--el-bg-color) !important;
+  background-color: var(--input-color) !important;
+  box-shadow: none !important;
+}
+.el-input__inner {
+  color: var(--title--color) !important;
   box-shadow: none !important;
 }

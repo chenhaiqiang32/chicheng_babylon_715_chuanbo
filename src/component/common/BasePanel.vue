@@ -20,6 +20,7 @@ const props = defineProps<{
     display: flex;
     flex-direction: column;
 
+
     .panel-header {
         height: 32px;
         line-height: 32px;
@@ -30,7 +31,7 @@ const props = defineProps<{
     .panel-content {
         flex: 1;
         height: 0;
-
+        //   background-color: var(--bg-color);
     }
 }
 </style>

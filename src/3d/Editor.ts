@@ -19,6 +19,7 @@ import {
   MeshBuilder,
   Texture,
   LightGizmo,
+  TransformNode,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -27,13 +28,13 @@ import { watch, type WatchHandle } from 'vue';
 import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
 import { hasViewFlag } from '@/core/ViewFlagsMode';
+import { RuntimeAssets } from './assets/RuntimeAssets';
 
 export class Editor {
   loadScene(arg0: string) {}
   private scene: Scene;
   private engine: Engine;
   private gizmoManager: GizmoManager;
-  private shadowGenerator: CascadedShadowGenerator;
 
   private static instance: Editor;
   static get Instance() {
@@ -41,6 +42,23 @@ export class Editor {
       Editor.instance = new Editor();
     }
     return Editor.instance;
+  }
+
+  private resScene: Scene;
+
+  get ResScene() {
+    if (this.resScene == null) {
+      this.resScene = new Scene(this.engine);
+    }
+    return this.resScene;
+  }
+
+  get Scene() {
+    return this.scene;
+  }
+
+  get Engine() {
+    return this.engine;
   }
 
   private resizeObserver: ResizeObserver;
@@ -146,6 +164,9 @@ export class Editor {
     this.initWatch();
 
     useScene().setHierarchy(this.scene.rootNodes);
+    this.scene.onNewTransformNodeAddedObservable.add((node) => {
+      useScene().setHierarchy(this.scene.rootNodes);
+    });
     setTimeout(() => {
       this.resize();
     }, 100);
@@ -198,6 +219,7 @@ export class Editor {
     const rootNodes = result.meshes;
     rootNodes.forEach((mesh) => {
       mesh.receiveShadows = true;
+
       //this.shadowGenerator.addShadowCaster(mesh as AbstractMesh);
     });
     this.resize();
@@ -229,19 +251,19 @@ export class Editor {
     directionalLight.intensity = 0.5;
     this.light = directionalLight;
 
-    const box = MeshBuilder.CreateBox('box', {}, scene);
-    box.position = new Vector3(0, 0, 0);
-    box.receiveShadows = true;
-    const mat = new PBRMaterial('boxMat', scene);
-    box.material = mat;
-    mat.albedoTexture = new Texture('./img/Avocado_baseColor.png', scene);
-    mat.metallic = 0.3;
-    mat.roughness = 0.7;
+    // const box = MeshBuilder.CreateBox('box', {}, scene);
+    // box.position = new Vector3(0, 0, 0);
+    // box.receiveShadows = true;
+    // const mat = new PBRMaterial('boxMat', scene);
+    // box.material = mat;
+    // mat.albedoTexture = new Texture('./img/Avocado_baseColor.png', scene);
+    // mat.metallic = 0.3;
+    // mat.roughness = 0.7;
 
-    const sphere = MeshBuilder.CreateSphere('sphere', {}, scene);
-    sphere.position.set(0, 1, 0);
+    // const sphere = MeshBuilder.CreateSphere('sphere', {}, scene);
+    // sphere.position.set(0, 1, 0);
 
-    // await this.loadFbx();
+    await this.loadFbx();
     return scene;
   }
 
