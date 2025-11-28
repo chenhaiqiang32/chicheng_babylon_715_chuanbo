@@ -10,7 +10,9 @@ import { AssetsManager } from '@/3d/assets/AssetsManager';
 import { RuntimeAssets } from '@/3d/assets/RuntimeAssets';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
+import { useScene } from '@/store/useScene';
 import { Utils } from '@/utils';
+import { Scene } from '@babylonjs/core';
 import { useDark, useToggle } from '@vueuse/core'
 
 const isDark = useDark({
@@ -106,7 +108,13 @@ function exportScene() {
 function importScene() {
     Utils.chooseFile().then((fileList) => {
         if (fileList[0]) {
-            RuntimeAssets.Instance.importMesh(fileList[0])
+            RuntimeAssets.Instance.importMesh(fileList[0]).then(async (assets) => {
+                await assets.addToScene(Editor.Instance.Scene);
+                setTimeout(() => {
+                    useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
+                }, 1000);
+
+            })
         }
     })
 

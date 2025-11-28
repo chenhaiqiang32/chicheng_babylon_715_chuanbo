@@ -1,8 +1,12 @@
 import { Mesh, Scene } from '@babylonjs/core';
 import type { CC } from '../../BaseRes';
-import { IAssets } from '../../AssetsManager';
+import { ILoaderAssets, ICollectAssets } from '../../AssetsManager';
 
-export function serializeMeshNode(mesh: Mesh, meshData: CC.MeshNode, assetsManager: IAssets) {
+export function serializeMeshNode(
+  mesh: Mesh,
+  meshData: CC.MeshNode,
+  assetsManager: ICollectAssets,
+) {
   meshData.type = 'mesh';
   meshData.material = mesh.material?.uuid || '';
   meshData.sideOrientation = mesh.sideOrientation;
@@ -16,7 +20,7 @@ export function serializeMeshNode(mesh: Mesh, meshData: CC.MeshNode, assetsManag
   }
 }
 
-export async function deserializeMeshNode(data: CC.MeshNode, scene: Scene, assets: IAssets) {
+export async function deserializeMeshNode(data: CC.MeshNode, scene: Scene, assets: ILoaderAssets) {
   const mesh = new Mesh(data.name, scene, {});
   mesh.sideOrientation = data.sideOrientation;
   mesh.uniqueId = data.id;

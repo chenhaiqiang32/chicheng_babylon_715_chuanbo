@@ -87,6 +87,8 @@ export class Editor {
     }
     if (this._selectNodes.length > 0) {
       this._selectNodes.forEach((item) => {
+        console.log(item.parent);
+
         if (item instanceof Mesh) {
           item.overlayColor = new Color3(1, 0, 0);
           item.overlayAlpha = 0.2;
@@ -138,9 +140,9 @@ export class Editor {
     this.initWatch();
     //
     useScene().setHierarchy(this.scene.rootNodes);
-    this.scene.onNewTransformNodeAddedObservable.add((node) => {
-      useScene().setHierarchy(this.scene.rootNodes);
-    });
+    // this.scene.onNewTransformNodeAddedObservable.add((node) => {
+
+    // });
     setTimeout(() => {
       this.resize();
     }, 100);
@@ -182,6 +184,10 @@ export class Editor {
     this.resize();
   }
 
+  newScene() {
+    return new Scene(this.engine);
+  }
+
   async createScene() {
     const scene = new Scene(this.engine);
     const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), this.scene);
@@ -219,7 +225,7 @@ export class Editor {
     // const sphere = MeshBuilder.CreateSphere('sphere', {}, scene);
     // sphere.position.set(0, 1, 0);
 
-    await this.loadFbx();
+    //await this.loadFbx();
     return scene;
   }
 

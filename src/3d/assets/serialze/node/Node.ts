@@ -4,9 +4,9 @@ import { deserializeMeshNode, serializeMeshNode } from './Mesh';
 import { deserializeCamera, serializeCamera } from './Camera';
 import { deserializeTransformNode, serializeTransformNode } from './Transform';
 import { deserializeLight, serializeLight } from './Light';
-import { IAssets } from '../../AssetsManager';
+import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 
-export function serializeNode(node: TransformNode, assets: IAssets): CC.ObjectNode {
+export function serializeNode(node: TransformNode, assets: ICollectAssets): CC.ObjectNode {
   try {
     const reuslt: Partial<CC.ObjectNode> = {
       id: node.uniqueId,
@@ -35,7 +35,7 @@ export function serializeNode(node: TransformNode, assets: IAssets): CC.ObjectNo
 export async function deserializeNode(
   node: CC.ObjectNode,
   scene: Scene,
-  assets: IAssets,
+  assets: ILoaderAssets,
   parent?: Node,
 ) {
   let currentNode: Node;
@@ -43,9 +43,9 @@ export async function deserializeNode(
     currentNode = await deserializeMeshNode(node as CC.MeshNode, scene, assets);
     deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode);
   } else if (node.type === 'camera') {
-    currentNode = deserializeCamera(node as CC.CameraNode, scene);
+    currentNode = deserializeCamera(node as CC.CameraNode, scene, assets);
   } else if (node.type === 'light') {
-    currentNode = deserializeLight(node as CC.LightNode, scene);
+    currentNode = deserializeLight(node as CC.LightNode, scene, assets);
   } else {
     currentNode = new TransformNode(node.name, scene);
     deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode);

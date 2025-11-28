@@ -1,4 +1,4 @@
-import { Quaternion, type TransformNode } from '@babylonjs/core';
+import { type TransformNode } from '@babylonjs/core';
 import type { CC } from '../../BaseRes';
 
 export function serializeTransformNode(

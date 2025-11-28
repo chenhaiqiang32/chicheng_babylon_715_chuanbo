@@ -18,21 +18,22 @@ import { ID } from '@/utils/id';
 import { CC } from './BaseRes';
 import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import JSZip from 'jszip';
-import { deserializeNode, serializeNode } from './serialze/node/Node';
 
-export interface IAssets {
+export interface ICollectAssets {
   addCubeTexture(cubeTexture: CubeTexture): void;
   addTexture(texture: BaseTexture): void;
   addMaterial(material: Material): void;
   addGeometry(geometry: Geometry): void;
+}
 
+export interface ILoaderAssets {
   getGeometry(uuid: string): Promise<Geometry>;
   getMaterial(uuid: string): Promise<Material>;
   getTexture(uuid: string): Promise<BaseTexture>;
   getCubeTexture(uuid: string): Promise<CubeTexture>;
 }
 
-export class AssetsManager implements IAssets {
+export class AssetsManager implements ICollectAssets, ILoaderAssets {
   private static instance: AssetsManager;
   cubeTexture: CubeTexture[] = [];
   texture: BaseTexture[] = [];
@@ -152,7 +153,6 @@ export class AssetsManager implements IAssets {
     Texture.SerializeBuffers = false;
     const textureArray = new Array<any>();
     for (const tex of this.texture) {
-      console.log(tex);
       const texture = tex.getInternalTexture();
       const data = tex.serialize();
       if (texture._buffer) {
