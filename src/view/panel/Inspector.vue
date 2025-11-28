@@ -22,15 +22,15 @@
 </template>
 <script setup lang='ts'>
 import BasePanel from '@/component/common/BasePanel.vue'
-import Common from '@/component/base/Common.vue'
+import Common from './inspector/Common.vue'
 import { isNode } from '@/tools/guards/nodes.ts';
 import { ref, reactive, watch, computed, KeepAlive } from 'vue'
 import { storeToRefs } from 'pinia';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
-import MaterialInspectorRouter from '@/component/material/MaterialRouter.vue'
-import Transform from '@/component/base/Transform.vue'
-import Collision from '@/component/base/Collision.vue'
+import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
+import Transform from './inspector/Transform.vue'
+import Collision from './inspector/Collision.vue'
 const { currentSelected } = storeToRefs(useScene());
 const props = defineProps<{ editor: any }>()
 const activeTab = ref("entity")

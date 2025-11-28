@@ -28,7 +28,7 @@ import {
 import { inject, toRaw, computed } from 'vue';
 import { reactive, watch, ref, onMounted, onUnmounted } from 'vue';
 import Vector from '@/component/base/Vector.vue'
-import SectionField from '@/component/base/SectionField.vue'
+import SectionField from '@/component/common/SectionField.vue'
 import { isMesh } from '@/tools/guards/nodes';
 import { onNodeModifiedObservable } from "@/tools/observables"
 

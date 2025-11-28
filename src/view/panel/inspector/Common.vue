@@ -10,16 +10,16 @@
 </template>
 <script setup lang='ts'>
 import { computed, ref, watch } from "vue"
-import SectionField from '@/component/base/SectionField.vue'
+import SectionField from '@/component/common/SectionField.vue'
 import StringField from '@/component/base/StringField.vue'
 import Switch from "@/component/base/Switch.vue";
-import { onNodeModifiedObservable } from "../../tools/observables"
+import { onNodeModifiedObservable } from "@/tools/observables"
 import {
     Vector3,
     Node,
     InstancedMesh,
 } from '@babylonjs/core';
-import Field from "../common/Field.vue";
+import Field from "@/component/common/Field.vue";
 const props = defineProps<{ object: any | null }>()
 //const objectType = ref<string>("");
 // 计算属性：获取物体类型信息

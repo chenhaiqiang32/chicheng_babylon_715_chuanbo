@@ -1,8 +1,8 @@
 <template>
-      <div class="utils-row">
-      <el-button type="default" class="w-full" @click="handleExport">Export...</el-button>
-      <el-button v-if="mesh" type="danger" class="w-full" @click="handleRemove">Remove</el-button>
-    </div>
+  <div class="utils-row">
+    <el-button type="default" class="w-full" @click="handleExport">Export...</el-button>
+    <el-button v-if="mesh" type="danger" class="w-full" @click="handleRemove">Remove</el-button>
+  </div>
   <!-- <SectionField title="Utils">
     <div class="utils-row">
       <el-button type="default" class="w-full" @click="handleExport">Export...</el-button>
@@ -19,7 +19,7 @@
 // import { onRedoObservable, registerUndoRedo } from "../../../editor/tools/undoredo"
 // import { showConfirm } from "../../../editor/ui/dialog"
 // import { projectConfiguration } from "../../../editor/project/configuration"
-import SectionField from "./SectionField.vue"
+import SectionField from "@/component/common/SectionField.vue"
 
 const props = defineProps<{ mesh?: any; material: any }>()
 

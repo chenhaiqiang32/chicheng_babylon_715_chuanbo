@@ -206,18 +206,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue"
-//import { registerSimpleUndoRedo } from "../../tools/undoredo"
-import AlphaModeField from "../base/AlphaModeField.vue"
-import TransparencyModeField from "../base/TransparencyModeField.vue"
-import MaterialInspectorUtils from "../base/MaterialInspectorUtils.vue"
-import SectionField from "../base/SectionField.vue"
-import StringField from "../base/StringField.vue"
-import Switch from "../base/Switch.vue"
-import Number from "../base/Number.vue"
-import Texture from "../base/Texture1.vue"
-import Color from "../base/Color.vue"
-import Slider from "../base/Slider.vue"
+import { computed } from "vue"
+import SectionField from "@/component/common/SectionField.vue"
+import StringField from "@/component/base/StringField.vue"
+import Switch from "@/component/base/Switch.vue"
+import Number from "@/component/base/Number.vue"
+import Texture from "@/component/base/Texture.vue"
+import Color from "@/component/base/Color.vue"
+import Slider from "@/component/base/Slider.vue"
 const props = defineProps<{ mesh?: any; material: any; editor: any }>()
 console.log(props.material);
 

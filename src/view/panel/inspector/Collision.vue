@@ -29,7 +29,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, watch } from "vue"
-import SectionField from '@/component/base/SectionField.vue'
+import SectionField from '@/component/common/SectionField.vue'
 import Switch from "@/component/base/Switch.vue";
 import { AbstractMesh, Mesh, Tools } from '@babylonjs/core';
 import { UniqueNumber } from "@/tools/guards/tools";
