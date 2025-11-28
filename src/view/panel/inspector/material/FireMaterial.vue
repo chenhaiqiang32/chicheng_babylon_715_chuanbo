@@ -7,5 +7,5 @@
 <script setup lang="ts">
 import SectionField from "@/component/common/SectionField.vue"
 import StringField from "@/component/base/StringField.vue"
-const props = defineProps<{ mesh?: any; material: any; editor: any }>()
+const props = defineProps<{ mesh?: any; material: any; }>()
 </script>

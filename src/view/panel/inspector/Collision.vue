@@ -37,7 +37,7 @@ import { UniqueNumber } from "@/tools/guards/tools";
 import { isInstancedMesh, isMesh } from "@/tools/guards/nodes"
 import { CollisionMesh, type CollisionMeshType } from "@/tools/node/collision"
 
-const props = defineProps<{ editor: any; object: AbstractMesh }>()
+const props = defineProps<{ object: AbstractMesh }>()
 
 const mesh = computed<AbstractMesh>(() => {
   let m: any = props.object._masterMesh ?? props.object

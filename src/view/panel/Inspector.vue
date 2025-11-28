@@ -6,14 +6,14 @@
                     <Common v-if="selectedObject" :object="selectedObject" />
                 </KeepAlive>
                 <KeepAlive>
-                    <Transform :editor="props.editor" :object="selectedObject" />
+                    <Transform :object="selectedObject" />
                 </KeepAlive>
                 <KeepAlive>
-                    <Collision v-if="selectedObject?.geometry" :editor="props.editor" :object="selectedObject" />
+                    <Collision v-if="selectedObject?.geometry" :object="selectedObject" />
                 </KeepAlive>
                 <KeepAlive>
                     <MaterialInspectorRouter v-if="selectedObject?.geometry" :mesh="selectedObject"
-                        :material="selectedObject.material" :editor="props.editor" />
+                        :material="selectedObject.material" />
                 </KeepAlive>
             </div>
         </el-scrollbar>
@@ -32,7 +32,6 @@ import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
 import Collision from './inspector/Collision.vue'
 const { currentSelected } = storeToRefs(useScene());
-const props = defineProps<{ editor: any }>()
 const activeTab = ref("entity")
 const search = ref("")
 const editedObject = ref<any | null>(null)
@@ -51,22 +50,15 @@ const selectedObject = ref<any>(null);
 
 // 监听 currentSelected 变化，更新选中的对象
 watch(currentSelected, (newSelected) => {
-    console.log('currentSelected 变化:', newSelected.values);
-
     if (newSelected && newSelected.length > 0) {
-        // 获取第一个选中的对象
         const objectId = newSelected[0];
-        console.log('设置选中对象:', objectId);
-
         try {
             const sceneObject = Editor.Instance.getNodeById(objectId);
             if (sceneObject) {
                 selectedObject.value = sceneObject;
                 editedObject.value = sceneObject;
-
             }
         } catch (error) {
-            console.warn('无法获取选中的对象:', error);
             selectedObject.value = null;
             editedObject.value = null;
         }
@@ -76,23 +68,6 @@ watch(currentSelected, (newSelected) => {
     }
 }, { immediate: true });
 
-// 监听 editor 变化
-watch(() => props.editor, (newEditor) => {
-    if (newEditor && currentSelected.value && currentSelected.value.length > 0) {
-        const objectId = currentSelected.value[0];
-        try {
-            const sceneObject = newEditor.getNodeById(objectId);
-            if (sceneObject) {
-                selectedObject.value = sceneObject;
-                editedObject.value = sceneObject;
-            }
-        } catch (error) {
-            console.warn('无法获取选中的对象:', error);
-            selectedObject.value = null;
-            editedObject.value = null;
-        }
-    }
-});
 
 
 </script>

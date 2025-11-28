@@ -76,6 +76,6 @@ import AlphaModeField from "@/component/base/AlphaModeField.vue"
 import TransparencyModeField from "@/component/base/TransparencyModeField.vue"
 import MaterialInspectorUtils from "./MaterialInspectorUtils.vue"
 
-const props = defineProps<{ mesh?: any; material: any; editor: any }>()
+const props = defineProps<{ mesh?: any; material: any; }>()
 const force = () => { }
 </script>

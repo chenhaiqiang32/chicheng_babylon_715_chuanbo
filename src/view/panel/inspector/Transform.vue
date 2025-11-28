@@ -32,7 +32,7 @@ import SectionField from '@/component/common/SectionField.vue'
 import { isMesh } from '@/tools/guards/nodes';
 import { onNodeModifiedObservable } from "@/tools/observables"
 
-const props = defineProps<{ editor: any; object: any }>();
+const props = defineProps<{ object: any }>();
 const label = (t: string) => t;
 const hasQuaternion = computed(() => !!props.object?.rotationQuaternion)
 const rotationProxy = ref({ x: 0, y: 0, z: 0 })

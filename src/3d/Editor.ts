@@ -219,7 +219,7 @@ export class Editor {
     // const sphere = MeshBuilder.CreateSphere('sphere', {}, scene);
     // sphere.position.set(0, 1, 0);
 
-    // await this.loadFbx();
+    await this.loadFbx();
     return scene;
   }
 

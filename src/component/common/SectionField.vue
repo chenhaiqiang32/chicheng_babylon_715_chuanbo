@@ -53,14 +53,9 @@ const opened = ref(true)
   gap: 8px;
   width: 100%;
   border-radius: 8px;
-  padding: 8px;
+  padding: 4px;
   background-color: var(--bg-color-1);
-
-  &+& {
-    margin-top: 4px;
-  }
-
-  /* background: var(--el-color-info-light-9); */
+  margin-top: 4px;
 }
 
 .editor-section__header {
@@ -70,7 +65,6 @@ const opened = ref(true)
   width: 100%;
   padding: 8px 12px;
   border-radius: 8px;
-  /* background: var(--el-color-info-light-8); */
   background-color: var(--bg-color-2);
   cursor: pointer;
   transition: background .2s;

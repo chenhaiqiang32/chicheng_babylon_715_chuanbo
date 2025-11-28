@@ -1,5 +1,5 @@
 <template>
-  <component :is="componentName" :mesh="mesh" :material="material" :editor="editor" />
+  <component :is="componentName" :mesh="mesh" :material="material" />
 </template>
 
 <script setup lang="ts">
@@ -18,7 +18,7 @@ import CellMaterial from "./CellMaterial.vue"
 import FireMaterial from "./FireMaterial.vue"
 import GradientMaterial from "./GradientMaterial.vue"
 
-const props = defineProps<{ mesh?: any; material: any; editor: any }>()
+const props = defineProps<{ mesh?: any; material: any; }>()
 
 const mapping: Record<string, any> = {
   PBRMaterial: PBRMaterial,
