@@ -20,6 +20,8 @@ import {
   Texture,
   LightGizmo,
   TransformNode,
+  Matrix,
+  Camera,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -34,6 +36,7 @@ export class Editor {
   loadScene(arg0: string) {}
   private scene: Scene;
   private engine: Engine;
+  private camera: Camera;
   private gizmoManager: GizmoManager;
 
   private static instance: Editor;
@@ -148,6 +151,7 @@ export class Editor {
 
     this.initGizmos();
     this.initViewMode();
+    this.initRaycast();
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -242,6 +246,7 @@ export class Editor {
     camera.angularSensibilityX = 200; // 水平拖动速度（越小越快）
     camera.angularSensibilityY = 200; // 垂直拖动速度
     camera.panningSensibility = 500; // 鼠标中键缩放速度（越小越快）
+    this.camera = camera;
 
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
@@ -315,6 +320,24 @@ export class Editor {
   initViewMode(){
     // 默认开始 Gizmos 和 Mask
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
+  }
+
+  initRaycast(){
+    // 鼠标点击后执行射线检测
+    this.scene.onPointerDown = () => {
+      const ray = this.scene.createPickingRay(
+        this.scene.pointerX,
+        this.scene.pointerY,
+        Matrix.Identity(),
+        this.camera
+      );
+
+      const raycastHit = this.scene.pickWithRay(ray);
+      // 赋值当前选中的 Object
+      if(raycastHit.hit){
+        useScene().setCurrentSelect([raycastHit.pickedMesh.id]);
+      }
+    }
   }
 
   // 切换控制模式：选择/移动/旋转/缩放

@@ -108,11 +108,12 @@ function exportScene() {
     Editor.Instance.export();
 }
 function importScene() {
-    Utils.chooseFile().then((fileList) => {
+    Utils.chooseFile().then(async (fileList) => {
         if (fileList[0]) {
             //RuntimeAssets.Instance.importMesh(fileList[0])
             const modelLoader = new ModelLoader(fileList);
-            modelLoader.load();
+            const data = await modelLoader.load();
+            console.log(data);
         }
     })
 

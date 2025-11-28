@@ -1,9 +1,8 @@
 import { Editor } from "@/3d/Editor";
 import { useScene } from "@/store/useScene";
-import { ImportMeshAsync, Scene, SceneLoader } from "@babylonjs/core";
+import { ISceneLoaderAsyncResult, ImportMeshAsync, Scene, SceneLoader } from "@babylonjs/core";
 import { IGLTF } from "@babylonjs/loaders/glTF/2.0";
 import JSZip from "jszip";
-import { resolve } from "path";
 
 // 模型加载
 export class ModelLoader {
@@ -12,25 +11,29 @@ export class ModelLoader {
         this.scene = Editor.Instance['scene'];
     }
 
-    load(){
+    async load():Promise<ISceneLoaderAsyncResult>{
         const file = this.files[0];
 
         // todo:后期再用设计模式优化
         if(file.name.endsWith(".glb")){
-            this.loadGlb(file);
+            return await this.loadGlb(file);
         }
         else if(file.name.endsWith(".zip")){
-            this.loadGLTF(file);
+            return await this.loadGLTF(file);
         }
     }
 
-    loadGlb(file: File){
-        ImportMeshAsync(file, this.scene);
+    async loadGlb(file: File){
+        const result =  await ImportMeshAsync(file, this.scene);
+        useScene().setHierarchy(this.scene.rootNodes);
+        return result;
     }
 
     async loadGLTF(file: File){
+        // 反序列化 zip
         const zip = await JSZip.loadAsync(file);
         let gltfFile: JSZip.JSZipObject | null = null;
+        // 找到 .gltf 文件
         Object.keys(zip.files).forEach(path => {
             if(path.endsWith(".gltf")){
                 gltfFile = zip.files[path];
@@ -54,6 +57,7 @@ export class ModelLoader {
             })
         }
 
+        // 根据 gltf 文件将对应文件转换为 blob
         for(const buf of gltfJson.buffers){
             const uri = buf.uri;
             if(!uri || uri.startsWith("data:")) continue;
@@ -86,6 +90,6 @@ export class ModelLoader {
 
         const result = await SceneLoader.ImportMeshAsync("", "", finalGLTF, this.scene);
         useScene().setHierarchy(this.scene.rootNodes);
-
+        return result;
     }
 }
