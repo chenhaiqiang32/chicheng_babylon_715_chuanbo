@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import { Node, Vector3 } from '@babylonjs/core';
+import { ViewFlagsMode } from '@/core/ViewFlagsMode';
 
 function buildHierarchy(node: Node): HierarchyNode {
   return {
@@ -11,6 +12,7 @@ function buildHierarchy(node: Node): HierarchyNode {
   };
 }
 
+// 模型控制模式
 export enum ControlMode {
     Select = "Select",
     Move = "Move",
@@ -22,7 +24,7 @@ export const useScene = defineStore('scene', () => {
   const hierarchy = ref<HierarchyNode[]>([]);
   const currentSelected = ref<Array<string>>([]);
   const currentControlMode = ref<ControlMode>();
-  const modelPosition = ref<Vector3>();
+  const currentViewFlagsMode  =ref<ViewFlagsMode>();
 
   function setHierarchy(rootNodes: Node[]) {
     hierarchy.value = rootNodes.map(buildHierarchy);
@@ -35,8 +37,19 @@ export const useScene = defineStore('scene', () => {
   function setCurrentControlMode(mode : ControlMode){
     currentControlMode.value = mode;
   }
-
   
+  function setCurrentViewFlagsMode(...flags: ViewFlagsMode[]){
+    currentViewFlagsMode.value = 0;
+    for(const flag of flags){
+      currentViewFlagsMode.value |= flag;
+    }
+  }
 
-  return { hierarchy, setHierarchy, currentSelected, setCurrentSelect, currentControlMode, setCurrentControlMode };
+  return { hierarchy, setHierarchy, 
+           currentSelected, setCurrentSelect, 
+           currentControlMode, setCurrentControlMode,
+           currentViewFlagsMode, setCurrentViewFlagsMode,
+         };
 });
+export { ViewFlagsMode };
+

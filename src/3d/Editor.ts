@@ -1,4 +1,4 @@
-import { ControlMode, useScene } from '@/store/useScene';
+import { ControlMode, ViewFlagsMode, useScene } from '@/store/useScene';
 import {
   ArcRotateCamera,
   CascadedShadowGenerator,
@@ -18,6 +18,7 @@ import {
   DirectionalLight,
   MeshBuilder,
   Texture,
+  LightGizmo,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -25,6 +26,7 @@ import '@babylonjs/materials';
 import { watch, type WatchHandle } from 'vue';
 import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
+import { hasViewFlag } from '@/core/ViewFlagsMode';
 
 export class Editor {
   loadScene(arg0: string) {}
@@ -49,6 +51,13 @@ export class Editor {
 
   private _selectNodes: Node[];
 
+  private enableGizmo : boolean = true;
+
+  private enableMask : boolean = true;
+
+  private lightGizmos : LightGizmo;
+  private light : DirectionalLight;
+
   get selectNodes() {
     return this.selectNodes;
   }
@@ -56,30 +65,37 @@ export class Editor {
     if (this._selectNodes?.length > 0) {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
-          item.renderOverlay = false;
-
-          this.highLightLayer.removeMesh(item);
+          this.toggleMeshMask(item, false);
+          //item.renderOverlay = false;
+          //this.highLightLayer.removeMesh(item);
         }
       });
     }
 
     this._selectNodes = v;
     if (v[0] instanceof AbstractMesh) {
+      this.gizmoManager.attachToMesh(v[0]);
+      if(this.enableGizmo)
         this.gizmoManager.boundingBoxGizmoEnabled = true;
-        this.gizmoManager.attachToMesh(v[0]);
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
       if(v[0].getChildMeshes().length > 0)
         this.gizmoManager.attachToNode(v[0]);
       else 
+      {
         this.gizmoManager.boundingBoxGizmoEnabled = false;
+        this.gizmoManager.attachToNode(v[0]);
+        // 灯光 attach 到 mesh 上，否则旋转 gizmos 无效
+        this.gizmoManager.attachToMesh(this.lightGizmos.attachedMesh);
+      }
     }
     if (this._selectNodes.length > 0) {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
-          item.overlayColor = new Color3(1, 0, 0);
-          item.overlayAlpha = 0.2;
-          item.renderOverlay = true;
+          this.toggleMeshMask(item, this.enableMask);
+          //item.overlayColor = new Color3(1, 0, 0);
+          //item.overlayAlpha = 0.2;
+          //item.renderOverlay = true;
           // this.highLightLayer.addMesh(item, new Color3(0, 0, 1));
         }
       });
@@ -100,6 +116,7 @@ export class Editor {
     // this.scene.activeCamera.attachControl();
     // // this.loadFbx();
 
+
     this.scene = await this.createScene();
 
     const env = CubeTexture.CreateFromPrefilteredData(
@@ -107,43 +124,12 @@ export class Editor {
       this.scene,
     );
 
-
-
     this.scene.environmentTexture = env;
     this.scene.iblIntensity = 0.5;
     // this.scene.debugLayer.show();
 
-    // 修改 boundingboxgizmo 样式
-    let boundingBoxGizmo = new BoundingBoxGizmo();
-    boundingBoxGizmo.setColor(Color3.Red());
-    boundingBoxGizmo.setEnabledScaling(false);
-    boundingBoxGizmo.setEnabledRotationAxis("");
-
-    this.gizmoManager = new GizmoManager(this.scene);
-    this.gizmoManager.enableAutoPicking = false;
-    this.gizmoManager.positionGizmoEnabled = true;
-    this.gizmoManager.boundingBoxGizmoEnabled = true;
-    this.gizmoManager.gizmos.boundingBoxGizmo = boundingBoxGizmo;
-    this.gizmoManager.boundingBoxGizmoEnabled = false;
-
-    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() =>{
-      // TODO:监听BoundingBoxGizmos拖拽开始
-    });
-
-    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {
-      // TODO:监听BoundingBoxGizmos拖拽结束
-    });
-
-    this.gizmoManager.gizmos.positionGizmo.onDragStartObservable.add(()=> {
-      // TODO:监听gizmos位移开始
-    })
-    this.gizmoManager.gizmos.positionGizmo.onDragEndObservable.add(() => {
-      // TODO:监听gizmos位移结束
-    })
-
-    // 非等比例下无法缩放，需要将 update... 设置为 false
-    this.gizmoManager.rotationGizmoEnabled = true;
-    this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+    this.initGizmos();
+    this.initViewMode();
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -159,14 +145,14 @@ export class Editor {
     resizeObserver.observe(canvas);
     this.initWatch();
 
-    // 默认选择模式
-    this.switchControlType(ControlMode.Select);
-
     useScene().setHierarchy(this.scene.rootNodes);
     setTimeout(() => {
       this.resize();
     }, 100);
     this.test();
+
+    // 默认移动模式
+    useScene().setCurrentControlMode(ControlMode.Move);
   }
 
   test() {}
@@ -184,8 +170,15 @@ export class Editor {
         this.switchControlType(v);
       }
     );
+    const viewFlagsModeWatcher = watch(
+      () => useScene().currentViewFlagsMode,
+      (v) => {
+        this.switchViewFlagsMode(v);
+      }
+    );
     this.watcher.push(selectWatcher);
     this.watcher.push(controlModeWatcher);
+    this.watcher.push(viewFlagsModeWatcher);
   }
 
   async loadFbx() {
@@ -234,6 +227,7 @@ export class Editor {
     const directionalLight = new DirectionalLight('dirLight', new Vector3(0, -1, -1), scene);
     directionalLight.position = new Vector3(0, 10, 0);
     directionalLight.intensity = 0.5;
+    this.light = directionalLight;
 
     const box = MeshBuilder.CreateBox('box', {}, scene);
     box.position = new Vector3(0, 0, 0);
@@ -264,16 +258,54 @@ export class Editor {
     return this.scene.getNodeById(id);
   }
 
+  initGizmos(){
+    // 修改 boundingboxgizmo 样式
+    let boundingBoxGizmo = new BoundingBoxGizmo();
+    boundingBoxGizmo.setColor(Color3.Red());
+    boundingBoxGizmo.setEnabledScaling(false);
+    boundingBoxGizmo.setEnabledRotationAxis("");
+
+    this.gizmoManager = new GizmoManager(this.scene);
+    this.gizmoManager.enableAutoPicking = false;
+    this.gizmoManager.positionGizmoEnabled = true;
+    this.gizmoManager.boundingBoxGizmoEnabled = true;
+    this.gizmoManager.gizmos.boundingBoxGizmo = boundingBoxGizmo;
+    this.gizmoManager.boundingBoxGizmoEnabled = false;
+
+    // 添加灯光 gizmo
+    this.lightGizmos = new LightGizmo();
+    this.lightGizmos.scaleRatio = 2;
+    this.lightGizmos.light = this.light;
+
+    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() =>{
+      // TODO:监听BoundingBoxGizmos拖拽开始
+    });
+
+    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {
+      // TODO:监听BoundingBoxGizmos拖拽结束
+    });
+
+    // 非等比例下无法缩放，需要将 update... 设置为 false
+    this.gizmoManager.rotationGizmoEnabled = true;
+    this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+  }
+
+  initViewMode(){
+    // 默认开始 Gizmos 和 Mask
+    useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
+  }
+
   // 切换控制模式：选择/移动/旋转/缩放
-  switchControlType(mode : ControlMode)
-  {
+  switchControlType(mode : ControlMode){
     switch(mode)
     {
       case ControlMode.Select:
-        this.gizmoManager.positionGizmoEnabled = true;
+        this.gizmoManager.positionGizmoEnabled = false
         this.gizmoManager.rotationGizmoEnabled = false;
         this.gizmoManager.scaleGizmoEnabled = false;
         this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = true;
+        // 选择模式的话把 view 都关掉
+        useScene().setCurrentViewFlagsMode(ViewFlagsMode.None);
         break;
 
       case ControlMode.Move:
@@ -298,6 +330,41 @@ export class Editor {
         break;
     }
   }
+
+  // 判断是否有对应位的 flag -> 执行对应位的操作
+  switchViewFlagsMode(mode: ViewFlagsMode){
+    this.setEnableGizmos(hasViewFlag(mode, ViewFlagsMode.Gizmos));
+    this.setEnableMask(hasViewFlag(mode, ViewFlagsMode.Mask));
+  }
+
+  setEnableGizmos(flag:boolean){
+    this.enableGizmo = flag;
+    this.gizmoManager.boundingBoxGizmoEnabled = flag;
+  }
+
+  setEnableMask(flag:boolean){
+    this.enableMask = flag;
+
+    if(this._selectNodes == undefined) return;
+    this._selectNodes.forEach((item) => {
+        if (item instanceof Mesh) {
+          this.toggleMeshMask(item, this.enableMask);
+        }
+    });
+  }
+
+  toggleMeshMask(mesh:Mesh, isOn:boolean){
+    if(isOn){
+      mesh.overlayColor = new Color3(1, 0, 0);
+      mesh.overlayAlpha = 0.2;
+      mesh.renderOverlay = true;
+    }
+    else {
+      mesh.renderOverlay = false;
+      this.highLightLayer.removeMesh(mesh);
+    }
+  }
+
   export() {
     AssetsManager.Instance.exportScene(this.scene);
     // const json = SceneSerializer.Serialize(this.scene);

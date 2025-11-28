@@ -1,27 +1,46 @@
 <template>
     <div class="tool-bar">
         <div class="transform">
-            <div class="item-icon" :class="{ 'selected': selectedModel === 'move' }" @click="selectedModel = 'move'">
-                <SVG name="move" size="22px"></SVG>
+            <div class="item-icon" :class="{ 'selected': selectedControlMode === ControlMode.Select }" 
+                @click="onControlIconClick(ControlMode.Select)">
+                <SVG name="cursor" :size="iconSize"></SVG>
             </div>
-            <div class="item-icon" :class="{ 'selected': selectedModel === 'rotate' }"
-                @click="selectedModel = 'rotate'">
-                <SVG name="rotate" size="20px"></SVG>
+            <div class="item-icon" :class="{ 'selected': selectedControlMode === ControlMode.Move }" 
+                @click="onControlIconClick(ControlMode.Move)">
+                <SVG name="move" :size="iconSize"></SVG>
             </div>
-            <div class="item-icon" :class="{ 'selected': selectedModel === 'scale' }" @click="selectedModel = 'scale'">
-                <SVG name="scale" size="20px"></SVG>
+            <div class="item-icon" :class="{ 'selected': selectedControlMode === ControlMode.Rotate }"
+                @click="onControlIconClick(ControlMode.Rotate)">
+                <SVG name="rotate" :size="iconSize"></SVG>
+            </div>
+            <div class="item-icon" :class="{ 'selected': selectedControlMode === ControlMode.Scale }" 
+                @click="onControlIconClick(ControlMode.Scale)">
+                <SVG name="scale" :size="iconSize"></SVG>
             </div>
         </div>
-        <SVG style="margin-left: auto;" name="gizmo" size="24px" :color="showGizmo ? '#fff' : '#555'"
-            @click="showGizmo = !showGizmo"></SVG>
+            <div class="view">
+                <div class="item-icon" name="gizmo" size="24px" :class="{'selected': hasViewFlag(viewFlagsMode, ViewFlagsMode.Gizmos)}"
+                    @click="onViewIconClick(ViewFlagsMode.Gizmos)">
+                    <SVG name="gizmo" :size="iconSize"></SVG>
+                </div>
+                <div class="item-icon" name="mask" size="24px" :class="{'selected': hasViewFlag(viewFlagsMode, ViewFlagsMode.Mask)}" 
+                    @click="onViewIconClick(ViewFlagsMode.Mask)">
+                    <SVG name="mask" :size="iconSize"></SVG>
+                </div>
+            </div>
     </div>
 </template>
 <script setup lang='ts'>
 import SVG from '@/component/common/SVG.vue';
+import { ViewFlagsMode, hasViewFlag, toggleViewFlag } from '@/core/ViewFlagsMode';
+import { ControlMode, useScene } from '@/store/useScene';
+import { storeToRefs } from 'pinia';
 import { onMounted, onUnmounted, ref, shallowRef } from 'vue';
 
-const selectedModel = ref('move');
-const showGizmo = ref(false);
+const iconSize : string = "20px";
+const selectedControlMode = storeToRefs(useScene()).currentControlMode;
+const viewFlagsMode = storeToRefs(useScene()).currentViewFlagsMode;
+
 defineEmits<{
 }>();
 
@@ -29,11 +48,19 @@ defineEmits<{
 
 // ==================== 生命周期钩子 ====================
 onMounted(() => {
-
 });
 onUnmounted(() => {
 
 });
+
+function onControlIconClick(mode: ControlMode){
+    useScene().setCurrentControlMode(mode);
+}
+
+function onViewIconClick(flag:ViewFlagsMode){
+    viewFlagsMode.value = toggleViewFlag(viewFlagsMode.value, flag);
+}
+
 </script>
 <style scoped lang='scss'>
 .tool-bar {
@@ -51,22 +78,29 @@ onUnmounted(() => {
 
     .transform {
         display: flex;
+        gap: 5px;
+    }
 
-        .item-icon {
-            aspect-ratio: 1 / 1;
-            padding: 3px;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #888;
-            border-radius: 5px;
+    .view {
+        display: flex;
+        margin-left: auto;
+        gap: 5px;
+    }
 
-            &.selected {
-                background-color: var(--el-bg-color);
-                color: #fff;
-            }
+    .item-icon {
+        aspect-ratio: 1 / 1;
+        padding: 3px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #888;
+        border-radius: 5px;
+
+        &.selected {
+            background-color: var(--el-bg-color);
+            color: #fff;
         }
     }
 }
