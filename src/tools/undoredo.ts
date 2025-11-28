@@ -1,29 +1,22 @@
-//import { shell } from "electron";
-
-import { Observable } from "@babylonjs/core";
-
-import { setInspectorEffectivePropertyValue } from "./property";
+import { Observable } from '@babylonjs/core';
+import { setInspectorEffectivePropertyValue } from './property';
 
 export type SimpleUndoRedoStackItem = {
-	object: any;
-	property: string;
-
-	oldValue: any;
-	newValue: any;
-
-	onLost?: () => void;
-
-	executeRedo?: boolean;
+  object: any;
+  property: string;
+  oldValue: any;
+  newValue: any;
+  action?: () => void;
+  onLost?: () => void;
+  executeRedo?: boolean;
 };
 
 export type UndoRedoStackItem = {
-	undo: () => void;
-	redo: () => void;
-
-	action?: () => void;
-	onLost?: () => void;
-
-	executeRedo?: boolean;
+  undo: () => void;
+  redo: () => void;
+  action?: () => void;
+  onLost?: () => void;
+  executeRedo?: boolean;
 };
 
 export const stack: UndoRedoStackItem[] = [];
@@ -34,75 +27,71 @@ export const onRedoObservable: Observable<void> = new Observable<void>();
 let index = -1;
 
 export function clearUndoRedo() {
-	stack.forEach((item) => {
-		item.onLost?.();
-	});
-
-	index = -1;
-	stack.splice(0, stack.length);
+  stack.forEach((item) => {
+    item.onLost?.();
+  });
+  index = -1;
+  stack.splice(0, stack.length);
 }
 
 export function registerUndoRedo(configuration: UndoRedoStackItem) {
-	const deleted = stack.splice(index + 1, stack.length);
-	deleted.forEach((item) => {
-		item.onLost?.();
-	});
+  const deleted = stack.splice(index + 1, stack.length);
+  deleted.forEach((item) => {
+    item.onLost?.();
+  });
 
-	stack.push(configuration);
+  stack.push(configuration);
 
-	if (stack.length > 200) {
-		stack.shift();
-		// const item = stack.shift();
-		// item?.onLost?.();
-	} else {
-		++index;
-	}
+  if (stack.length > 200) {
+    stack.shift();
+  } else {
+    ++index;
+  }
 
-	if (configuration.executeRedo) {
-		configuration.redo();
-		configuration.action?.();
-	}
+  if (configuration.executeRedo) {
+    configuration.redo();
+    configuration.action?.();
+  }
 }
 
 export function registerSimpleUndoRedo(configuration: SimpleUndoRedoStackItem) {
-	
-	registerUndoRedo({
-		undo: () => {
-			setInspectorEffectivePropertyValue(configuration.object, configuration.property, configuration.oldValue);
-		},
-		redo: () => {
-			setInspectorEffectivePropertyValue(configuration.object, configuration.property, configuration.newValue);
-		},
-		onLost: configuration.onLost,
-		executeRedo: configuration.executeRedo,
-	});
+  registerUndoRedo({
+    undo: () => {
+      setInspectorEffectivePropertyValue(
+        configuration.object,
+        configuration.property,
+        configuration.oldValue,
+      );
+    },
+    redo: () => {
+      setInspectorEffectivePropertyValue(
+        configuration.object,
+        configuration.property,
+        configuration.newValue,
+      );
+    },
+    action: configuration.action,
+    onLost: configuration.onLost,
+    executeRedo: configuration.executeRedo,
+  });
 }
 
 export function undo() {
-	console.log('撤销操作:', index);
-	if (index < 0) {
-		//return shell.beep();
-		return;
-	}
-
-	stack[index].undo();
-	stack[index].action?.();
-
-	--index;
-
-	onUndoObservable.notifyObservers();
+  if (index < 0) {
+    return;
+  }
+  stack[index].undo();
+  stack[index].action?.();
+  --index;
+  onUndoObservable.notifyObservers();
 }
 
 export function redo() {
-	console.log('重做操作:', index);
-	if (index >= stack.length - 1) {
-		//return shell.beep();
-		return;
-	}
-
-	++index;
-	stack[index].redo();
-	stack[index].action?.();
-
-	onRedoObservable.notifyObservers();
+  if (index >= stack.length - 1) {
+    return;
+  }
+  ++index;
+  stack[index].redo();
+  stack[index].action?.();
+  onRedoObservable.notifyObservers();
 }

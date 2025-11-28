@@ -26,8 +26,13 @@ import { watch, type WatchHandle } from 'vue';
 import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
 import { RuntimeAssets } from './assets/RuntimeAssets';
+import { Dispatch } from '@/utils/dispatch';
 
-export class Editor {
+interface EditorEvent {
+  nameChanged: { newName: string; id: string };
+}
+
+export class Editor extends Dispatch<EditorEvent> {
   loadScene(arg0: string) {}
   private scene: Scene;
   private engine: Engine;

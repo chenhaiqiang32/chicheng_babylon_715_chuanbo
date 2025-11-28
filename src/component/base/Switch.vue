@@ -25,7 +25,6 @@ watch(
 
 const handleClick = (event: MouseEvent) => {
   event.stopPropagation();
-
   const oldValue = value.value;
   const newValue = !oldValue;
   value.value = newValue;

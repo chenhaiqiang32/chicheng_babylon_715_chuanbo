@@ -22,7 +22,8 @@ import { ElInput, type ElTree, type TreeNodeData } from 'element-plus';
 import { Search } from '@element-plus/icons-vue'
 
 import { storeToRefs } from 'pinia';
-import { ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { Editor } from '@/3d/Editor';
 
 const searchText = ref('');
 const treeProps = {
@@ -32,6 +33,17 @@ const treeProps = {
 const { hierarchy, currentSelected } = storeToRefs(useScene());
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
+
+onMounted(() => {
+    Editor.Instance.on('nameChanged', onNameChanged)
+})
+
+function onNameChanged(node: { id: string, newName: string }) {
+    const treeNode = treeRef.value.getNode(node.id);
+    if (treeNode) {
+        treeNode.data.name = node.newName;
+    }
+}
 
 const handleNodeClick = (node: HierarchyNode) => {
     currentSelected.value = node ? [node.id] : [];
@@ -53,6 +65,10 @@ function filterHierarchy(value: any, data: TreeNodeData, child: any) {
     return data.name.includes(value);
 }
 
+
+onUnmounted(() => {
+
+})
 
 
 </script>

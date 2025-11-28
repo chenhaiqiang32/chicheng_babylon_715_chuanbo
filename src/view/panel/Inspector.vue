@@ -24,7 +24,7 @@
 import BasePanel from '@/component/common/BasePanel.vue'
 import Common from './inspector/Common.vue'
 import { isNode } from '@/tools/guards/nodes.ts';
-import { ref, reactive, watch, computed, KeepAlive } from 'vue'
+import { ref, reactive, watch, computed, KeepAlive, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
@@ -44,7 +44,7 @@ const setEditedObject = (obj: any) => {
 defineExpose({ setEditedObject })
 
 // 当前选中的对象
-const selectedObject = ref<any>(null);
+const selectedObject = shallowRef<any>(null);
 
 // 监听 currentSelected 变化，更新选中的对象
 watch(currentSelected, (newSelected) => {

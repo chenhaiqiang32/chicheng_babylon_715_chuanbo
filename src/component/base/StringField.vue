@@ -1,9 +1,6 @@
 <template>
   <Field :title="label" :tooltip="tooltip">
-    <el-input size="small" v-if="!multiline" v-model="value" class="editor-string-field__input" @input="onInput"
-      @keyup.enter.native="onEnter" @blur="onBlur" />
-    <el-input size="small" v-else type="textarea" v-model="value" class="editor-string-field__input" @input="onInput"
-      @blur="onBlur" />
+    <input class="input-costum" v-model="value" @change="onEnter" />
   </Field>
 </template>
 
@@ -13,12 +10,12 @@ import Field from "@/component/common/Field.vue"
 import { InfoFilled } from "@element-plus/icons-vue"
 import { registerSimpleUndoRedo } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
+import { Editor } from "@/3d/Editor"
 const props = defineProps<{
   object: any;
   property: string;
   label?: string;
   tooltip?: string;
-  multiline?: boolean;
   noUndoRedo?: boolean
 }>()
 const emit = defineEmits<{ (e: "change", value: string): void }>()
@@ -36,39 +33,39 @@ watch(
   { immediate: true, deep: true }
 )
 
-const onInput = (newValue: string) => {
-  if (newValue !== value.value) {
-    const oldVal = value.value
-    value.value = newValue
-    setInspectorEffectivePropertyValue(props.object, props.property, newValue)
 
-    if (!props.noUndoRedo) {
-      registerSimpleUndoRedo({
-        object: props.object,
-        property: props.property,
-        oldValue: oldVal,
-        newValue: newValue
-      })
-    }
-
-    emit("change", newValue)
-  }
-}
 
 const onEnter = () => {
-  (document.activeElement as HTMLElement)?.blur()
-}
-
-const onBlur = () => {
   const newValue = value.value
-  if (newValue !== oldValue.value && !props.noUndoRedo) {
-    registerSimpleUndoRedo({ object: props.object, property: props.property, oldValue: oldValue.value, newValue })
+
+  const object = props.object;
+  if (!props.noUndoRedo) {
+    registerSimpleUndoRedo({
+      object: object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
+        Editor.Instance.dispatch('nameChanged', { newName: object.name, id: object.id })
+      }
+    })
+  } else {
+    setInspectorEffectivePropertyValue(object, props.property, newValue)
+    Editor.Instance.dispatch('nameChanged', { newName: object.name, id: object.id })
+  }
+
+  if (newValue !== oldValue.value) {
     oldValue.value = newValue
   }
+
+  emit("change", newValue)
+
 }
+
 </script>
 <style scoped lang="scss">
-.el-input {
+.input-costum {
   width: 100%;
+  border: none;
+  height: 24px;
+  padding: 0 5px;
+  background-color: var(--input-color);
+  border-radius: var(--border-radius);
 }
 </style>
