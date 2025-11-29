@@ -18,6 +18,7 @@ import {
   MeshBuilder,
   Texture,
   TransformNode,
+  ImportMeshAsync,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -25,7 +26,6 @@ import '@babylonjs/materials';
 import { watch, type WatchHandle } from 'vue';
 import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
-import { RuntimeAssets } from './assets/RuntimeAssets';
 
 export class Editor {
   loadScene(arg0: string) {}
@@ -87,8 +87,6 @@ export class Editor {
     }
     if (this._selectNodes.length > 0) {
       this._selectNodes.forEach((item) => {
-        console.log(item.parent);
-
         if (item instanceof Mesh) {
           item.overlayColor = new Color3(1, 0, 0);
           item.overlayAlpha = 0.2;
@@ -106,9 +104,10 @@ export class Editor {
       stencil: true,
     });
     // this.scene = await AssetsManager.Instance.loadFile(
-    //   '18a508e08481489d89ed4a4f3f18eff2.zip',
+    //   '4ef6f2a2e7c84f7c8453ea345d6895bc.zip',
     //   this.engine,
     // );
+    // this.scene.activeCamera.attachControl();
 
     // this.scene.activeCamera.attachControl();
     // // this.loadFbx();
@@ -139,10 +138,11 @@ export class Editor {
     resizeObserver.observe(canvas);
     this.initWatch();
     //
-    useScene().setHierarchy(this.scene.rootNodes);
     // this.scene.onNewTransformNodeAddedObservable.add((node) => {
 
     // });
+    useScene().setHierarchy(this.scene.rootNodes);
+
     setTimeout(() => {
       this.resize();
     }, 100);
@@ -161,41 +161,35 @@ export class Editor {
     this.watcher.push(selectWatcher);
   }
 
-  async loadFbx() {
-    const modelUrl = './Avocado.glb';
-    const result = await SceneLoader.ImportMeshAsync(
-      '',
-      '',
-      modelUrl.split('/').pop(),
-      this.scene,
-      (evt) => {
-        // 实时加载进度（可选）
-        if (evt.lengthComputable) {
-          console.log('加载进度:', ((evt.loaded / evt.total) * 100).toFixed(2) + '%');
-        }
-      },
-    );
+  loadFbx = async () => {
+    const modelUrl = './BoomBox.glb';
+    const result = await ImportMeshAsync(modelUrl, this.scene);
     const rootNodes = result.meshes;
     rootNodes.forEach((mesh) => {
       mesh.receiveShadows = true;
-
       //this.shadowGenerator.addShadowCaster(mesh as AbstractMesh);
     });
     this.resize();
-  }
+    useScene().setHierarchy(this.scene.rootNodes);
+  };
 
   newScene() {
-    return new Scene(this.engine);
+    const scene = new Scene(this.engine);
+    const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
+    scene.environmentTexture = env;
+    scene.useRightHandedSystem = true;
+    return scene;
   }
 
   async createScene() {
     const scene = new Scene(this.engine);
+    scene.useRightHandedSystem = true;
     const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), this.scene);
-    camera.minZ = 0.01;
+    camera.minZ = 0.001;
     camera.maxZ = 5000;
     camera.attachControl();
-    camera.lowerRadiusLimit = 0.1;
-    camera.upperRadiusLimit = 20;
+    camera.lowerRadiusLimit = 0.01;
+    camera.upperRadiusLimit = 5000;
     camera.wheelPrecision = 60; // 鼠标滚轮（传统鼠标）
     camera.wheelDeltaPercentage = 0.08; // 触控板滚轮（Mac/Windows 触控板）
     camera.pinchDeltaPercentage = 0.15; // 手机/平板双指缩放

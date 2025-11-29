@@ -7,12 +7,11 @@
 </template>
 <script setup lang='ts'>
 import { AssetsManager } from '@/3d/assets/AssetsManager';
-import { RuntimeAssets } from '@/3d/assets/RuntimeAssets';
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
 import { useScene } from '@/store/useScene';
 import { Utils } from '@/utils';
-import { Scene } from '@babylonjs/core';
 import { useDark, useToggle } from '@vueuse/core'
 
 const isDark = useDark({
@@ -27,12 +26,11 @@ const menuItems: MenuItem[] = [
         name: 'menu.file.title',
         children: [
             {
-                name: 'menu.file.save',
-                callback: exportScene
-            },
-            {
                 name: 'menu.file.import',
                 callback: importScene
+            }, {
+                name: '加载并导出',
+                callback: exportFile
             }
         ]
     },
@@ -103,21 +101,32 @@ const menuItems: MenuItem[] = [
 ]
 
 function exportScene() {
-    Editor.Instance.export();
+
 }
+function load() {
+
+}
+function exportFile() {
+    Utils.chooseFile().then((fileList) => {
+        if (fileList[0]) {
+            RuntimeLibrary.Instance.importMesh(fileList[0]).then(async (assets) => {
+                assets.exportFile()
+            })
+        }
+    })
+}
+
 function importScene() {
     Utils.chooseFile().then((fileList) => {
         if (fileList[0]) {
-            RuntimeAssets.Instance.importMesh(fileList[0]).then(async (assets) => {
+            RuntimeLibrary.Instance.loadAssets(fileList[0]).then(async (assets) => {
                 await assets.addToScene(Editor.Instance.Scene);
                 setTimeout(() => {
                     useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
                 }, 1000);
-
             })
         }
     })
-
 }
 
 </script>

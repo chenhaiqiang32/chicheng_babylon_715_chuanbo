@@ -41,18 +41,19 @@ export async function deserializeNode(
   let currentNode: Node;
   if (node.type === 'mesh') {
     currentNode = await deserializeMeshNode(node as CC.MeshNode, scene, assets);
-    deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode);
   } else if (node.type === 'camera') {
     currentNode = deserializeCamera(node as CC.CameraNode, scene, assets);
   } else if (node.type === 'light') {
     currentNode = deserializeLight(node as CC.LightNode, scene, assets);
   } else {
     currentNode = new TransformNode(node.name, scene);
-    deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode);
   }
   currentNode.uniqueId = node.id;
   if (parent) {
     currentNode.parent = parent;
+  }
+  if (currentNode instanceof TransformNode) {
+    deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode);
   }
   node.children?.forEach((item) => deserializeNode(item, scene, assets, currentNode));
 }

@@ -1,4 +1,4 @@
-import { Mesh, Scene } from '@babylonjs/core';
+import { Mesh, Scene, SceneSerializer } from '@babylonjs/core';
 import type { CC } from '../../BaseRes';
 import { ILoaderAssets, ICollectAssets } from '../../AssetsManager';
 
@@ -22,7 +22,6 @@ export function serializeMeshNode(
 
 export async function deserializeMeshNode(data: CC.MeshNode, scene: Scene, assets: ILoaderAssets) {
   const mesh = new Mesh(data.name, scene, {});
-  mesh.sideOrientation = data.sideOrientation;
   mesh.uniqueId = data.id;
   if (data.geometry) {
     const geoInfo = await assets.getGeometry(data.geometry);
@@ -33,6 +32,7 @@ export async function deserializeMeshNode(data: CC.MeshNode, scene: Scene, asset
   if (data.material) {
     mesh.material = await assets.getMaterial(data.material);
   }
+  mesh.sideOrientation = data.sideOrientation;
   mesh.markAsDirty();
   return mesh;
 }

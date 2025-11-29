@@ -20,7 +20,6 @@ import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import JSZip from 'jszip';
 
 export interface ICollectAssets {
-  addCubeTexture(cubeTexture: CubeTexture): void;
   addTexture(texture: BaseTexture): void;
   addMaterial(material: Material): void;
   addGeometry(geometry: Geometry): void;
@@ -30,7 +29,6 @@ export interface ILoaderAssets {
   getGeometry(uuid: string): Promise<Geometry>;
   getMaterial(uuid: string): Promise<Material>;
   getTexture(uuid: string): Promise<BaseTexture>;
-  getCubeTexture(uuid: string): Promise<CubeTexture>;
 }
 
 export class AssetsManager implements ICollectAssets, ILoaderAssets {
@@ -94,20 +92,6 @@ export class AssetsManager implements ICollectAssets, ILoaderAssets {
     const geo = this.geometry.find((g) => g.uuid === uuid);
     if (geo) {
       return geo;
-    } else {
-      const arrayBuffer = await this.zipFiles.file(`geomertry/${uuid}`).async('arraybuffer');
-      const vertexData = bufferToVertex(arrayBuffer);
-      const geometry = new Geometry(uuid);
-      geometry.uuid = uuid;
-      for (const key in vertexData.buffer) {
-        if (key === 'indices') {
-          geometry.setIndices(vertexData.buffer[key]);
-        } else {
-          geometry.setVerticesData(key, vertexData.buffer[key]);
-        }
-      }
-      this.addGeometry(geometry);
-      return geometry;
     }
   }
   async getMaterial(uuid: string): Promise<Material> {
@@ -225,6 +209,18 @@ export class AssetsManager implements ICollectAssets, ILoaderAssets {
       // }
       return material;
     });
+
+    const geometryJson = await zip.file('geomerty.json').async('text');
+    const geometrys = JSON.parse(geometryJson);
+    for (let index = 0; index < geometrys.length; index++) {
+      const element = geometrys[index];
+      const file = await zip.file(`geomertry/${element}`).async('arraybuffer');
+      const vertexData = bufferToVertex(file);
+      const geometry = Geometry.Parse(vertexData, rootScene, '');
+      geometry.uuid = element;
+      this.addGeometry(geometry);
+    }
+
     const sceneObj = await deserializeScene(scene, engine, this, rootScene);
     return sceneObj;
   }
@@ -250,16 +246,7 @@ export class AssetsManager implements ICollectAssets, ILoaderAssets {
 
 function serializeGeometry(geometry: Geometry) {
   const geo = geometry.serializeVerticeData();
-  const geoInfo: GeoData = {
-    id: geo.id,
-    buffer: {},
-  };
-  for (const [key, arr] of Object.entries(geo)) {
-    if (Array.isArray(arr)) {
-      geoInfo.buffer[convertKey(key)] = arr;
-    }
-  }
-  const buffer = vertexToBuffer(geoInfo);
+  const buffer = vertexToBuffer(geo);
   return buffer;
 }
 

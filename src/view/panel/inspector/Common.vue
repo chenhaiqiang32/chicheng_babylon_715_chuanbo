@@ -24,10 +24,7 @@ const props = defineProps<{ object: any | null }>()
 //const objectType = ref<string>("");
 // 计算属性：获取物体类型信息
 const objectType = computed(() => {
-    console.log(props.object);
-
     if (!props.object) return 'None';
-
     return props.object.getClassName?.() || 'Unknown';
 });
 
@@ -36,7 +33,6 @@ function isInstancedMesh(object: any): object is InstancedMesh {
     return object.getClassName?.() === "InstancedMesh";
 }
 watch(() => props.object, (newObject) => {
-    console.log(newObject);
     if (!newObject) return;
 }, { immediate: true })
 </script>
