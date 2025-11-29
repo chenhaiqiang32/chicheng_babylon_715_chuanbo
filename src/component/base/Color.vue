@@ -47,8 +47,6 @@ const min = computed(() => (props.noClamp ? undefined : 0))
 const max = computed(() => (props.noClamp ? undefined : 1))
 
 watch(() => [props.object, props.property], () => {
-    console.log(hex.value);
-
     hex.value = toHex()
     oldHex.value = hex.value
     r.value = currentColor.value?.r ?? 1

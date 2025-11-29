@@ -72,5 +72,12 @@ watch(currentSelected, (newSelected) => {
 <style scoped lang='scss'>
 .block-list {
     padding: 10px;
+
+    .translate-content {
+        display: flex;
+        flex-direction: row;
+        gap: 5px;
+    }
 }
+
 </style>

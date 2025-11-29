@@ -9,10 +9,9 @@ import {
 } from '@babylonjs/core';
 import { deserializeNode, serializeNode } from './node/Node';
 import type { CC } from '../BaseRes';
-import JSZip from 'jszip';
-import { IAssets } from '../AssetsManager';
+import { ICollectAssets, ILoaderAssets } from '../AssetsManager';
 
-export function serializeScene(scene: Scene, assets: IAssets): CC.Scene {
+export function serializeScene(scene: Scene, assets: ICollectAssets): CC.Scene {
   const result: Partial<CC.Scene> = {};
   result.uuid = scene.uuid;
   result.type = 'scene';
@@ -54,7 +53,7 @@ export function serializeScene(scene: Scene, assets: IAssets): CC.Scene {
 export async function deserializeScene(
   sceneData: CC.Scene,
   engine: Engine,
-  assets: IAssets,
+  assets: ILoaderAssets,
   scene: Scene,
 ) {
   scene = scene ?? new Scene(engine);

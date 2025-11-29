@@ -23,4 +23,15 @@ export namespace Utils {
       input.click();
     });
   }
+
+  export function generateName(baseName: string, names: string[]) {
+    if (!names.includes(baseName)) {
+      return baseName;
+    }
+    let i = 1;
+    while (names.includes(`${baseName} (${i})`)) {
+      i++;
+    }
+    return `${baseName} (${i})`;
+  }
 }

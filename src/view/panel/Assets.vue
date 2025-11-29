@@ -20,10 +20,8 @@
 <script setup lang='ts'>
 import Grid from '@/component/common/Grid.vue'
 import SVG from '@/component/common/SVG.vue';
-import { ResContainer } from '@/3d/assets/RuntimeAssets';
 import { onMounted, shallowRef } from 'vue';
 import { Material } from '@babylonjs/core';
-import { Editor } from '@/3d/Editor';
 
 const minWidth = 70
 const rowHeight = 70
@@ -41,9 +39,7 @@ function getAssetsType(asset: any) {
     }
 }
 
-function onchange(asset: ResContainer) {
-    console.log(Editor.Instance.Scene.textures);
-    materialArray.value = [...Editor.Instance.Scene.materials]
+function onchange() {
 }
 
 </script>

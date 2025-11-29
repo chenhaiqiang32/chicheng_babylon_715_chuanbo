@@ -18,21 +18,20 @@ import { ID } from '@/utils/id';
 import { CC } from './BaseRes';
 import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import JSZip from 'jszip';
-import { deserializeNode, serializeNode } from './serialze/node/Node';
 
-export interface IAssets {
-  addCubeTexture(cubeTexture: CubeTexture): void;
+export interface ICollectAssets {
   addTexture(texture: BaseTexture): void;
   addMaterial(material: Material): void;
   addGeometry(geometry: Geometry): void;
+}
 
+export interface ILoaderAssets {
   getGeometry(uuid: string): Promise<Geometry>;
   getMaterial(uuid: string): Promise<Material>;
   getTexture(uuid: string): Promise<BaseTexture>;
-  getCubeTexture(uuid: string): Promise<CubeTexture>;
 }
 
-export class AssetsManager implements IAssets {
+export class AssetsManager implements ICollectAssets, ILoaderAssets {
   private static instance: AssetsManager;
   cubeTexture: CubeTexture[] = [];
   texture: BaseTexture[] = [];
@@ -93,20 +92,6 @@ export class AssetsManager implements IAssets {
     const geo = this.geometry.find((g) => g.uuid === uuid);
     if (geo) {
       return geo;
-    } else {
-      const arrayBuffer = await this.zipFiles.file(`geomertry/${uuid}`).async('arraybuffer');
-      const vertexData = bufferToVertex(arrayBuffer);
-      const geometry = new Geometry(uuid);
-      geometry.uuid = uuid;
-      for (const key in vertexData.buffer) {
-        if (key === 'indices') {
-          geometry.setIndices(vertexData.buffer[key]);
-        } else {
-          geometry.setVerticesData(key, vertexData.buffer[key]);
-        }
-      }
-      this.addGeometry(geometry);
-      return geometry;
     }
   }
   async getMaterial(uuid: string): Promise<Material> {
@@ -152,7 +137,6 @@ export class AssetsManager implements IAssets {
     Texture.SerializeBuffers = false;
     const textureArray = new Array<any>();
     for (const tex of this.texture) {
-      console.log(tex);
       const texture = tex.getInternalTexture();
       const data = tex.serialize();
       if (texture._buffer) {
@@ -225,6 +209,18 @@ export class AssetsManager implements IAssets {
       // }
       return material;
     });
+
+    const geometryJson = await zip.file('geomerty.json').async('text');
+    const geometrys = JSON.parse(geometryJson);
+    for (let index = 0; index < geometrys.length; index++) {
+      const element = geometrys[index];
+      const file = await zip.file(`geomertry/${element}`).async('arraybuffer');
+      const vertexData = bufferToVertex(file);
+      const geometry = Geometry.Parse(vertexData, rootScene, '');
+      geometry.uuid = element;
+      this.addGeometry(geometry);
+    }
+
     const sceneObj = await deserializeScene(scene, engine, this, rootScene);
     return sceneObj;
   }
@@ -250,16 +246,7 @@ export class AssetsManager implements IAssets {
 
 function serializeGeometry(geometry: Geometry) {
   const geo = geometry.serializeVerticeData();
-  const geoInfo: GeoData = {
-    id: geo.id,
-    buffer: {},
-  };
-  for (const [key, arr] of Object.entries(geo)) {
-    if (Array.isArray(arr)) {
-      geoInfo.buffer[convertKey(key)] = arr;
-    }
-  }
-  const buffer = vertexToBuffer(geoInfo);
+  const buffer = vertexToBuffer(geo);
   return buffer;
 }
 

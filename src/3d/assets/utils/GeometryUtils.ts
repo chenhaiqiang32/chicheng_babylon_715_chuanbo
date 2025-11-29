@@ -2,7 +2,10 @@ export function vertexToBuffer(g: GeoData) {
   const attributes: AttributeInfo[] = [];
   const typedBuffers: { key: string; buffer: ArrayBuffer }[] = [];
   let dataSectionOffset = 0;
-  for (const [key, arr] of Object.entries(g.buffer)) {
+  for (const [key, arr] of Object.entries(g)) {
+    if (!Array.isArray(arr)) {
+      continue;
+    }
     let typed: ArrayBuffer;
     if (key.toLowerCase().includes('indices')) {
       const ta = new Uint32Array(arr);
@@ -17,7 +20,7 @@ export function vertexToBuffer(g: GeoData) {
   }
 
   const geoInfo: GeoInfo = {
-    id: g.id,
+    uuid: g.uuid,
     attributes,
   };
 
@@ -51,16 +54,16 @@ export function bufferToVertex(buffer: ArrayBuffer): GeoData {
   const info = JSON.parse(headerStr) as GeoInfo;
   const headerPad = (4 - (headerLen % 4)) % 4;
   const dataStart = 4 + headerLen + headerPad;
-  const out: GeoData = { id: info.id, buffer: {} };
+  const out: any = { uuid: info.uuid };
   for (const attr of info.attributes) {
     const start = dataStart + attr.start;
     const count = attr.byteLength >>> 2;
     if (attr.key.toLowerCase().includes('indices')) {
       const ta = new Uint32Array(buffer, start, count);
-      out.buffer[attr.key] = Array.from(ta);
+      out[attr.key] = Array.from(ta);
     } else {
       const ta = new Float32Array(buffer, start, count);
-      out.buffer[attr.key] = Array.from(ta);
+      out[attr.key] = Array.from(ta);
     }
   }
   return out;

@@ -5,11 +5,11 @@ declare interface AttributeInfo {
 }
 
 declare interface GeoData {
-  id: string;
-  buffer: { [key: string]: number[] };
+  uuid: string;
+  [key: string]: number[];
 }
 
 declare interface GeoInfo {
-  id: string;
+  uuid: string;
   attributes: AttributeInfo[];
 }

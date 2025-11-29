@@ -348,14 +348,10 @@ const handleDrop = (ev: DragEvent) => {
                 const oldTexture = props.object[props.property]
                 const scene = props.scene
                 const newTexture = CubeTexture.CreateFromPrefilteredData(absolutePath, scene)
-                //   const scene = props.scene ?? (isScene(props.object) ? props.object : props.object.getScene())
-                //  const newTexture = configureImportedTexture(CubeTexture.CreateFromPrefilteredData(absolutePath, scene))
                 const sc = newTexture.getScene()
                 props.object[props.property] = newTexture
-                // if (sc) updateIblShadowsRenderPipeline(sc, true)
                 emitChange(props.object[props.property])
                 if (oldTexture !== newTexture && !props.noUndoRedo) {
-                    //  registerUndoRedo({ executeRedo: true, undo: () => { props.object[props.property] = oldTexture; if (sc) updateIblShadowsRenderPipeline(sc, true) }, redo: () => { props.object[props.property] = newTexture; if (sc) updateIblShadowsRenderPipeline(sc, true) }, onLost: () => newTexture?.dispose() })
                 }
             }
             break
@@ -366,84 +362,14 @@ const handleDrop = (ev: DragEvent) => {
 const computeTemporaryPreview = async () => {
     const texture: any = props.object[props.property]
     if (!texture?.url || getExtname(texture.url).toLowerCase() === ".exr") return
-    // In browser environment, we can't access the file system directly
-    // Instead, try to fetch the texture to check if it exists
-    const textureUrl = texture.url.startsWith('http') ? texture.url : `/public/${texture.url}`;
-    try {
-        const response = await fetch(textureUrl, {
-            method: 'HEAD', // Only request headers, not the entire file
-            cache: 'no-cache'
-        });
-
-        if (!response.ok) {
-            previewError.value = true;
-            return;
-        }
-    } catch (error) {
-        // If fetch fails, assume the texture is not available
-        previewError.value = true;
-        return;
-    }
-    if (!isTexture(texture)) {
-        previewError.value = false
-        return
-    }
-
-    // Use browser Canvas API for image resizing (replaces sharp)
-    const buffer = await resizeImageInBrowser(textureUrl, 128, 128);
-    if (previewTemporaryUrl.value) URL.revokeObjectURL(previewTemporaryUrl.value)
     previewError.value = false
-    previewTemporaryUrl.value = URL.createObjectURL(new Blob([buffer]))
+    previewTemporaryUrl.value = texture.url
 }
 
-// Helper function to resize image using Canvas API in browser
-async function resizeImageInBrowser(url: string, width: number, height: number): Promise<ArrayBuffer> {
-    console.log(url);
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous'; // Allow loading images from different origins
 
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                reject(new Error('Could not get canvas context'));
-                return;
-            }
-
-            // Draw image with the desired size
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Convert canvas to Blob and then to ArrayBuffer
-            canvas.toBlob((blob) => {
-                if (!blob) {
-                    reject(new Error('Could not create blob from canvas'));
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    resolve(reader.result as ArrayBuffer);
-                };
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(blob);
-            }, 'image/png');
-        };
-
-        img.onerror = () => {
-            reject(new Error(`Failed to load image: ${url}`));
-        };
-
-        img.src = url;
-    });
-}
 
 watch(textureRef, () => computeTemporaryPreview())
 onMounted(() => computeTemporaryPreview())
-onBeforeUnmount(() => { if (previewTemporaryUrl.value) URL.revokeObjectURL(previewTemporaryUrl.value) })
 </script>
 
 <style scoped>
