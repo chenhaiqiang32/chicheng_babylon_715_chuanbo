@@ -22,17 +22,10 @@ onMounted(() => {
     height: 100%;
     position: relative;
 
-    .control-bar {
-        display: block;
-        width: 100%;
-        height: 5%;
-    }
-
     canvas {
         display: block;
         width: 100%;
-        //height: 100%;
-        height: 95%;
+        height: 100%;
     }
 }
 </style>

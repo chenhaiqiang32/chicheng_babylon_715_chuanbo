@@ -11,7 +11,7 @@ import { AssetsManager } from '@/3d/assets/AssetsManager';
 import { RuntimeAssets } from '@/3d/assets/RuntimeAssets';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
-import { ModelLoader } from '@/core/modelLoader/modelLoader';
+import { ModelLoader } from '@/3d/core/modelLoader/modelLoader';
 import { Utils } from '@/utils';
 import { useDark, useToggle } from '@vueuse/core'
 import { ref } from 'vue'
