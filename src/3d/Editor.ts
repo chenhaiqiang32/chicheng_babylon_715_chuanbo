@@ -34,8 +34,13 @@ import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
 import { registerLeftClick } from '@/3d/core/utils/registerLeftClick';
 import { focusOnNode } from '@/3d/core/utils/focusOnNode';
+import { Dispatch } from '@/utils/dispatch';
 
-export class Editor {
+interface EditorEvent {
+  nameChanged: { newName: string; id: string };
+}
+
+export class Editor extends Dispatch<EditorEvent> {
   loadScene(arg0: string) {}
   private scene: Scene;
   private engine: Engine;

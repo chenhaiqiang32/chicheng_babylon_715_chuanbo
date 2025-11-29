@@ -16,9 +16,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue"
+import { ref, watch, computed, onMounted, onUnmounted } from "vue"
 import Field from "@/component/common/Field.vue"
-import { registerSimpleUndoRedo } from "../../tools/undoredo"
+import { registerSimpleUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
 const props = defineProps<{
 	object: any
@@ -44,11 +44,28 @@ const vy = ref<number>(toDisplay(props.object?.[props.property]?.y ?? 0))
 const vz = ref<number>(toDisplay(props.object?.[props.property]?.z ?? 0))
 const vw = ref<number>(toDisplay(props.object?.[props.property]?.w ?? 0))
 
-watch(() => [props.object, props.property], () => {
+function syncFromObject() {
 	vx.value = toDisplay(props.object?.[props.property]?.x ?? 0)
 	vy.value = toDisplay(props.object?.[props.property]?.y ?? 0)
 	vz.value = toDisplay(props.object?.[props.property]?.z ?? 0)
 	vw.value = toDisplay(props.object?.[props.property]?.w ?? 0)
+}
+
+watch(() => [props.object, props.property], () => {
+	syncFromObject()
+}, { immediate: true })
+
+let undoObserver: any = null
+let redoObserver: any = null
+
+onMounted(() => {
+	undoObserver = onUndoObservable.add(() => syncFromObject())
+	redoObserver = onRedoObservable.add(() => syncFromObject())
+})
+
+onUnmounted(() => {
+	if (undoObserver) onUndoObservable.remove(undoObserver)
+	if (redoObserver) onRedoObservable.remove(redoObserver)
 })
 
 const axisMin = (i: number) => (Array.isArray(props.min) ? props.min[i] : props.min)
@@ -56,19 +73,13 @@ const axisMax = (i: number) => (Array.isArray(props.max) ? props.max[i] : props.
 
 const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 	const storeVal = toStore(val)
-	if (props.object?.[props.property]) {
-		props.object[props.property][axis] = storeVal
-
-	}
-	const oldValue = ref<number>(getInspectorPropertyValue(props.object, `${props.property}.${axis}`) ?? 0)
-	//const oldValue = props.object?.[props.property]?.[axis] ?? 0;
-	setInspectorEffectivePropertyValue(props.object, `${props.property}.${axis}`, val)
-	const newValue = storeVal;
+	const oldVal = getInspectorPropertyValue(props.object, `${props.property}.${axis}`) ?? 0
+	setInspectorEffectivePropertyValue(props.object, `${props.property}.${axis}`, storeVal)
 	registerSimpleUndoRedo({
 		object: props.object,
 		property: `${props.property}.${axis}`,
-		oldValue,
-		newValue
+		oldValue: oldVal,
+		newValue: storeVal
 	})
 	emit("change")
 }

@@ -1,7 +1,7 @@
 <template>
     <div class="editor-container">
         <Header></Header>
-        <ElSplitter :lazy="true">
+        <ElSplitter :lazy="true" style="height: 0 ; flex: 1;">
             <ElSplitterPanel min="600px">
                 <ElSplitter :lazy="true" layout="vertical">
                     <ElSplitterPanel>
@@ -42,8 +42,6 @@ import Scene from './panel/Scene.vue'
 import Animation from './panel/Animation.vue'
 import Assets from './panel/Assets.vue'
 import Inspector from './panel/Inspector.vue'
-import { Editor } from '@/3d/Editor';
-
 import Hierarchy from './panel/Hierarchy.vue'
 import { ElTabPane } from 'element-plus';
 import { storeToRefs } from 'pinia';

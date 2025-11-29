@@ -4,16 +4,21 @@
  * @param property defines the path of the property to set its value.
  * @param newValue defines the new value to set to the property.
  */
-export function setInspectorEffectivePropertyValue(object: any, property: string, newValue: any): void {
-	const parts = property.split(".");
+export function setInspectorEffectivePropertyValue(
+  object: any,
+  property: string,
+  newValue: any,
+): void {
+  const parts = property.split('.');
 
-	let value = object;
+  let value = object;
 
-	for (let i = 0; i < parts.length - 1; ++i) {
-		value = value[parts[i]];
-	}
+  for (let i = 0; i < parts.length - 1; ++i) {
+    value = value[parts[i]];
+  }
 
-	value[parts[parts.length - 1]] = newValue;
+  value[parts[parts.length - 1]] = newValue;
+  console.log(parts[parts.length - 1], newValue);
 }
 
 /**
@@ -23,14 +28,14 @@ export function setInspectorEffectivePropertyValue(object: any, property: string
  * @example getInspectorPropertyValue(scene, "ambientColor");
  * @example getInspectorPropertyValue(scene, "ambientColor.r");
  */
-export function getInspectorPropertyValue(object: any, property: string) {	
-	const parts = property.split(".");
+export function getInspectorPropertyValue(object: any, property: string) {
+  const parts = property.split('.');
 
-	let value = object;
+  let value = object;
 
-	for (let i = 0; i < parts.length; ++i) {
-		value = value[parts[i]];
-	}
+  for (let i = 0; i < parts.length; ++i) {
+    value = value[parts[i]];
+  }
 
-	return value;
+  return value;
 }

@@ -22,13 +22,13 @@ app.mount('#app');
 // 添加全局键盘事件监听，实现撤销/重做功能
 window.addEventListener('keydown', (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
-    //  event.preventDefault();
+    event.preventDefault();
     undo();
   } else if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
-    event.preventDefault();
+    // event.preventDefault();
     redo();
   } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z') {
-    //  event.preventDefault();
+    event.preventDefault();
     redo();
   }
 });

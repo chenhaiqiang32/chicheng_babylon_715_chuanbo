@@ -6,9 +6,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { ref, watch, onMounted, onUnmounted } from "vue"
 import { InfoFilled } from "@element-plus/icons-vue"
-import { registerSimpleUndoRedo } from "../../tools/undoredo"
+import { registerSimpleUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
 import Field from "@/component/common/Field.vue"
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; step?: number; min?: number; max?: number; noUndoRedo?: boolean }>()
@@ -17,9 +17,27 @@ const emit = defineEmits<{ (e: "change", value: number): void; (e: "finishChange
 const value = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 0)
 const oldValue = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 0)
 
+function syncFromObject() {
+    const v = getInspectorPropertyValue(props.object, props.property) ?? 0
+    value.value = v
+    oldValue.value = v
+}
+
 watch(() => [props.object, props.property], () => {
-	value.value = getInspectorPropertyValue(props.object, props.property) ?? 0
-	oldValue.value = getInspectorPropertyValue(props.object, props.property) ?? 0
+    syncFromObject()
+}, { immediate: true })
+
+let undoObserver: any = null
+let redoObserver: any = null
+
+onMounted(() => {
+    undoObserver = onUndoObservable.add(() => syncFromObject())
+    redoObserver = onRedoObservable.add(() => syncFromObject())
+})
+
+onUnmounted(() => {
+    if (undoObserver) onUndoObservable.remove(undoObserver)
+    if (redoObserver) onRedoObservable.remove(redoObserver)
 })
 
 const onInput = (newValue: number) => {
