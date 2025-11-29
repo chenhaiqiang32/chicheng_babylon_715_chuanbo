@@ -1,15 +1,12 @@
-import { ModelAssets } from '@/3d/assets/AssetsManager';
-import { RuntimeAssets } from '@/3d/assets/RuntimeAssets';
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { defineStore } from 'pinia';
 import { shallowRef } from 'vue';
 
 export const useAssets = defineStore('assets', () => {
-  const assets = RuntimeAssets.Instance;
+  const assets = RuntimeLibrary.Instance;
   const assetsArray = shallowRef<[]>([]);
 
-  assets.on('onChanged', () => {
-    assetsArray.value = [...assets.sceneAssets];
-  });
+  assets.on('onChanged', () => {});
 
   return {
     assetsArray,

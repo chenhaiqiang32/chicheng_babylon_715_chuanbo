@@ -215,7 +215,6 @@ import Texture from "@/component/base/Texture.vue"
 import Color from "@/component/base/Color.vue"
 import Slider from "@/component/base/Slider.vue"
 const props = defineProps<{ mesh?: any; material: any; }>()
-console.log(props.material);
 
 const labelDiv = (t: string) => ({ render: () => t }) as any
 const force = () => { }

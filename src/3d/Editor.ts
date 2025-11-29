@@ -32,7 +32,6 @@ import { watch, type WatchHandle } from 'vue';
 import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
-import { RuntimeAssets } from './assets/RuntimeAssets';
 import { registerLeftClick } from '@/3d/core/utils/registerLeftClick';
 import { focusOnNode } from '@/3d/core/utils/focusOnNode';
 
@@ -158,11 +157,8 @@ export class Editor {
     this.highLightLayer.needStencil();
     resizeObserver.observe(canvas);
     this.initWatch();
-
     useScene().setHierarchy(this.scene.rootNodes);
-    this.scene.onNewTransformNodeAddedObservable.add((node) => {
-      useScene().setHierarchy(this.scene.rootNodes);
-    });
+
     setTimeout(() => {
       this.resize();
     }, 100);
@@ -198,37 +194,23 @@ export class Editor {
     this.watcher.push(viewFlagsModeWatcher);
   }
 
-  async loadFbx() {
-    const modelUrl = './Avocado.glb';
-    const result = await SceneLoader.ImportMeshAsync(
-      '',
-      '',
-      modelUrl.split('/').pop(),
-      this.scene,
-      (evt) => {
-        // 实时加载进度（可选）
-        if (evt.lengthComputable) {
-          console.log('加载进度:', ((evt.loaded / evt.total) * 100).toFixed(2) + '%');
-        }
-      },
-    );
-    const rootNodes = result.meshes;
-    rootNodes.forEach((mesh) => {
-      mesh.receiveShadows = true;
-
-      //this.shadowGenerator.addShadowCaster(mesh as AbstractMesh);
-    });
-    this.resize();
+  newScene() {
+    const scene = new Scene(this.engine);
+    const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
+    scene.environmentTexture = env;
+    scene.useRightHandedSystem = true;
+    return scene;
   }
 
   async createScene() {
     const scene = new Scene(this.engine);
+    scene.useRightHandedSystem = true;
     const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), this.scene);
-    camera.minZ = 0.01;
+    camera.minZ = 0.001;
     camera.maxZ = 5000;
     camera.attachControl();
-    camera.lowerRadiusLimit = 0.1;
-    camera.upperRadiusLimit = 20;
+    camera.lowerRadiusLimit = 0.01;
+    camera.upperRadiusLimit = 5000;
     camera.wheelPrecision = 60; // 鼠标滚轮（传统鼠标）
     camera.wheelDeltaPercentage = 0.08; // 触控板滚轮（Mac/Windows 触控板）
     camera.pinchDeltaPercentage = 0.15; // 手机/平板双指缩放

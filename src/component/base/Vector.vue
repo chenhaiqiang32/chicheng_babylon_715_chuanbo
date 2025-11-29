@@ -33,8 +33,6 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ (e: "change"): void; (e: "finishChange"): void }>()
 
-const pointerOver = ref(false)
-
 const hasZ = computed(() => props.object?.[props.property]?.z !== undefined || props.object?.[props.property]?.w !== undefined)
 const hasW = computed(() => props.object?.[props.property]?.w !== undefined)
 
@@ -72,13 +70,10 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 		oldValue,
 		newValue
 	})
-	console.log(oldValue + "12122" + newValue + axis);
-
 	emit("change")
 }
 
 const onFinishChange = () => {
-
 	emit("finishChange")
 }
 </script>
