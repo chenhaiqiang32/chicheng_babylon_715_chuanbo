@@ -3,7 +3,8 @@
         @dragleave="handleDragLeave" :class="{ 'is-over': dragOver }">
         <div class="texture-row">
             <div class="texture-preview" :class="previewClass">
-                <el-popover v-if="textureUrl" :disabled="noPopover">
+                <el-popover v-if="textureUrl" :disabled="noPopover" placement="left" popper-class="texture-popover"
+                    :offset="8">
                     <template #reference>
                         <div class="texture-preview-inner">
                             <template v-if="isCube">
@@ -403,6 +404,10 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+:global(.texture-popover) {
+    width: 1320px;
+}
+
 .texture-field {
     display: flex;
     flex-direction: column;
