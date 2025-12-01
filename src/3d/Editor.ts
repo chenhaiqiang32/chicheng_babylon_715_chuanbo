@@ -241,10 +241,17 @@ export class Editor extends Dispatch<EditorEvent> {
    * @returns 找到的节点，或null
    */
   getNodeById(id: number): Node {
-    let node = this.scene.getTransformNodeByUniqueId(id);
+    let node: Node = this.scene.getTransformNodeByUniqueId(id);
     if (!node) {
-      return this.scene.getMeshByUniqueId(id);
+      node = this.scene.getMeshByUniqueId(id);
     }
+    if (!node) {
+      node = this.scene.getCameraByUniqueId(id);
+    }
+    if (!node) {
+      node = this.scene.getLightByUniqueId(id);
+    }
+    return node;
   }
 
   /**
