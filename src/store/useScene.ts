@@ -1,13 +1,14 @@
-import { ref } from 'vue';
+import { ref, shallowReactive } from 'vue';
 import { defineStore } from 'pinia';
-import { Node, Vector3 } from '@babylonjs/core';
+import { Node, Scene } from '@babylonjs/core';
 import { ViewFlagsMode } from '@/3d/core/utils/viewFlagsMode';
+import { CC } from '@/3d/assets/BaseRes';
 
 function buildHierarchy(node: Node): HierarchyNode {
   return {
     name: node.name,
     type: node.getClassName(),
-    id: node.id,
+    id: node.uniqueId,
     children: node.getChildren()?.map(buildHierarchy) ?? [],
   };
 }
@@ -22,15 +23,17 @@ export enum ControlMode {
 
 export const useScene = defineStore('scene', () => {
   const hierarchy = ref<HierarchyNode[]>([]);
-  const currentSelected = ref<Array<string>>([]);
+  const currentSelected = ref<Array<number>>([]);
   const currentControlMode = ref<ControlMode>();
   const currentViewFlagsMode = ref<ViewFlagsMode>();
+
+  const sceneList = shallowReactive<Scene[]>([]);
 
   function setHierarchy(rootNodes: Node[]) {
     hierarchy.value = rootNodes.map(buildHierarchy);
   }
 
-  function setCurrentSelect(objectIds?: string[]) {
+  function setCurrentSelect(objectIds?: number[]) {
     currentSelected.value = objectIds ?? [];
   }
 
@@ -47,6 +50,7 @@ export const useScene = defineStore('scene', () => {
 
   return {
     hierarchy,
+    sceneList,
     setHierarchy,
     currentSelected,
     setCurrentSelect,

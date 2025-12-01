@@ -6,7 +6,7 @@
                     <Common v-if="selectedObject" :object="selectedObject" />
                 </KeepAlive>
                 <KeepAlive>
-                    <Transform :object="selectedObject" />
+                    <Transform v-if="selectedObject" :object="selectedObject" />
                 </KeepAlive>
                 <!-- <KeepAlive>
                     <Collision v-if="selectedObject?.geometry" :object="selectedObject" />
@@ -14,10 +14,6 @@
                 <KeepAlive>
                     <MaterialInspectorRouter v-if="selectedObject?.material" :mesh="selectedObject"
                         :material="selectedObject.material" />
-                </KeepAlive>
-                <KeepAlive>
-                    <SceneSetting v-if="selectedObject?.getClassName() === 'ArcRotateCamera'"
-                        :object="Editor.Instance.Scene" />
                 </KeepAlive>
             </div>
         </el-scrollbar>
@@ -28,15 +24,12 @@
 import BasePanel from '@/component/common/BasePanel.vue'
 import Common from './inspector/Common.vue'
 import { isNode } from '@/tools/guards/nodes.ts';
-import { ref, reactive, watch, computed, KeepAlive, shallowRef } from 'vue'
+import { ref, watch, computed, KeepAlive, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
 import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
-import Collision from './inspector/Collision.vue'
-import SceneSetting from './inspector/SceneSetting.vue'
-
 const { currentSelected } = storeToRefs(useScene());
 const editedObject = ref<any | null>(null)
 

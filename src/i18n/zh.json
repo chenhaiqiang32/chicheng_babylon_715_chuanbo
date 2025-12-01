@@ -1,6 +1,8 @@
 {
   "view": {
-    "hierarchy": "层级"
+    "hierarchy": "层级",
+    "scene": "场景",
+    "sceneList": "场景列表"
   },
   "menu": {
     "file": {
@@ -80,15 +82,15 @@
       "metallic": "金属度",
       "roughness": "粗糙度"
     },
-      "sceneSetting":{
+    "sceneSetting": {
       "title": "场景设置",
       "background": "背景",
       "backgroundcolor": "背景设置",
       "gravity": "重力",
       "clearColor": "背景颜色",
       "ambientColor": "环境光颜色",
-      "renderingPipeline": "渲染管线"
-      
+      "renderingPipeline": "渲染管线",
+      "useOnlyMetallicFromMetallicReflectanceTexture": "仅使用反射纹理的金属通道"
     }
   }
 }

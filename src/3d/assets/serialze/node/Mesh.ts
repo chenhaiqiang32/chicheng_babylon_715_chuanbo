@@ -6,16 +6,21 @@ export function serializeMeshNode(
   mesh: Mesh,
   meshData: CC.MeshNode,
   assetsManager: ICollectAssets,
+  serializeAssets: boolean = true,
 ) {
   meshData.type = 'mesh';
   meshData.material = mesh.material?.uuid || '';
   meshData.sideOrientation = mesh.sideOrientation;
   if (mesh.geometry) {
-    assetsManager.addGeometry(mesh.geometry);
+    if (serializeAssets) {
+      assetsManager.addGeometry(mesh.geometry);
+    }
     meshData.geometry = mesh.geometry?.uuid;
   }
   if (mesh.material) {
-    assetsManager.addMaterial(mesh.material);
+    if (serializeAssets) {
+      assetsManager.addMaterial(mesh.material);
+    }
     meshData.material = mesh.material?.uuid || '';
   }
 }

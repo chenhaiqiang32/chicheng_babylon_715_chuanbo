@@ -1,5 +1,5 @@
 declare interface HierarchyNode {
-  id: string;
+  id: number;
   type: string;
   name: string;
   children?: HierarchyNode[];

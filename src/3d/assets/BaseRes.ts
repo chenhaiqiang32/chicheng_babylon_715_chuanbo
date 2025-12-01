@@ -68,6 +68,7 @@ export namespace CC {
 
   export interface Scene extends BaseRes {
     type: 'scene';
+    uuid: string;
     autoClear: boolean;
     clearColor: number[];
     collisionsEnabled: boolean;
