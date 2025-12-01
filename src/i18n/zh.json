@@ -89,8 +89,7 @@
       "gravity": "重力",
       "clearColor": "背景颜色",
       "ambientColor": "环境光颜色",
-      "renderingPipeline": "渲染管线",
-      "useOnlyMetallicFromMetallicReflectanceTexture": "仅使用反射纹理的金属通道"
+      "renderingPipeline": "渲染管线"
     }
   }
 }
