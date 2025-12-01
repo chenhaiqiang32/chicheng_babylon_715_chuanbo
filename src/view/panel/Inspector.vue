@@ -15,10 +15,6 @@
                     <MaterialInspectorRouter v-if="selectedObject?.material" :mesh="selectedObject"
                         :material="selectedObject.material" />
                 </KeepAlive>
-                <KeepAlive>
-                    <SceneSetting v-if="selectedObject?.getClassName() === 'ArcRotateCamera'"
-                        :object="Editor.Instance.Scene" />
-                </KeepAlive>
             </div>
         </el-scrollbar>
 
