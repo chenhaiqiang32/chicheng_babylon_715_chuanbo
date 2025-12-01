@@ -10,6 +10,9 @@
       :min="0" />
     <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity"
       :min="0" />
+    <!-- <Switch label="Metallic" :object="metallicToggle" property="checked" :noUndoRedo="true" /> -->
+    <Slider :label="$t('component.material.metallic')" :object="material" property="metallic" :min="0" />
+    <Slider :label="$t('component.material.roughness')" :object="material" property="roughness" :min="0" />
     <!-- <AlphaModeField :object="material" /> -->
     <!-- <TransparencyModeField :object="material" /> -->
     <!-- <MaterialInspectorUtils :mesh="mesh" :material="material" /> -->
@@ -228,7 +231,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, } from "vue"
 import SectionField from "@/component/common/SectionField.vue"
 import StringField from "@/component/base/StringField.vue"
 import Switch from "@/component/base/Switch.vue"

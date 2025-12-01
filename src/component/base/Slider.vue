@@ -22,11 +22,14 @@ const value = ref<number>(getInspectorPropertyValue(props.object, props.property
 const oldValue = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 0)
 
 watch(() => [props.object, props.property], () => {
+
+
 	value.value = getInspectorPropertyValue(props.object, props.property) ?? 0
 	oldValue.value = getInspectorPropertyValue(props.object, props.property) ?? 0
 })
 
 const onInput = () => {
+	console.log("watch", props.object, props.property);
 	setInspectorEffectivePropertyValue(props.object, props.property, value.value)
 	emit("change", value.value)
 }

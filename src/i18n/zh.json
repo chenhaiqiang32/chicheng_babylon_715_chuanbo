@@ -76,7 +76,19 @@
       "reflectionTexture": "反射纹理",
       "lightmapTexture": "光照贴图纹理",
       "useLightmapAsShadowmap": "将光照贴图作为阴影贴图",
-      "useOnlyMetallicFromMetallicReflectanceTexture": "仅使用反射纹理的金属通道"
+      "useOnlyMetallicFromMetallicReflectanceTexture": "仅使用反射纹理的金属通道",
+      "metallic": "金属度",
+      "roughness": "粗糙度"
+    },
+      "sceneSetting":{
+      "title": "场景设置",
+      "background": "背景",
+      "backgroundcolor": "背景设置",
+      "gravity": "重力",
+      "clearColor": "背景颜色",
+      "ambientColor": "环境光颜色",
+      "renderingPipeline": "渲染管线"
+      
     }
   }
 }

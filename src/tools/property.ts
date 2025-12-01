@@ -18,7 +18,6 @@ export function setInspectorEffectivePropertyValue(
   }
 
   value[parts[parts.length - 1]] = newValue;
-  console.log(parts[parts.length - 1], newValue);
 }
 
 /**

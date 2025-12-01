@@ -15,6 +15,10 @@
                     <MaterialInspectorRouter v-if="selectedObject?.material" :mesh="selectedObject"
                         :material="selectedObject.material" />
                 </KeepAlive>
+                <KeepAlive>
+                    <SceneSetting v-if="selectedObject?.getClassName() === 'ArcRotateCamera'"
+                        :object="Editor.Instance.Scene" />
+                </KeepAlive>
             </div>
         </el-scrollbar>
 
@@ -31,6 +35,8 @@ import { Editor } from '@/3d/Editor';
 import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
 import Collision from './inspector/Collision.vue'
+import SceneSetting from './inspector/SceneSetting.vue'
+
 const { currentSelected } = storeToRefs(useScene());
 const editedObject = ref<any | null>(null)
 
@@ -79,5 +85,4 @@ watch(currentSelected, (newSelected) => {
         gap: 5px;
     }
 }
-
 </style>
