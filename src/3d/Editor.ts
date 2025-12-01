@@ -18,6 +18,7 @@ import {
   LightGizmo,
   Matrix,
   Camera,
+  Texture,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -32,6 +33,10 @@ import { Dispatch } from '@/utils/dispatch';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
+  numberChanged: { newNumber: number; id: string };
+  textureChanged: { newTexture: string; id: string };
+  switchChanged: { newSwitch: boolean; id: string };
+  UndoRedo: void;
 }
 
 export class Editor extends Dispatch<EditorEvent> {

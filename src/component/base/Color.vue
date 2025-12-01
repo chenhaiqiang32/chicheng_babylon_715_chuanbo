@@ -6,11 +6,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue"
+import { ref, watch, computed, onMounted, onUnmounted } from "vue"
 import { Color3, Color4 } from "@babylonjs/core"
 import { registerUndoRedo } from "../../tools/undoredo"
 import { getInspectorPropertyValue } from "../../tools/property"
 import Field from "@/component/common/Field.vue"
+import { Editor } from "@/3d/Editor"
 
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; noUndoRedo?: boolean; noClamp?: boolean; noColorPicker?: boolean }>()
 const emit = defineEmits<{ (e: "change", value: Color3 | Color4): void; (e: "finishChange", value: Color3 | Color4, oldValue: Color3 | Color4): void }>()
@@ -82,7 +83,12 @@ const onPickerChange = () => {
         emit("change", next)
         if (!props.noUndoRedo) {
             console.log("noUndoRedo");
-            registerUndoRedo({ undo: () => (props.object[props.property] = prev?.clone()), redo: () => (props.object[props.property] = next.clone()) })
+            registerUndoRedo({
+                undo: () => (props.object[props.property] = prev?.clone()), redo: () => (props.object[props.property] = next.clone()), executeRedo: true, action() {
+                    hex.value = toHex()
+                    oldHex.value = hex.value
+                },
+            })
         }
     }
     console.log(currentColor);

@@ -7,11 +7,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { onMounted, onUnmounted, ref, watch } from "vue"
 import { registerSimpleUndoRedo } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
 import Field from "@/component/common/Field.vue"
 import { ElSlider } from "element-plus"
+import { Editor } from "@/3d/Editor"
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; step?: number; min?: number; max?: number; noUndoRedo?: boolean }>()
 const emit = defineEmits<{ (e: "change", value: number): void; (e: "finishChange", value: number, oldValue: number): void }>()
 
@@ -29,7 +30,6 @@ watch(() => [props.object, props.property], () => {
 })
 
 const onInput = () => {
-	console.log("watch", props.object, props.property);
 	setInspectorEffectivePropertyValue(props.object, props.property, value.value)
 	emit("change", value.value)
 }
@@ -37,11 +37,17 @@ const onInput = () => {
 const onBlur = () => {
 	const newValue = value.value
 	if (newValue !== oldValue.value && !props.noUndoRedo) {
-		registerSimpleUndoRedo({ object: props.object, property: props.property, oldValue: oldValue.value, newValue })
+		registerSimpleUndoRedo({
+			object: props.object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action() {
+				value.value = getInspectorPropertyValue(props.object, props.property) ?? 0
+				oldValue.value = getInspectorPropertyValue(props.object, props.property) ?? 0
+			},
+		})
 		emit("finishChange", newValue, oldValue.value)
 		oldValue.value = newValue
 	}
 }
+
 </script>
 
 <style lang="scss">

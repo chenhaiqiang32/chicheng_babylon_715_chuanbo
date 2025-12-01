@@ -5,10 +5,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { onMounted, onUnmounted, ref, watch } from "vue"
 import { registerSimpleUndoRedo } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
 import Field from "../common/Field.vue";
+import { Editor } from "@/3d/Editor";
 const props = defineProps<{ object: any; property: string; label?: any; noUndoRedo?: boolean }>()
 const emit = defineEmits<{ (e: "change", value: boolean): void }>()
 
@@ -35,7 +36,13 @@ const handleClick = (event: MouseEvent) => {
       object: props.object,
       property: props.property,
       oldValue: oldValue,
-      newValue: newValue
+      newValue: newValue,
+      executeRedo: true,
+      action: () => {
+        Editor.Instance.dispatch('switchChanged', { newSwitch: newValue, id: props.object.id })
+        value.value = getInspectorPropertyValue(props.object, props.property) ?? false
+        console.log(newValue, 'switchChanged');
+      }
     })
   }
 }

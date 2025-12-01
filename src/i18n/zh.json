@@ -62,6 +62,7 @@
       "emissiveTexture": "自发光纹理",
       "specularIntensity": "镜面反射强度",
       "albedo": "基础颜色",
+      "emissive": "自发光颜色",
       "albedoTexture": "基础颜色纹理",
       "useAlphaFromDiffuseTexture": "使用透明度通道",
       "alphaCutOff": "透明度阈值",
@@ -80,7 +81,14 @@
       "useLightmapAsShadowmap": "将光照贴图作为阴影贴图",
       "useOnlyMetallicFromMetallicReflectanceTexture": "仅使用反射纹理的金属通道",
       "metallic": "金属度",
-      "roughness": "粗糙度"
+      "roughness": "粗糙度",
+      "MetallicF0Factor": "金属F0因子",
+      "ambientTexture": "环境光纹理",
+      "useRoughnessFromMetallicTextureAlpha": "从金属纹理的Alpha通道使用粗糙度",
+      "useRoughnessFromMetallicTextureGreen": "从金属纹理的Green通道使用粗糙度",
+      "useMetallnessFromMetallicTextureBlue": "从金属纹理的Blue通道使用金属度",
+      "useAmbientOcclusionFromMetallicTextureRed": "从金属纹理的Red通道使用环境光",
+      "metallicReflectanceTexture": "金属反射纹理"
     },
     "sceneSetting": {
       "title": "场景设置",

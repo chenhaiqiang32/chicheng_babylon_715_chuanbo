@@ -11,6 +11,7 @@ import { InfoFilled } from "@element-plus/icons-vue"
 import { registerSimpleUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
 import Field from "@/component/common/Field.vue"
+import { Editor } from "@/3d/Editor"
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; step?: number; min?: number; max?: number; noUndoRedo?: boolean }>()
 const emit = defineEmits<{ (e: "change", value: number): void; (e: "finishChange", value: number, oldValue: number): void }>()
 
@@ -18,27 +19,17 @@ const value = ref<number>(getInspectorPropertyValue(props.object, props.property
 const oldValue = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 0)
 
 function syncFromObject() {
-    const v = getInspectorPropertyValue(props.object, props.property) ?? 0
-    value.value = v
-    oldValue.value = v
+	const v = getInspectorPropertyValue(props.object, props.property) ?? 0
+	value.value = v
+	oldValue.value = v
 }
 
 watch(() => [props.object, props.property], () => {
-    syncFromObject()
+	syncFromObject()
 }, { immediate: true })
 
 let undoObserver: any = null
 let redoObserver: any = null
-
-onMounted(() => {
-    undoObserver = onUndoObservable.add(() => syncFromObject())
-    redoObserver = onRedoObservable.add(() => syncFromObject())
-})
-
-onUnmounted(() => {
-    if (undoObserver) onUndoObservable.remove(undoObserver)
-    if (redoObserver) onRedoObservable.remove(redoObserver)
-})
 
 const onInput = (newValue: number) => {
 	value.value = newValue
@@ -49,7 +40,12 @@ const onInput = (newValue: number) => {
 const onBlur = () => {
 	const newValue = value.value
 	if (newValue !== oldValue.value && !props.noUndoRedo) {
-		registerSimpleUndoRedo({ object: props.object, property: props.property, oldValue: oldValue.value, newValue })
+		registerSimpleUndoRedo({
+			object: props.object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
+				Editor.Instance.dispatch('numberChanged', { newNumber: value.value, id: props.object.id })
+				syncFromObject()
+			}
+		})
 		emit("finishChange", newValue, oldValue.value)
 		oldValue.value = newValue
 	}

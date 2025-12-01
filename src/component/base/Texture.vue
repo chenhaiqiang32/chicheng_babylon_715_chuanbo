@@ -28,9 +28,13 @@
                             </template>
                         </div>
                     </template>
-                    <!-- <template #default>
+                    <template #default>
                         <div class="popover-content">
-                            <template v-if="isCube">
+                            <SectionField title="Common">
+                                <Switch label="Gamma Space" :object="textureRef" property="gammaSpace"
+                                    @change="emitChange(textureRef)" />
+                            </SectionField>
+                            <!--    <template v-if="isCube">
                                 <SectionField title="Common">
                                     <div class="kv">
                                         <div class="kv-k">Path</div>
@@ -42,7 +46,7 @@
                                         @change="emitChange(textureRef)" />
                                 </SectionField>
                             </template>
-                            <template v-else-if="isColorGrading">
+<template v-else-if="isColorGrading">
                                 <SectionField title="Common">
                                     <div class="kv">
                                         <div class="kv-k">Path</div>
@@ -50,7 +54,7 @@
                                     </div>
                                 </SectionField>
                             </template>
-                            <template v-else>
+<template v-else>
                                 <SectionField title="Common">
                                     <div class="kv">
                                         <div class="kv-k">Dimensions</div>
@@ -120,9 +124,9 @@
                                         </el-select>
                                     </div>
                                 </SectionField>
-                            </template>
+                            </template>-->
                         </div>
-                    </template> -->
+                    </template>
                 </el-popover>
                 <div v-else class="texture-preview-inner"><el-icon>
                         <QuestionFilled />
@@ -163,10 +167,11 @@
             <slot />
         </div>
     </div>
+
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue"
+import { ref, computed, watch, onMounted, onBeforeUnmount, onUnmounted } from "vue"
 
 //mport sharp from "sharp"
 import { Texture, CubeTexture, ColorGradingTexture } from "@babylonjs/core"
@@ -201,7 +206,8 @@ import { onSelectedAssetChanged, onTextureAddedObservable } from "@/tools/observ
 import { isColorGradingTexture, isCubeTexture, isTexture } from "@/tools/guards/texture"
 import { projectConfiguration } from "@/tools/configuration"
 import { configureImportedTexture } from "@/tools/preview/import"
-
+import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
+import { Editor } from "@/3d/Editor";
 const props = defineProps<{
     object: any
     title: string
@@ -220,7 +226,7 @@ const emit = defineEmits<{ (e: "change", t?: any): void }>()
 const dragOver = ref(false)
 const previewError = ref(false)
 const previewTemporaryUrl = ref<string | null>(null)
-const textureRef = computed<any>(() => props.object?.[props.property] ?? null)
+const textureRef = ref<any>(props.object?.[props.property] ?? null)
 const textureUrl = computed<string | null | false>(() => (isTexture(textureRef.value) || isCubeTexture(textureRef.value) || isColorGradingTexture(textureRef.value)) && textureRef.value?.url)
 const isCube = computed(() => isCubeTexture(textureRef.value))
 const isColorGrading = computed(() => isColorGradingTexture(textureRef.value))
@@ -268,7 +274,9 @@ const openAsset = (name: string) => {
     onSelectedAssetChanged.notifyObservers(joinPaths(getDirname(projectConfiguration.path!), name))
 }
 
-const emitChange = (t: any) => emit("change", t)
+const emitChange = (t: any) => {
+    emit("change", t)
+}
 const force = () => { }
 const roundCoordinatesIndex = (v: number) => { if (textureRef.value) textureRef.value.coordinatesIndex = Math.round(v) }
 const onCoordinatesModeChange = (v: number) => { if (textureRef.value) { textureRef.value.coordinatesMode = v; emitChange(textureRef.value) } }
@@ -277,12 +285,19 @@ const onSamplingModeChange = (v: number) => { if (textureRef.value) { textureRef
 const setVScale = (v: number) => { if (textureRef.value) { textureRef.value.vScale = v; emitChange(textureRef.value) } }
 
 const clear = () => {
-    const oldTexture = props.object[props.property]
-    props.object[props.property] = null
+    const oldTexture = getInspectorPropertyValue(props.object, props.property)
+    setInspectorEffectivePropertyValue(props.object, props.property, null)
+    textureRef.value = null
     emitChange(null)
     if (!props.noUndoRedo) {
-        registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = null) })
+        registerUndoRedo({
+            executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = null), action: () => {
+                Editor.Instance.dispatch('textureChanged', { newTexture: textureRef.value?.url ?? "", id: props.object.id })
+            }
+        })
     }
+    //  console.log(textureRef.value);
+
 }
 
 const handleDragOver = (ev: DragEvent) => { dragOver.value = true }
@@ -360,16 +375,31 @@ const handleDrop = (ev: DragEvent) => {
 }
 
 const computeTemporaryPreview = async () => {
-    const texture: any = props.object[props.property]
+    const texture: any = getInspectorPropertyValue(props.object, props.property)
     if (!texture?.url || getExtname(texture.url).toLowerCase() === ".exr") return
     previewError.value = false
     previewTemporaryUrl.value = texture.url
+
 }
 
 
 
+watch(() => [props.object, props.property], () => {
+    textureRef.value = getInspectorPropertyValue(props.object, props.property)
+})
 watch(textureRef, () => computeTemporaryPreview())
-onMounted(() => computeTemporaryPreview())
+onMounted(() => {
+    computeTemporaryPreview(),
+        Editor.Instance.on('UndoRedo', (e) => {
+            //textureRef重新计算
+            textureRef.value = getInspectorPropertyValue(props.object, props.property)
+            console.log(textureRef.value);
+
+        })
+})
+onUnmounted(() => {
+    Editor.Instance.off('UndoRedo', () => { })
+})
 </script>
 
 <style scoped>
