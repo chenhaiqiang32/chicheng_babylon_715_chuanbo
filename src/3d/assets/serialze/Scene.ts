@@ -11,7 +11,11 @@ import { deserializeNode, serializeNode } from './node/Node';
 import type { CC } from '../BaseRes';
 import { ICollectAssets, ILoaderAssets } from '../AssetsManager';
 
-export function serializeScene(scene: Scene, assets: ICollectAssets): CC.Scene {
+export function serializeScene(
+  scene: Scene,
+  assets: ICollectAssets,
+  serializeAssets: boolean = true,
+): CC.Scene {
   const result: Partial<CC.Scene> = {};
   result.uuid = scene.uuid;
   result.type = 'scene';
@@ -46,7 +50,9 @@ export function serializeScene(scene: Scene, assets: ICollectAssets): CC.Scene {
   };
   result.iblIntensity = scene.iblIntensity;
 
-  result.nodes = scene.rootNodes.map((item) => serializeNode(item as TransformNode, assets));
+  result.nodes = scene.rootNodes.map((item) =>
+    serializeNode(item as TransformNode, assets, serializeAssets),
+  );
   return result as CC.Scene;
 }
 

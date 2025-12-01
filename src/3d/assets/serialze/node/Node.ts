@@ -6,15 +6,21 @@ import { deserializeTransformNode, serializeTransformNode } from './Transform';
 import { deserializeLight, serializeLight } from './Light';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 
-export function serializeNode(node: TransformNode, assets: ICollectAssets): CC.ObjectNode {
+export function serializeNode(
+  node: TransformNode,
+  assets: ICollectAssets,
+  serializeAssets: boolean,
+): CC.ObjectNode {
   try {
     const reuslt: Partial<CC.ObjectNode> = {
       id: node.uniqueId,
       name: node.name,
-      children: node.getChildren()?.map((item) => serializeNode(item as TransformNode, assets)),
+      children: node
+        .getChildren()
+        ?.map((item) => serializeNode(item as TransformNode, assets, serializeAssets)),
     };
     if (node instanceof Mesh) {
-      serializeMeshNode(node, reuslt as CC.MeshNode, assets);
+      serializeMeshNode(node, reuslt as CC.MeshNode, assets, serializeAssets);
     } else if (node instanceof Camera) {
       serializeCamera(node, reuslt as CC.CameraNode, assets);
     } else if (node instanceof Light) {

@@ -1,14 +1,12 @@
 import { ControlMode, ViewFlagsMode, useScene } from '@/store/useScene';
 import {
   ArcRotateCamera,
-  CascadedShadowGenerator,
   CubeTexture,
   Engine,
   GizmoManager,
   AbstractMesh,
   PBRMaterial,
   Scene,
-  SceneLoader,
   Vector3,
   Node,
   BoundingBoxGizmo,
@@ -17,13 +15,9 @@ import {
   Mesh,
   DirectionalLight,
   MeshBuilder,
-  Texture,
   LightGizmo,
-  TransformNode,
   Matrix,
   Camera,
-  PointerEventTypes,
-  PointerInfo,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -148,8 +142,8 @@ export class Editor extends Dispatch<EditorEvent> {
     this.initViewMode();
     this.initPointerObservale();
     this.initFocus();
-    MeshBuilder.CreateSphere('Sphere');
-
+    // const sphere = MeshBuilder.CreateSphere('Sphere');
+    // sphere.material = new PBRMaterial('PBR', this.scene);
     this.engine.runRenderLoop(() => {
       this.scene.render();
     });
@@ -246,8 +240,11 @@ export class Editor extends Dispatch<EditorEvent> {
    * @param id 节点的唯一ID
    * @returns 找到的节点，或null
    */
-  getNodeById(id: string): Node {
-    return this.scene.getNodeById(id);
+  getNodeById(id: number): Node {
+    let node = this.scene.getTransformNodeByUniqueId(id);
+    if (!node) {
+      return this.scene.getMeshByUniqueId(id);
+    }
   }
 
   /**
@@ -319,7 +316,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const raycastHit = this.scene.pickWithRay(ray);
     // 赋值当前选中的 Object
     if (raycastHit.hit) {
-      useScene().setCurrentSelect([raycastHit.pickedMesh.id]);
+      useScene().setCurrentSelect([raycastHit.pickedMesh.uniqueId]);
     } else {
       useScene().setCurrentSelect();
     }

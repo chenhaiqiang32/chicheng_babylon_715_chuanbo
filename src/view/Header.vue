@@ -32,6 +32,9 @@ const menuItems: MenuItem[] = [
             }, {
                 name: '加载并导出',
                 callback: exportFile
+            }, {
+                name: '加载资产包',
+                callback: importAssets
             }
         ]
     },
@@ -108,7 +111,7 @@ function load() {
 
 }
 function exportFile() {
-    Utils.chooseFile().then((fileList) => {
+    Utils.chooseFile('.glb').then((fileList) => {
         if (fileList[0]) {
             RuntimeLibrary.Instance.importMesh(fileList[0]).then(async (assets) => {
                 assets.exportFile()
@@ -118,7 +121,19 @@ function exportFile() {
 }
 
 function importScene() {
-    Utils.chooseFile().then(async (fileList) => {
+    Utils.chooseFile('.glb').then(async (fileList) => {
+        if (fileList[0]) {
+            RuntimeLibrary.Instance.importMesh(fileList[0]).then(async (assets) => {
+                await assets.addToScene(Editor.Instance.Scene);
+                setTimeout(() => {
+                    useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
+                }, 1000);
+            })
+        }
+    })
+}
+function importAssets() {
+    Utils.chooseFile('.zip').then(async (fileList) => {
         if (fileList[0]) {
             RuntimeLibrary.Instance.loadAssets(fileList[0]).then(async (assets) => {
                 await assets.addToScene(Editor.Instance.Scene);

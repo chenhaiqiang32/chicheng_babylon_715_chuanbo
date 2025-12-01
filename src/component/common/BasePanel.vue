@@ -3,14 +3,17 @@
         <div class="panel-header">
             <span name="header">{{ title }}</span>
         </div>
-        <div class="panel-content">
+        <div class="panel-content" :style="containerStyle">
             <slot></slot>
         </div>
     </div>
 </template>
 <script setup lang='ts'>
+import { CSSProperties } from 'vue';
+
 const props = defineProps<{
-    title: string
+    title: string,
+    containerStyle?: CSSProperties
 }>()
 </script>
 <style scoped lang='scss'>

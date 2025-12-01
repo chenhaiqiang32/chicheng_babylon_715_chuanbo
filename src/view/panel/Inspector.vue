@@ -6,7 +6,7 @@
                     <Common v-if="selectedObject" :object="selectedObject" />
                 </KeepAlive>
                 <KeepAlive>
-                    <Transform :object="selectedObject" />
+                    <Transform v-if="selectedObject" :object="selectedObject" />
                 </KeepAlive>
                 <!-- <KeepAlive>
                     <Collision v-if="selectedObject?.geometry" :object="selectedObject" />
@@ -24,13 +24,12 @@
 import BasePanel from '@/component/common/BasePanel.vue'
 import Common from './inspector/Common.vue'
 import { isNode } from '@/tools/guards/nodes.ts';
-import { ref, reactive, watch, computed, KeepAlive, shallowRef } from 'vue'
+import { ref, watch, computed, KeepAlive, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
 import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
-import Collision from './inspector/Collision.vue'
 const { currentSelected } = storeToRefs(useScene());
 const editedObject = ref<any | null>(null)
 
@@ -79,5 +78,4 @@ watch(currentSelected, (newSelected) => {
         gap: 5px;
     }
 }
-
 </style>

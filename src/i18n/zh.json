@@ -1,6 +1,8 @@
 {
   "view": {
-    "hierarchy": "层级"
+    "hierarchy": "层级",
+    "scene": "场景",
+    "sceneList": "场景列表"
   },
   "menu": {
     "file": {

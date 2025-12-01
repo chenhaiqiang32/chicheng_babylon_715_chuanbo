@@ -1,18 +1,34 @@
 <template>
-    <BasePanel :title="$t('view.hierarchy')">
-        <div class="hierarchy-panel">
-            <ElInput size="small" placeholder="搜索" v-model="searchText">
-                <template #prefix>
-                    <el-icon>
-                        <Search />
-                    </el-icon>
-                </template>
-            </ElInput>
-            <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)" :data="hierarchy"
-                highlight-current :props="treeProps" node-key="id" :default-expanded="true" :default-active="true"
-                @node-click="handleNodeClick">
-            </ElTree>
-        </div>
+    <BasePanel :title="$t('view.scene')">
+        <ElSplitter :lazy="true" layout="vertical">
+            <ElSplitterPanel :min="120" :max="500" :size="120">
+                <div class="scene-list">
+                    <div class="title">{{ $t('view.sceneList') }}</div>
+                    <div v-for="scene in sceneList" :key="scene.uuid">
+                        {{ scene.name }}
+                    </div>
+                </div>
+            </ElSplitterPanel>
+            <ElSplitterPanel>
+                <div class="hierarchy-panel">
+                    <ElInput size="small" placeholder="搜索" v-model="searchText">
+                        <template #prefix>
+                            <el-icon>
+                                <Search />
+                            </el-icon>
+                        </template>
+                    </ElInput>
+                    <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
+                        :data="hierarchy" highlight-current :props="treeProps" node-key="id" :default-expanded="true"
+                        :default-active="true" @node-click="handleNodeClick">
+                    </ElTree>
+                </div>
+            </ElSplitterPanel>
+
+
+        </ElSplitter>
+
+
     </BasePanel>
 </template>
 <script setup lang='ts'>
@@ -30,7 +46,7 @@ const treeProps = {
     label: 'name',
 }
 
-const { hierarchy, currentSelected } = storeToRefs(useScene());
+const { hierarchy, currentSelected, sceneList } = storeToRefs(useScene());
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
 
@@ -53,6 +69,7 @@ const handleNodeClick = (node: HierarchyNode) => {
         treeRef.value?.setCurrentKey(null);
     }
 }
+
 watch(searchText, (val) => {
     treeRef.value!.filter(val)
 })
@@ -73,10 +90,19 @@ onUnmounted(() => {
 
 </script>
 <style scoped lang='scss'>
+.scene-list {
+    height: 100%;
+
+    .title {
+        padding: 10px;
+    }
+}
+
 .hierarchy-panel {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1;
+    height: 0;
     gap: 10px;
     padding: 10px;
 
