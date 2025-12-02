@@ -28,3 +28,8 @@
   color: var(--title--color) !important;
   box-shadow: none !important;
 }
+.el-message-box {
+  .el-input__wrapper {
+    background-color: var(--bg-color-2) !important;
+  }
+}

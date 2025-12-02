@@ -1,8 +1,11 @@
-import { ref, shallowReactive } from 'vue';
+import { ref, shallowReactive, shallowRef } from 'vue';
 import { defineStore } from 'pinia';
 import { Node, Scene } from '@babylonjs/core';
 import { ViewFlagsMode } from '@/3d/core/utils/viewFlagsMode';
 import { CC } from '@/3d/assets/BaseRes';
+import { deserializeScene, serializeScene } from '@/3d/assets/serialze/Scene';
+import { Editor } from '@/3d/Editor';
+import { MultiAssets, RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 
 function buildHierarchy(node: Node): HierarchyNode {
   return {
@@ -26,8 +29,13 @@ export const useScene = defineStore('scene', () => {
   const currentSelected = ref<Array<number>>([]);
   const currentControlMode = ref<ControlMode>();
   const currentViewFlagsMode = ref<ViewFlagsMode>();
+  const currentScene = ref<string>();
+  const scenelist = new Array<Scene>();
+  const sceneInfoList = shallowRef<Partial<CC.Scene>[]>([]);
 
-  const sceneList = shallowReactive<Scene[]>([]);
+  function setSceneList(scenes: CC.Scene[]) {
+    sceneInfoList.value = scenes;
+  }
 
   function setHierarchy(rootNodes: Node[]) {
     hierarchy.value = rootNodes.map(buildHierarchy);
@@ -48,10 +56,44 @@ export const useScene = defineStore('scene', () => {
     }
   }
 
+  function addScene(scene: Scene) {
+    scenelist.push(scene);
+    sceneInfoList.value.push({ name: scene.name, uuid: scene.uuid });
+    sceneInfoList.value = [...sceneInfoList.value];
+  }
+
+  async function getScene(uuid: string): Promise<Scene> {
+    const scene = scenelist.find((x) => x.uuid == uuid);
+    if (scene) {
+      return scene;
+    } else {
+      const ccNode = sceneInfoList.value.find((x) => x.uuid == uuid) as CC.Scene;
+      if (ccNode) {
+        const assets = new MultiAssets(RuntimeLibrary.Instance.sceneAssets);
+        const scene = new Scene(Editor.Instance.Engine);
+        RuntimeLibrary.Instance.sceneAssets.forEach((asset) => {
+          asset.serializeToScene(scene);
+        });
+        await deserializeScene(ccNode, Editor.Instance.Engine, assets, scene);
+        scenelist.push(scene);
+        return scene;
+      }
+    }
+  }
+
+  function getAllScene(): Scene[] {
+    return scenelist;
+  }
+
   return {
+    getScene,
+    currentScene,
     hierarchy,
-    sceneList,
+    sceneInfoList,
+    setSceneList,
+    addScene,
     setHierarchy,
+    getAllScene,
     currentSelected,
     setCurrentSelect,
     currentControlMode,

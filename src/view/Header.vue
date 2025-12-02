@@ -7,10 +7,14 @@
 </template>
 <script setup lang='ts'>
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
+import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
 import { useScene } from '@/store/useScene';
 import { Utils } from '@/utils';
+import { ID } from '@/utils/id';
+import { zipFiles } from '@/utils/Zip';
+import { Tools } from '@babylonjs/core';
 import { useDark, useToggle } from '@vueuse/core'
 import { ref } from 'vue'
 
@@ -104,20 +108,18 @@ const menuItems: MenuItem[] = [
     },
 ]
 
-function exportScene() {
-
-}
-function load() {
-
-}
-function exportFile() {
-    Utils.chooseFile('.glb').then((fileList) => {
-        if (fileList[0]) {
-            RuntimeLibrary.Instance.importMesh(fileList[0]).then(async (assets) => {
-                assets.exportFile()
-            })
-        }
-    })
+async function exportFile() {
+    const files = await RuntimeLibrary.Instance.exportAll()
+    const sceneList = useScene().getAllScene();
+    const sceneDatas = new Array<any>(sceneList.length);
+    for (let index = 0; index < sceneList.length; index++) {
+        const scene = sceneList[index];
+        const sceneData = serializeScene(scene, null, false);
+        sceneDatas.push(sceneData);
+    }
+    files.push(['scene.json', JSON.stringify(sceneDatas)]);
+    const zip = await zipFiles(files);
+    Tools.Download(zip, ID.generateUUID().replace(/-/g, '') + '.zip');
 }
 
 function importScene() {
@@ -133,16 +135,7 @@ function importScene() {
     })
 }
 function importAssets() {
-    Utils.chooseFile('.zip').then(async (fileList) => {
-        if (fileList[0]) {
-            RuntimeLibrary.Instance.loadAssets(fileList[0]).then(async (assets) => {
-                await assets.addToScene(Editor.Instance.Scene);
-                setTimeout(() => {
-                    useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
-                }, 1000);
-            })
-        }
-    })
+
 }
 
 </script>

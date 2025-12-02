@@ -60,7 +60,7 @@ export async function deserializeScene(
   sceneData: CC.Scene,
   engine: Engine,
   assets: ILoaderAssets,
-  scene: Scene,
+  scene?: Scene,
 ) {
   scene = scene ?? new Scene(engine);
 

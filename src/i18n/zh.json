@@ -2,7 +2,20 @@
   "view": {
     "hierarchy": "层级",
     "scene": "场景",
-    "sceneList": "场景列表"
+    "sceneList": "场景列表",
+    "addScene": "新建场景",
+    "sceneName": "场景名称",
+    "newScenePlaceholder": "请输入场景名称",
+    "newSceneCancel": "取消",
+    "newSceneConfirm": "完成"
+  },
+  "toolsBar": {
+    "cursor": "选择",
+    "move": "移动",
+    "rotate": "旋转",
+    "scale": "缩放",
+    "gizmo": "变换轴",
+    "overlay": "模型选中后遮罩效果"
   },
   "menu": {
     "file": {
