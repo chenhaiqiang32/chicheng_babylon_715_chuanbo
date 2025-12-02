@@ -97,7 +97,10 @@
       "gravity": "重力",
       "clearColor": "背景颜色",
       "ambientColor": "环境光颜色",
-      "renderingPipeline": "渲染管线"
+      "renderingPipeline": "渲染管线",
+      "environment": "环境",
+      "environmentTexture": "环境贴图",
+      "fog": "雾"
     }
   }
 }

@@ -19,8 +19,8 @@ const emit = defineEmits<{ (e: "change", value: number): void; (e: "finishChange
 const min = props.min ?? 0
 const max = props.max ?? 1
 const step = props.step ?? (max - min) / 100;
-const value = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 0)
-const oldValue = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 0)
+const value = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 1)
+const oldValue = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 1)
 
 watch(() => [props.object, props.property], () => {
 

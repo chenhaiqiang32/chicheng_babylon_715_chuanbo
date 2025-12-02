@@ -1,16 +1,16 @@
 <template>
     <div>
-        <SectionField title="Colors">
-            <Color label="Clear" :object="object" property="clearColor" />
-            <Color label="Ambient" :object="object" property="ambientColor" />
+        <SectionField title="$t('component.sceneSetting.backgroundcolor')">
+            <Color label="$t('component.sceneSetting.clearColor')" :object="object" property="clearColor" />
+            <Color label="$t('component.sceneSetting.ambientColor')" :object="object" property="ambientColor" />
         </SectionField>
 
-        <SectionField title="Environment">
-            <Texture acceptCubeTexture title="Environment Texture" :object="object" property="environmentTexture"
-                @change="force" />
+        <SectionField title="$t('component.sceneSetting.environment')">
+            <Texture acceptCubeTexture title="$t('component.sceneSetting.environmentTexture')" :object="object"
+                property="environmentTexture" @change="force" />
         </SectionField>
 
-        <SectionField title="Fog">
+        <SectionField title="$t('component.sceneSetting.fog')">
             <Switch label="Enabled" :object="object" property="fogEnabled" @change="force" />
 
             <template v-if="object.fogEnabled">
