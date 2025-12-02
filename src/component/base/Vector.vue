@@ -20,6 +20,7 @@ import { ref, watch, computed, onMounted, onUnmounted } from "vue"
 import Field from "@/component/common/Field.vue"
 import { registerSimpleUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
+import { Editor } from "@/3d/Editor";
 const props = defineProps<{
 	object: any
 	property: string
@@ -35,8 +36,9 @@ const emit = defineEmits<{ (e: "change"): void; (e: "finishChange"): void }>()
 
 const hasZ = computed(() => props.object?.[props.property]?.z !== undefined || props.object?.[props.property]?.w !== undefined)
 const hasW = computed(() => props.object?.[props.property]?.w !== undefined)
+//保留三位小数
 
-const toDisplay = (v: number) => (props.asDegrees ? (v * 180) / Math.PI : v)
+const toDisplay = (v: number) => parseFloat((props.asDegrees ? (v * 180) / Math.PI : v).toFixed(3))
 const toStore = (v: number) => (props.asDegrees ? (v * Math.PI) / 180 : v)
 
 const vx = ref<number>(toDisplay(props.object?.[props.property]?.x ?? 0))
@@ -58,15 +60,15 @@ watch(() => [props.object, props.property], () => {
 let undoObserver: any = null
 let redoObserver: any = null
 
-onMounted(() => {
-	undoObserver = onUndoObservable.add(() => syncFromObject())
-	redoObserver = onRedoObservable.add(() => syncFromObject())
-})
+// onMounted(() => {
+// 	undoObserver = onUndoObservable.add(() => syncFromObject())
+// 	redoObserver = onRedoObservable.add(() => syncFromObject())
+// })
 
-onUnmounted(() => {
-	if (undoObserver) onUndoObservable.remove(undoObserver)
-	if (redoObserver) onRedoObservable.remove(redoObserver)
-})
+// onUnmounted(() => {
+// 	if (undoObserver) onUndoObservable.remove(undoObserver)
+// 	if (redoObserver) onRedoObservable.remove(redoObserver)
+// })
 
 const axisMin = (i: number) => (Array.isArray(props.min) ? props.min[i] : props.min)
 const axisMax = (i: number) => (Array.isArray(props.max) ? props.max[i] : props.max)
@@ -87,6 +89,15 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 const onFinishChange = () => {
 	emit("finishChange")
 }
+onMounted(() => {
+	Editor.Instance.on("UndoRedo", () => {
+		syncFromObject()
+	})
+})
+onUnmounted(() => {
+	Editor.Instance.off("UndoRedo", () => {
+	})
+})
 </script>
 
 <style lang="scss">

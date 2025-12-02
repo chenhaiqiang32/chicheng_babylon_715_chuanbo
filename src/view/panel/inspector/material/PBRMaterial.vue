@@ -1,19 +1,28 @@
 <template>
   <SectionField :title="$t('component.material.title')" :label="material.getClassName()">
     <StringField :label="$t('component.material.name')" :object="material" property="name" />
+    <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
+    <Color :label="$t('component.material.emissive')" :object="material" property="emissiveColor" />
     <Switch :label="$t('component.material.backFaceCulling')" :object="material" property="backFaceCulling" />
     <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
-    <Slider :label="$t('component.material.directIntensity')" :object="material" property="directIntensity" :min="0" />
+    <Slider :label="$t('component.material.directIntensity')" :object="material" property="directIntensity" :min="0"
+      :max="50" />
     <Slider :label="$t('component.material.environmentIntensity')" :object="material" property="environmentIntensity"
-      :min="0" />
-    <Slider :label="$t('component.material.emissiveIntensity')" :object="material" property="emissiveIntensity"
-      :min="0" />
-    <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity"
-      :min="0" />
+      :min="0" :max="50" />
+    <Slider :label="$t('component.material.emissiveIntensity')" :object="material" property="emissiveIntensity" :min="0"
+      :max="50" />
+    <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity" :min="0"
+      :max="50" />
+    <!-- <Switch label="Metallic" :object="metallicToggle" property="checked" :noUndoRedo="true" /> -->
+    <Slider v-if="material.metallicTexture" :label="$t('component.material.metallic')" :object="material"
+      property="metallicF0Factor" :min="0" />
+    <Slider v-if="!material.metallicTexture" :label="$t('component.material.metallic')" :object="material"
+      property="metallic" :min="0" />
+    <Slider :label="$t('component.material.roughness')" :object="material" property="roughness" :min="0" />
     <!-- <AlphaModeField :object="material" /> -->
     <!-- <TransparencyModeField :object="material" /> -->
     <!-- <MaterialInspectorUtils :mesh="mesh" :material="material" /> -->
-    <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
+
     <Texture :object="material" :title="$t('component.material.albedoTexture')" property="albedoTexture"
       @change="force">
       <template v-if="material.albedoTexture">
@@ -90,8 +99,9 @@
           property="useOnlyMetallicFromMetallicReflectanceTexture" @change="force" />
       </template>
     </Texture>
+    <Texture :object="material" :title="$t('component.material.emissiveTexture')" property="emissiveTexture">
+    </Texture>
 
-    <Texture :object="material" :title="$t('component.material.emissiveTexture')" property="emissiveTexture" />
     <Texture :object="material" :title="$t('component.material.lightmapTexture')" property="lightmapTexture">
       <template v-if="material.lightmapTexture">
         <Switch :label="$t('component.material.useLightmapAsShadowmap')" :object="material"
@@ -228,7 +238,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, onMounted, } from "vue"
 import SectionField from "@/component/common/SectionField.vue"
 import StringField from "@/component/base/StringField.vue"
 import Switch from "@/component/base/Switch.vue"
@@ -249,4 +259,6 @@ const toggleMetallic = (v: boolean) => {
 const toggleRoughness = (v: boolean) => {
   // registerSimpleUndoRedo({ object: props.material, property: "roughness", oldValue: props.material.roughness, newValue: v ? 1 : null, executeRedo: true })
 }
+onMounted(() => {
+})
 </script>

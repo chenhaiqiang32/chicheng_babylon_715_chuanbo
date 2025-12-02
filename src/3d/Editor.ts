@@ -25,7 +25,6 @@ import {
 import '@babylonjs/loaders/glTF';
 import '@babylonjs/materials';
 import { watch, type WatchHandle } from 'vue';
-import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
 import { focusOnNode } from '@/3d/core/utils/focusOnNode';
@@ -34,6 +33,10 @@ import { ID } from '@/utils/id';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
+  numberChanged: { newNumber: number; id: string };
+  textureChanged: { newTexture: string; id: string };
+  switchChanged: { newSwitch: boolean; id: string };
+  UndoRedo: void;
 }
 
 export class Editor extends Dispatch<EditorEvent> {

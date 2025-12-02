@@ -43,6 +43,8 @@ const onEnter = () => {
 
   const object = props.object;
   if (!props.noUndoRedo) {
+    console.log('onEnter', newValue, oldValue.value);
+
     registerSimpleUndoRedo({
       object: object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
         Editor.Instance.dispatch('nameChanged', { newName: object.name, id: object.id })
@@ -60,6 +62,17 @@ const onEnter = () => {
   emit("change", newValue)
 
 }
+onMounted(() => {
+  Editor.Instance.on("UndoRedo", () => {
+    syncFromObject()
+  })
+})
+onUnmounted(() => {
+  Editor.Instance.off("UndoRedo", () => {
+  })
+})
+
+
 
 </script>
 <style scoped lang="scss">
