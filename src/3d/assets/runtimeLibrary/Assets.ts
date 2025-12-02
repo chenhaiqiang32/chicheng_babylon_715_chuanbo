@@ -3,7 +3,6 @@ import { URLUtils } from '@/utils/URL';
 import { ZipFile, zipFiles } from '@/utils/Zip';
 import { BaseTexture, Scene, Material, Texture } from '@babylonjs/core';
 import { Geometry } from '@babylonjs/core/Meshes';
-import JSZip from 'jszip';
 import { ICollectAssets, ILoaderAssets } from '../AssetsManager';
 import { CC } from '../BaseRes';
 import { deserializeNode } from '../serialze/node/Node';
@@ -118,10 +117,14 @@ export class Assets implements ICollectAssets, ILoaderAssets {
     if (!texture.uuid) {
       texture.uuid = ID.generateUUID();
     }
-    if (!this.texture.find((item) => item.uuid === texture.uuid) || force) {
+    const old = this.texture.find((item) => item.uuid === texture.uuid);
+    if (!old || force) {
       const data = texture.serialize();
       data.uuid = texture.uuid;
       delete data.url;
+      if (old) {
+        ArrayUtils.remove(old, this.texture);
+      }
       this.texture.push(data);
       if (!this.textureFile.has(texture.uuid)) {
         const t = texture.getInternalTexture();

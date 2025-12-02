@@ -25,7 +25,7 @@ const objectType = computed(() => {
     return props.object.getClassName?.() || 'Unknown';
 });
 function setVisible(visible: boolean) {
-    props.object.setEnabled(visible)
+    props.object.isVisible = visible;
     onNodeModifiedObservable.notifyObservers(props.object)
 }
 
