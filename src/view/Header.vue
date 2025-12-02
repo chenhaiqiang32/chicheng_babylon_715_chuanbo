@@ -31,18 +31,11 @@ const menuItems: MenuItem[] = [
         name: 'menu.file.title',
         children: [
             {
-                name: 'menu.file.open',
-                callback: open
-            },
-            {
                 name: 'menu.file.import',
-                callback: importScene
+                callback: importModel
             }, {
-                name: '加载并导出',
+                name: 'menu.file.save',
                 callback: exportFile
-            }, {
-                name: '加载资产包',
-                callback: importAssets
             }
         ]
     },
@@ -137,7 +130,7 @@ async function exportFile() {
 
 }
 
-function importScene() {
+function importModel() {
     Utils.chooseFile('.glb').then(async (fileList) => {
         if (fileList[0]) {
             RuntimeLibrary.Instance.importMesh(fileList[0]).then(async (assets) => {
