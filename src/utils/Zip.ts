@@ -1,9 +1,9 @@
 import JSZip from 'jszip';
 
-export type ZipFile = [string, Blob | ArrayBuffer | string | Uint8Array | string];
+export type ZipFile = [string, Blob | ArrayBuffer | string];
 
-const zip = new JSZip();
 export function zipFiles(files: ZipFile[], onProgress?: (progress: number) => void) {
+  const zip = new JSZip();
   files.forEach((file) => {
     zip.file(file[0], file[1]);
   });

@@ -9,27 +9,27 @@ import {
   Scene,
   Vector3,
   Node,
-  BoundingBoxGizmo,
   Color3,
-  HighlightLayer,
   Mesh,
   DirectionalLight,
-  MeshBuilder,
   LightGizmo,
   Matrix,
   Camera,
-  Texture,
+  Light,
+  PointLight,
+  SpotLight,
+  PointerInfo,
+  PointerEventTypes,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
 import '@babylonjs/materials';
 import { watch, type WatchHandle } from 'vue';
-import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
-import { registerLeftClick } from '@/3d/core/utils/registerLeftClick';
 import { focusOnNode } from '@/3d/core/utils/focusOnNode';
 import { Dispatch } from '@/utils/dispatch';
+import { ID } from '@/utils/id';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -40,13 +40,15 @@ interface EditorEvent {
 }
 
 export class Editor extends Dispatch<EditorEvent> {
-  loadScene(arg0: string) {}
   private scene: Scene;
   private engine: Engine;
   private camera: Camera;
   private gizmoManager: GizmoManager;
 
   private static instance: Editor;
+  private downX = 0;
+  private downY = 0;
+  private isDown = false;
   static get Instance() {
     if (Editor.instance == null) {
       Editor.instance = new Editor();
@@ -73,8 +75,6 @@ export class Editor extends Dispatch<EditorEvent> {
 
   private resizeObserver: ResizeObserver;
 
-  private highLightLayer: HighlightLayer;
-
   private watcher: WatchHandle[] = [];
 
   private _selectNodes: Node[];
@@ -82,9 +82,6 @@ export class Editor extends Dispatch<EditorEvent> {
   private enableGizmo: boolean = true;
 
   private enableMask: boolean = true;
-
-  private lightGizmos: LightGizmo;
-  private light: DirectionalLight;
 
   get selectNodes() {
     return this.selectNodes;
@@ -113,8 +110,6 @@ export class Editor extends Dispatch<EditorEvent> {
       else {
         this.gizmoManager.boundingBoxGizmoEnabled = false;
         this.gizmoManager.attachToNode(v[0]);
-        // 灯光 attach 到 mesh 上，否则旋转 gizmos 无效
-        this.gizmoManager.attachToMesh(this.lightGizmos.attachedMesh);
       }
     }
     if (this._selectNodes.length > 0) {
@@ -132,47 +127,44 @@ export class Editor extends Dispatch<EditorEvent> {
       limitDeviceRatio: 2,
       stencil: true,
     });
-
-    this.scene = await this.createScene();
-
-    const env = CubeTexture.CreateFromPrefilteredData(
-      './abandoned_factory_canteen_01.env',
-      this.scene,
-    );
-
-    this.scene.environmentTexture = env;
-    this.scene.iblIntensity = 0.5;
-
-    this.initGizmos();
-    this.initViewMode();
-    this.initPointerObservale();
     this.initFocus();
-    // const sphere = MeshBuilder.CreateSphere('Sphere');
-    // sphere.material = new PBRMaterial('PBR', this.scene);
     this.engine.runRenderLoop(() => {
-      this.scene.render();
+      this.scene?.render();
     });
     window.addEventListener('resize', this.resize);
     const resizeObserver = new ResizeObserver((entries) => {
       this.resize();
     });
-
-    this.highLightLayer = new HighlightLayer('hl1', this.scene, {});
-    this.highLightLayer.needStencil();
     resizeObserver.observe(canvas);
-    this.initWatch();
-    useScene().setHierarchy(this.scene.rootNodes);
-
-    setTimeout(() => {
-      this.resize();
-    }, 100);
-    this.test();
-
-    // 默认移动模式
     useScene().setCurrentControlMode(ControlMode.Move);
+    this.initWatch();
   }
 
-  test() {}
+  async setCurrentScene(uuid: string) {
+    if (this.scene) {
+      this.scene.onPointerObservable.removeCallback(this.onPointerDonw);
+      this.scene.activeCamera.detachControl();
+    }
+    const scene = await useScene().getScene(uuid);
+    if (scene) {
+      this.initGizmos(scene);
+      scene.activeCamera.attachControl();
+      scene.onPointerObservable.add(this.onPointerDonw);
+      useScene().currentScene = uuid;
+    }
+    this.scene = scene;
+    setTimeout(() => {
+      useScene().setHierarchy(scene.rootNodes);
+      useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
+    }, 1);
+  }
+
+  async createNewScene(arg0: string) {
+    const scene = await this.createScene();
+    scene.name = arg0;
+    scene.uuid = ID.generateUUID();
+    return scene;
+  }
 
   initWatch() {
     const selectWatcher = watch(
@@ -198,7 +190,7 @@ export class Editor extends Dispatch<EditorEvent> {
     this.watcher.push(viewFlagsModeWatcher);
   }
 
-  newScene() {
+  newResScene() {
     const scene = new Scene(this.engine);
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
@@ -209,7 +201,7 @@ export class Editor extends Dispatch<EditorEvent> {
   async createScene() {
     const scene = new Scene(this.engine);
     scene.useRightHandedSystem = true;
-    const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), this.scene);
+    const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), scene);
     camera.minZ = 0.001;
     camera.maxZ = 5000;
     camera.attachControl();
@@ -229,11 +221,39 @@ export class Editor extends Dispatch<EditorEvent> {
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
     scene.iblIntensity = 0.5;
-    const directionalLight = new DirectionalLight('dirLight', new Vector3(0, -1, -1), scene);
-    directionalLight.position = new Vector3(0, 10, 0);
-    directionalLight.intensity = 0.5;
-    this.light = directionalLight;
+    this.createLight('directional', scene);
+
     return scene;
+  }
+
+  private createLight(type: 'directional' | 'point' | 'spot', scene: Scene) {
+    let light: Light;
+    switch (type) {
+      case 'directional':
+        light = new DirectionalLight('dirLight', new Vector3(0, -1, -1), scene);
+        break;
+      case 'point':
+        light = new PointLight('pointLight', new Vector3(0, 0, 0), scene);
+        break;
+      case 'spot':
+        light = new SpotLight(
+          'spotLight',
+          new Vector3(0, 0, 0),
+          new Vector3(0, -1, -1),
+          Math.PI / 4,
+          1,
+          scene,
+        );
+        break;
+      default:
+        light = new DirectionalLight('dirLight', new Vector3(0, -1, -1), scene);
+        break;
+    }
+    if (!light) {
+      const lightGizmo = new LightGizmo();
+      lightGizmo.light = light;
+      lightGizmo.scaleRatio = 2;
+    }
   }
 
   resize = () => {
@@ -262,23 +282,17 @@ export class Editor extends Dispatch<EditorEvent> {
   /**
    * 初始化 gizmo
    */
-  initGizmos() {
-    let boundingBoxGizmo = new BoundingBoxGizmo();
-    boundingBoxGizmo.setColor(Color3.Red());
-    boundingBoxGizmo.setEnabledScaling(false);
-    boundingBoxGizmo.setEnabledRotationAxis('');
-
-    this.gizmoManager = new GizmoManager(this.scene);
+  initGizmos(scene: Scene) {
+    this.gizmoManager = new GizmoManager(scene);
     this.gizmoManager.enableAutoPicking = false;
     this.gizmoManager.positionGizmoEnabled = true;
+
     this.gizmoManager.boundingBoxGizmoEnabled = true;
-    this.gizmoManager.gizmos.boundingBoxGizmo = boundingBoxGizmo;
+    this.gizmoManager.gizmos.boundingBoxGizmo.fixedDragMeshBoundsSize = true;
+    this.gizmoManager.gizmos.boundingBoxGizmo.fixedDragMeshBoundsSize = true;
     this.gizmoManager.boundingBoxGizmoEnabled = false;
 
     // 添加灯光 gizmo
-    this.lightGizmos = new LightGizmo();
-    this.lightGizmos.scaleRatio = 2;
-    this.lightGizmos.light = this.light;
 
     this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {
       // TODO:监听BoundingBoxGizmos拖拽开始
@@ -291,22 +305,7 @@ export class Editor extends Dispatch<EditorEvent> {
     // 非等比例下无法缩放，需要将 update... 设置为 false
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
-  }
-
-  /** 初始化模型试图模型 */
-  initViewMode() {
-    // 默认开始 Gizmos 和 Mask
-    useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
-  }
-
-  /** 初始化光标事件 */
-  initPointerObservale() {
-    registerLeftClick(this.scene, {
-      dragThreshold: 3,
-      onClick: () => {
-        this.raycastSelect();
-      },
-    });
+    this.gizmoManager.rotationGizmoEnabled = false;
   }
 
   initFocus() {
@@ -398,16 +397,33 @@ export class Editor extends Dispatch<EditorEvent> {
       mesh.renderOverlay = true;
     } else {
       mesh.renderOverlay = false;
-      this.highLightLayer.removeMesh(mesh);
     }
   }
 
-  export() {
-    AssetsManager.Instance.exportScene(this.scene);
-    // const json = SceneSerializer.Serialize(this.scene);
-    // const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
-    // Tools.Download(blob, 'scene.json');
-  }
+  onPointerDonw = (pointerInfo: PointerInfo) => {
+    const evt = pointerInfo.event;
+    switch (pointerInfo.type) {
+      case PointerEventTypes.POINTERDOWN:
+        if (evt.button === 0) {
+          this.isDown = true;
+          this.downX = evt.clientX;
+          this.downY = evt.clientY;
+        }
+        break;
+
+      case PointerEventTypes.POINTERUP:
+        if (evt.button === 0 && this.isDown) {
+          const dx = evt.clientX - this.downX;
+          const dy = evt.clientY - this.downY;
+          const isDrag = Math.sqrt(dx * dx + dy * dy) > 3;
+          if (!isDrag) {
+            this.raycastSelect();
+          }
+        }
+        this.isDown = false;
+        break;
+    }
+  };
 }
 
 export function applyEnvironmentToPBR(mat: PBRMaterial, scene: Scene) {

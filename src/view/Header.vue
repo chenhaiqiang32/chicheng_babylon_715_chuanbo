@@ -6,12 +6,16 @@
     </div>
 </template>
 <script setup lang='ts'>
-import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { LocalFileSystem } from '@/3d/assets/runtimeLibrary/File';
+import { MultiCollectAssets } from '@/3d/assets/runtimeLibrary/MultiCollectAssets';
+import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
 import { useScene } from '@/store/useScene';
 import { Utils } from '@/utils';
 import { useDark, useToggle } from '@vueuse/core'
+import { ElMessage } from 'element-plus';
 import { ref } from 'vue'
 
 const isDark = useDark({
@@ -28,13 +32,10 @@ const menuItems: MenuItem[] = [
         children: [
             {
                 name: 'menu.file.import',
-                callback: importScene
+                callback: importModel
             }, {
-                name: '加载并导出',
+                name: 'menu.file.save',
                 callback: exportFile
-            }, {
-                name: '加载资产包',
-                callback: importAssets
             }
         ]
     },
@@ -104,23 +105,32 @@ const menuItems: MenuItem[] = [
     },
 ]
 
-function exportScene() {
-
-}
-function load() {
-
-}
-function exportFile() {
-    Utils.chooseFile('.glb').then((fileList) => {
-        if (fileList[0]) {
-            RuntimeLibrary.Instance.importMesh(fileList[0]).then(async (assets) => {
-                assets.exportFile()
-            })
+async function exportFile() {
+    try {
+        await LocalFileSystem.Instance.init();
+        const sceneList = useScene().getAllScene();
+        const multiCollectAssets = new MultiCollectAssets(RuntimeLibrary.Instance.sceneAssets)
+        const sceneDatas = new Array<any>(sceneList.length);
+        for (let index = 0; index < sceneList.length; index++) {
+            const scene = sceneList[index];
+            const sceneData = serializeScene(scene, multiCollectAssets);
+            sceneDatas.push(sceneData);
         }
-    })
+        const files = await RuntimeLibrary.Instance.saveAll()
+        files.push(['scene.json', JSON.stringify(sceneDatas)]);
+        files.forEach((file) => {
+            LocalFileSystem.Instance.saveFile(file[0], file[1]);
+        })
+        RuntimeLibrary.Instance.sceneAssets.forEach((asset) => {
+            asset.createNew = false;
+        })
+    } catch (error) {
+        ElMessage.error(error);
+    }
+
 }
 
-function importScene() {
+function importModel() {
     Utils.chooseFile('.glb').then(async (fileList) => {
         if (fileList[0]) {
             RuntimeLibrary.Instance.importMesh(fileList[0]).then(async (assets) => {
@@ -133,16 +143,20 @@ function importScene() {
     })
 }
 function importAssets() {
-    Utils.chooseFile('.zip').then(async (fileList) => {
-        if (fileList[0]) {
-            RuntimeLibrary.Instance.loadAssets(fileList[0]).then(async (assets) => {
-                await assets.addToScene(Editor.Instance.Scene);
-                setTimeout(() => {
-                    useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
-                }, 1000);
-            })
-        }
-    })
+
+}
+
+async function open() {
+    await LocalFileSystem.Instance.init();
+    const sceneList = await RuntimeLibrary.Instance.loadAssets(LocalFileSystem.Instance);
+    if (sceneList.length > 0) {
+        useScene().setSceneList(sceneList)
+        Editor.Instance.setCurrentScene(sceneList[0].uuid);
+    } else {
+        const scene = await Editor.Instance.createNewScene('默认场景');
+        useScene().addScene(scene);
+        Editor.Instance.setCurrentScene(scene.uuid)
+    }
 }
 
 </script>

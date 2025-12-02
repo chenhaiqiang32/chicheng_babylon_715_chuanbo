@@ -6,15 +6,23 @@
 </template>
 <script setup lang='ts'>
 import { Editor } from '@/3d/Editor';
-import { nextTick, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import ToolBar from './scene/ToolBar.vue'
 
 const canvasRef = ref<HTMLCanvasElement>()
-onMounted(() => {
-    nextTick(() => {
-        Editor.Instance.init(canvasRef.value)
-    })
+onMounted(async () => {
+    Editor.Instance.init(canvasRef.value)
+    // const scene = await Editor.Instance.createNewScene('默认场景');
+    // useScene().addScene(scene);
+    // Editor.Instance.setCurrentScene(scene.uuid)
 })
+
+// onMounted(async () => {
+//     Editor.Instance.init(canvasRef.value)
+//     const scene = await Editor.Instance.createNewScene('默认场景');
+//    
+//     
+// })
 </script>
 <style scoped lang='scss'>
 .scene-panel {

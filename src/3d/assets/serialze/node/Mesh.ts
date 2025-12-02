@@ -10,7 +10,6 @@ export function serializeMeshNode(
 ) {
   meshData.type = 'mesh';
   meshData.material = mesh.material?.uuid || '';
-  meshData.sideOrientation = mesh.sideOrientation;
   if (mesh.geometry) {
     if (serializeAssets) {
       assetsManager.addGeometry(mesh.geometry);
@@ -37,7 +36,7 @@ export async function deserializeMeshNode(data: CC.MeshNode, scene: Scene, asset
   if (data.material) {
     mesh.material = await assets.getMaterial(data.material);
   }
-  mesh.sideOrientation = data.sideOrientation;
+  mesh.sideOrientation = 0;
   mesh.markAsDirty();
   return mesh;
 }
