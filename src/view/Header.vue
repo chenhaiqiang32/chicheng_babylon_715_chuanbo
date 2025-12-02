@@ -14,10 +14,8 @@ import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
 import { useScene } from '@/store/useScene';
 import { Utils } from '@/utils';
-import { ID } from '@/utils/id';
-import { zipFiles } from '@/utils/Zip';
-import { Tools } from '@babylonjs/core';
 import { useDark, useToggle } from '@vueuse/core'
+import { ElMessage } from 'element-plus';
 import { ref } from 'vue'
 
 const isDark = useDark({
@@ -115,19 +113,28 @@ const menuItems: MenuItem[] = [
 ]
 
 async function exportFile() {
-    const sceneList = useScene().getAllScene();
-    const multiCollectAssets = new MultiCollectAssets(RuntimeLibrary.Instance.sceneAssets)
-    const sceneDatas = new Array<any>(sceneList.length);
-    for (let index = 0; index < sceneList.length; index++) {
-        const scene = sceneList[index];
-        const sceneData = serializeScene(scene, multiCollectAssets);
-        sceneDatas.push(sceneData);
+    try {
+        await LocalFileSystem.Instance.init();
+        const sceneList = useScene().getAllScene();
+        const multiCollectAssets = new MultiCollectAssets(RuntimeLibrary.Instance.sceneAssets)
+        const sceneDatas = new Array<any>(sceneList.length);
+        for (let index = 0; index < sceneList.length; index++) {
+            const scene = sceneList[index];
+            const sceneData = serializeScene(scene, multiCollectAssets);
+            sceneDatas.push(sceneData);
+        }
+        const files = await RuntimeLibrary.Instance.saveAll()
+        files.push(['scene.json', JSON.stringify(sceneDatas)]);
+        files.forEach((file) => {
+            LocalFileSystem.Instance.saveFile(file[0], file[1]);
+        })
+        RuntimeLibrary.Instance.sceneAssets.forEach((asset) => {
+            asset.createNew = false;
+        })
+    } catch (error) {
+        ElMessage.error(error);
     }
-    const files = await RuntimeLibrary.Instance.saveAll()
-    files.push(['scene.json', JSON.stringify(sceneDatas)]);
-    files.forEach((file) => {
-        LocalFileSystem.Instance.saveFile(file[0], file[1]);
-    })
+
 }
 
 function importScene() {

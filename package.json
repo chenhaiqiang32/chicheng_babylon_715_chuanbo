@@ -33,6 +33,7 @@
     "@babylonjs/inspector": "^8.38.0",
     "@tsconfig/node22": "^22.0.2",
     "@types/node": "^22.16.5",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.7.0",
     "fast-glob": "^3.3.3",

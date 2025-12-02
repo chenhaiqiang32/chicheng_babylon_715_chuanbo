@@ -7,19 +7,24 @@ export interface IFile {
 
 export class LocalFileSystem implements IFile {
   private static _instance: LocalFileSystem;
-
   static get Instance() {
     return this._instance || (this._instance = new this());
   }
-
   root: FileSystemDirectoryHandle;
   private items: FileSystemItem[] = [];
   private dirs: FileSystemItem[] = [];
   async init() {
-    this.root = await FileSystem.Instance.openDirectory();
-    const children = await FileSystem.Instance.readDirectoryRecursive(this.root);
-    children.forEach((item) => getAllFile(item, this.items));
-    children.forEach((item) => getAllDir(item, this.dirs));
+    if (this.root) {
+      return;
+    }
+    try {
+      this.root = await FileSystem.Instance.openDirectory();
+      const children = await FileSystem.Instance.readDirectoryRecursive(this.root);
+      children.forEach((item) => getAllFile(item, this.items));
+      children.forEach((item) => getAllDir(item, this.dirs));
+    } catch (error) {
+      throw new Error('打开文件夹失败');
+    }
   }
   async saveFile(name: string, data: FileSystemWriteChunkType, dir?: string) {
     const pahts = name.split('/');
@@ -27,7 +32,6 @@ export class LocalFileSystem implements IFile {
       this.saveFile(pahts[1], data, pahts[0]);
       return;
     }
-
     const item = this.items.find((item) => item.name === name);
     if (item) {
       FileSystem.Instance.updateFile(item.handle as FileSystemFileHandle, data);

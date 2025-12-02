@@ -31,7 +31,7 @@ export class Assets implements ICollectAssets, ILoaderAssets {
   saveTexture: (uuid: BaseTexture) => void;
 
   private currentScene: Scene;
-  private createNew: boolean = true;
+  createNew: boolean = true;
   private sceneMaterial: Map<string, Material> = new Map();
   private sceneGeometry: Map<string, Geometry> = new Map();
   private sceneTexture: Map<string, BaseTexture> = new Map();

@@ -29,3 +29,10 @@ html {
     outline: none !important;
   }
 }
+.el-dialog {
+  .dialog-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--title--color);
+  }
+}
