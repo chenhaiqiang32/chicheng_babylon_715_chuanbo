@@ -31,6 +31,7 @@ export function serializeNode(
     if (node instanceof TransformNode) {
       serializeTransformNode(node, reuslt as CC.TransformNode);
     }
+    reuslt.visible = node.isVisible;
     return reuslt as CC.ObjectNode;
   } catch (error) {
     console.error('序列化节点时出错:', error);
@@ -61,5 +62,8 @@ export async function deserializeNode(
   if (currentNode instanceof TransformNode) {
     deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode);
   }
+  currentNode.inheritVisibility = true;
+  currentNode.isVisible = node.visible;
+
   node.children?.forEach((item) => deserializeNode(item, scene, assets, currentNode));
 }

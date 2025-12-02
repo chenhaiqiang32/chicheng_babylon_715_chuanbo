@@ -194,13 +194,13 @@ export class Editor extends Dispatch<EditorEvent> {
     const scene = new Scene(this.engine);
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
-    scene.useRightHandedSystem = true;
+    scene.useRightHandedSystem = false;
     return scene;
   }
 
   async createScene() {
     const scene = new Scene(this.engine);
-    scene.useRightHandedSystem = true;
+    scene.useRightHandedSystem = false;
     const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), scene);
     camera.minZ = 0.001;
     camera.maxZ = 5000;
