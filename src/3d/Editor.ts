@@ -36,11 +36,11 @@ interface EditorEvent {
   numberChanged: { newNumber: number; id: string };
   textureChanged: { newTexture: string; id: string };
   switchChanged: { newSwitch: boolean; id: string };
-  UndoRedo: void;
+
 }
 
 export class Editor extends Dispatch<EditorEvent> {
-  loadScene(arg0: string) {}
+  loadScene(arg0: string) { }
   private scene: Scene;
   private engine: Engine;
   private camera: Camera;
@@ -109,7 +109,7 @@ export class Editor extends Dispatch<EditorEvent> {
       if (this.enableGizmo) this.gizmoManager.boundingBoxGizmoEnabled = true;
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
-      if (v[0].getChildMeshes().length > 0) this.gizmoManager.attachToNode(v[0]);
+      if (v[0]?.getChildMeshes()?.length > 0) this.gizmoManager.attachToNode(v[0]);
       else {
         this.gizmoManager.boundingBoxGizmoEnabled = false;
         this.gizmoManager.attachToNode(v[0]);
@@ -172,7 +172,7 @@ export class Editor extends Dispatch<EditorEvent> {
     useScene().setCurrentControlMode(ControlMode.Move);
   }
 
-  test() {}
+  test() { }
 
   initWatch() {
     const selectWatcher = watch(
@@ -255,6 +255,10 @@ export class Editor extends Dispatch<EditorEvent> {
     }
     if (!node) {
       node = this.scene.getLightByUniqueId(id);
+    }
+    if (!node && id === this.scene.uniqueId) {
+      node = new Node('SceneSetttings', this.scene, null);
+      console.log(node.getClassName());
     }
     return node;
   }

@@ -293,7 +293,7 @@ const clear = () => {
     if (!props.noUndoRedo) {
         registerUndoRedo({
             executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = null), action: () => {
-                Editor.Instance.dispatch('textureChanged', { newTexture: textureRef.value?.url ?? "", id: props.object.id })
+                textureRef.value = getInspectorPropertyValue(props.object, props.property)
             }
         })
     }
@@ -390,16 +390,7 @@ watch(() => [props.object, props.property], () => {
 })
 watch(textureRef, () => computeTemporaryPreview())
 onMounted(() => {
-    computeTemporaryPreview(),
-        Editor.Instance.on('UndoRedo', (e) => {
-            //textureRef重新计算
-            textureRef.value = getInspectorPropertyValue(props.object, props.property)
-            console.log(textureRef.value);
-
-        })
-})
-onUnmounted(() => {
-    Editor.Instance.off('UndoRedo', () => { })
+    computeTemporaryPreview()
 })
 </script>
 

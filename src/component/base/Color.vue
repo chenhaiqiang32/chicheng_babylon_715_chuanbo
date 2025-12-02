@@ -1,7 +1,7 @@
 <template>
     <Field :title="label" :tooltip="tooltip">
         <el-color-picker style="margin-left: auto;" v-if="!noColorPicker" v-model="hex" :show-alpha="hasAlpha"
-            :predefine="predefine" @change="onPickerChange" />
+            :predefine="predefine" v-on:update:model-value="onPickerChange" @change="onPickerChange" @blur="onFinish" />
     </Field>
 </template>
 
@@ -20,8 +20,8 @@ const predefine = ["#FFFFFF", "#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF
 
 const currentColor = computed<Color3 | Color4 | null>(() => getInspectorPropertyValue(props.object, props.property) ?? null)
 
-const toHex = () => {
-    const val = currentColor.value
+const toHex = (target?: Color3 | Color4) => {
+    const val = target ?? currentColor.value
     if (!val) return "#ffffff"
     if (val instanceof Color4) {
         const r = Math.round(val.r * 255).toString(16).padStart(2, "0")
@@ -42,7 +42,7 @@ const r = ref<number>(currentColor.value?.r ?? 1)
 const g = ref<number>(currentColor.value?.g ?? 1)
 const b = ref<number>(currentColor.value?.b ?? 1)
 const a = ref<number>((currentColor.value as any)?.a ?? 1)
-const hasAlpha = computed<boolean>(() => (currentColor.value as any)?.a !== undefined)
+const hasAlpha = computed<boolean>(() => (currentColor.value as any)?.a == undefined)
 const showAlphaNumeric = computed<boolean>(() => !!props.noColorPicker && hasAlpha.value)
 const min = computed(() => (props.noClamp ? undefined : 0))
 const max = computed(() => (props.noClamp ? undefined : 1))
@@ -72,26 +72,23 @@ const onPickerChange = () => {
         props.object[props.property] = next
         emit("change", next)
         if (!props.noUndoRedo) {
-            console.log("noUndoRedo");
-
-            registerUndoRedo({ undo: () => (props.object[props.property] = prev?.clone()), redo: () => (props.object[props.property] = next.clone()) })
+            //    registerUndoRedo({ undo: () => (props.object[props.property] = prev?.clone()), redo: () => (props.object[props.property] = next.clone()) })
         }
     } else {
         const prev = currentColor.value as Color3
         const next = new Color3(rr, gg, bb)
         props.object[props.property] = next
+
         emit("change", next)
-        if (!props.noUndoRedo) {
-            console.log("noUndoRedo");
-            registerUndoRedo({
-                undo: () => (props.object[props.property] = prev?.clone()), redo: () => (props.object[props.property] = next.clone()), executeRedo: true, action() {
-                    hex.value = toHex()
-                    oldHex.value = hex.value
-                },
-            })
-        }
+        // if (!props.noUndoRedo) {
+        //     registerUndoRedo({
+        //         undo: () => (props.object[props.property] = prev?.clone()), redo: () => (props.object[props.property] = next.clone()), executeRedo: true, action() {
+        //             hex.value = toHex()
+        //             oldHex.value = hex.value
+        //         },
+        //     })
+        // }
     }
-    console.log(currentColor);
 
 }
 
@@ -121,10 +118,15 @@ const onChannelChange = (val: number, channel: "r" | "g" | "b" | "a") => {
 const onFinish = () => {
     const prev: any = currentColor.value?.clone?.() ?? null
     const next: any = getInspectorPropertyValue(props.object, props.property)
-    if (!props.noUndoRedo && prev && next && (prev.r !== next.r || prev.g !== next.g || prev.b !== next.b || prev.a !== next.a)) {
-        registerUndoRedo({ undo: () => prev && (props.object[props.property] = prev.clone()), redo: () => next && (props.object[props.property] = next.clone()) })
-        emit("finishChange", next, prev)
-    }
+
+    registerUndoRedo({
+        undo: () => prev && (props.object[props.property] = prev.clone()), redo: () => next && (props.object[props.property] = next.clone()), executeRedo: true, action() {
+            hex.value = toHex(getInspectorPropertyValue(props.object, props.property))
+            oldHex.value = hex.value
+        },
+    })
+    emit("finishChange", next, prev)
+
 }
 </script>
 

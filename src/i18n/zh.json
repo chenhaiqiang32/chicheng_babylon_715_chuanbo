@@ -100,7 +100,37 @@
       "renderingPipeline": "渲染管线",
       "environment": "环境",
       "environmentTexture": "环境贴图",
-      "fog": "雾"
+      "fog": "雾",
+      "fogEnabled": "开启雾",
+      "fogMode": "雾模式",
+      "fogColor": "雾颜色",
+      "motionBlur": "运动模糊",
+      "objectBased": "基于对象",
+      "motionStrength": "运动强度",
+      "motionBlurSamples": "运动模糊样本",
+      "reflections": "反射",
+      "steps": "步数",
+      "thickness": "厚度",
+      "strength": "强度",
+      "reflectionSpecularFalloffExponent": "反射镜面反射衰减指数",
+      "maxSteps": "最大步数",
+      "maxDistance": "最大距离",
+      "roughnessFactor": "粗糙度因子",
+      "reflectivityThreshold": "反射阈值",
+      "clipToFrustum": "裁剪到视锥体",
+      "enableSmoothReflections": "启用平滑反射",
+      "enableAutomaticThicknessComputation": "启用自动厚度计算",
+      "attenuateFacingCamera": "衰减面向相机",
+      "volumetricLightScattering": "体积光散射",
+      "exposure": "曝光",
+      "weight": "权重",
+      "decay": "衰减",
+      "density": "密度",
+      "newMeshPosition": "新网格位置"
+    },
+    "animation": {
+      "newAnimation": "新建动画",
+      "selectAnimation": "选择动画"
     }
   }
 }

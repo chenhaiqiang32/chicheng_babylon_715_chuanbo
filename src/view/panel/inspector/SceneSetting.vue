@@ -1,21 +1,21 @@
 <template>
     <div>
-        <SectionField title="$t('component.sceneSetting.backgroundcolor')">
-            <Color label="$t('component.sceneSetting.clearColor')" :object="object" property="clearColor" />
-            <Color label="$t('component.sceneSetting.ambientColor')" :object="object" property="ambientColor" />
+        <SectionField :title="$t('component.sceneSetting.backgroundcolor')">
+            <Color :label="$t('component.sceneSetting.clearColor')" :object="object" property="clearColor" />
+            <Color :label="$t('component.sceneSetting.ambientColor')" :object="object" property="ambientColor" />
         </SectionField>
 
-        <SectionField title="$t('component.sceneSetting.environment')">
-            <Texture acceptCubeTexture title="$t('component.sceneSetting.environmentTexture')" :object="object"
+        <SectionField :title="$t('component.sceneSetting.environment')">
+            <Texture :acceptCubeTexture="true" :title="$t('component.sceneSetting.environmentTexture')" :object="object"
                 property="environmentTexture" @change="force" />
         </SectionField>
-
-        <SectionField title="$t('component.sceneSetting.fog')">
-            <Switch label="Enabled" :object="object" property="fogEnabled" @change="force" />
+        <SectionField :title="$t('component.sceneSetting.fog')">
+            <Switch :label="$t('component.sceneSetting.fogEnabled')" :object="object" property="fogEnabled"
+                @change="force" />
 
             <template v-if="object.fogEnabled">
                 <div class="flex items-center gap-2">
-                    <div class="w-24">Mode</div>
+                    <div class="w-24">{{ $t('component.sceneSetting.fogMode') }}</div>
                     <el-select v-model="fogMode" @change="onFogModeChange">
                         <el-option :label="'None'" :value="Scene.FOGMODE_NONE" />
                         <el-option :label="'Linear'" :value="Scene.FOGMODE_LINEAR" />
@@ -33,15 +33,11 @@
                     <Number label="Density" :object="object" property="fogDensity" />
                 </template>
 
-                <Color label="Color" :object="object" property="fogColor" />
+                <Color :label="$t('component.sceneSetting.fogColor')" :object="object" property="fogColor" />
             </template>
         </SectionField>
 
-        <SectionField v-if="physicsEngine" title="Physics">
-            <Vector :object="gravityProxy" property="gravity" label="Gravity" @finishChange="applyGravity" />
-        </SectionField>
-
-        <SectionField title="Rendering Pipeline">
+        <SectionField :title="$t('component.sceneSetting.renderingPipeline')">
             <Switch label="Enabled" :object="defaultPipelineConfig" property="enabled" :noUndoRedo="true"
                 @change="toggleDefaultPipeline" />
             <template v-if="defaultRenderingPipeline">
@@ -201,48 +197,57 @@
             </template>
         </SectionField>
 
-        <SectionField title="Motion Blur">
+        <SectionField :title="$t('component.sceneSetting.motionBlur')">
             <Switch label="Enabled" :object="motionBlurConfig" property="enabled" :noUndoRedo="true"
                 @change="toggleMotionBlur" />
             <template v-if="motionBlur">
-                <Switch label="Object Based" :object="motionBlur" property="isObjectBased" />
-                <Number label="Motion Strength" :object="motionBlur" property="motionStrength" />
-                <Number label="Motion Blur Samples" :object="motionBlur" property="motionBlurSamples" :min="0"
-                    :step="1" />
+                <Switch :label="$t('component.sceneSetting.objectBased')" :object="motionBlur"
+                    property="isObjectBased" />
+                <Number :label="$t('component.sceneSetting.motionStrength')" :object="motionBlur"
+                    property="motionStrength" />
+                <Number :label="$t('component.sceneSetting.motionBlurSamples')" :object="motionBlur"
+                    property="motionBlurSamples" :min="0" :step="1" />
             </template>
         </SectionField>
 
-        <SectionField title="Reflections">
+        <SectionField :title="$t('component.sceneSetting.reflections')">
             <Switch label="Enabled" :object="ssrConfig" property="enabled" :noUndoRedo="true" @change="toggleSSR" />
             <template v-if="ssr">
-                <Number label="Step" :object="ssr" property="step" :min="0" />
-                <Number label="Thickness" :object="ssr" property="thickness" />
-                <Number label="Strength" :object="ssr" property="strength" :min="0" />
-                <Number label="Reflection Specular Falloff Exponent" :object="ssr"
+                <Number :label="$t('component.sceneSetting.step')" :object="ssr" property="step" :min="0" />
+                <Number :label="$t('component.sceneSetting.thickness')" :object="ssr" property="thickness" />
+                <Number :label="$t('component.sceneSetting.strength')" :object="ssr" property="strength" :min="0" />
+                <Number :label="$t('component.sceneSetting.reflectionSpecularFalloffExponent')" :object="ssr"
                     property="reflectionSpecularFalloffExponent" :min="0" />
-                <Number label="Max Steps" :object="ssr" property="maxSteps" :min="0" />
-                <Number label="Max Distance" :object="ssr" property="maxDistance" :min="0" />
+                <Number :label="$t('component.sceneSetting.maxSteps')" :object="ssr" property="maxSteps" :min="0" />
+                <Number :label="$t('component.sceneSetting.maxDistance')" :object="ssr" property="maxDistance"
+                    :min="0" />
 
-                <Number label="Roughness Factors" :object="ssr" property="roughnessFactor" :min="0" :max="1" />
-                <Number label="Reflectivity Threshold" :object="ssr" property="reflectivityThreshold" :min="0" />
-                <Number label="Blur Dispersion Strength" :object="ssr" property="blurDispersionStrength" :min="0" />
+                <Number :label="$t('component.sceneSetting.roughnessFactor')" :object="ssr" property="roughnessFactor"
+                    :min="0" :max="1" />
+                <Number :label="$t('component.sceneSetting.reflectivityThreshold')" :object="ssr"
+                    property="reflectivityThreshold" :min="0" />
+                <Number :label="$t('component.sceneSetting.blurDispersionStrength')" :object="ssr"
+                    property="blurDispersionStrength" :min="0" />
 
-                <Switch label="Clip To Frustum" :object="ssr" property="clipToFrustum" />
-                <Switch label="Enable Smooth Reflections" :object="ssr" property="enableSmoothReflections" />
-                <Switch label="Enable Automatic Thickness Computation" :object="ssr"
+                <Switch :label="$t('component.sceneSetting.clipToFrustum')" :object="ssr" property="clipToFrustum" />
+                <Switch :label="$t('component.sceneSetting.enableSmoothReflections')" :object="ssr"
+                    property="enableSmoothReflections" />
+                <Switch :label="$t('component.sceneSetting.enableAutomaticThicknessComputation')" :object="ssr"
                     property="enableAutomaticThicknessComputation" />
-                <Switch label="Attenuate Facing Camera" :object="ssr" property="attenuateFacingCamera" />
+                <Switch :label="$t('component.sceneSetting.attenuateFacingCamera')" :object="ssr"
+                    property="attenuateFacingCamera" />
             </template>
         </SectionField>
 
-        <SectionField title="Volumetric Light Scattering">
+        <SectionField :title="$t('component.sceneSetting.volumetricLightScattering')">
             <Switch label="Enabled" :object="vlsConfig" property="enabled" :noUndoRedo="true" @change="toggleVLS" />
             <template v-if="vls">
-                <Number label="Exposure" :object="vls" property="exposure" :min="0" />
-                <Number label="Weight" :object="vls" property="weight" :min="0" />
-                <Number label="Decay" :object="vls" property="decay" :min="0" />
-                <Number label="Density" :object="vls" property="density" :min="0" />
-                <Number label="New Mesh Position" :object="vls" property="newMeshPosition" />
+                <Number :label="$t('component.sceneSetting.exposure')" :object="vls" property="exposure" :min="0" />
+                <Number :label="$t('component.sceneSetting.weight')" :object="vls" property="weight" :min="0" />
+                <Number :label="$t('component.sceneSetting.decay')" :object="vls" property="decay" :min="0" />
+                <Number :label="$t('component.sceneSetting.density')" :object="vls" property="density" :min="0" />
+                <Number :label="$t('component.sceneSetting.newMeshPosition')" :object="vls"
+                    property="newMeshPosition" />
 
                 <div @drop.prevent="ev => handleDropVlsMesh(ev)" @dragover.prevent="handleDragOverVlsMesh"
                     @dragleave="dragOverVlsMesh = false"

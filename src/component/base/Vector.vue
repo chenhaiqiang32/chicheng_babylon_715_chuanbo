@@ -60,15 +60,6 @@ watch(() => [props.object, props.property], () => {
 let undoObserver: any = null
 let redoObserver: any = null
 
-// onMounted(() => {
-// 	undoObserver = onUndoObservable.add(() => syncFromObject())
-// 	redoObserver = onRedoObservable.add(() => syncFromObject())
-// })
-
-// onUnmounted(() => {
-// 	if (undoObserver) onUndoObservable.remove(undoObserver)
-// 	if (redoObserver) onRedoObservable.remove(redoObserver)
-// })
 
 const axisMin = (i: number) => (Array.isArray(props.min) ? props.min[i] : props.min)
 const axisMax = (i: number) => (Array.isArray(props.max) ? props.max[i] : props.max)
@@ -81,7 +72,11 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 		object: props.object,
 		property: `${props.property}.${axis}`,
 		oldValue: oldVal,
-		newValue: storeVal
+		newValue: storeVal,
+		executeRedo: true,
+		action() {
+			syncFromObject()
+		},
 	})
 	emit("change")
 }
@@ -89,15 +84,7 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 const onFinishChange = () => {
 	emit("finishChange")
 }
-onMounted(() => {
-	Editor.Instance.on("UndoRedo", () => {
-		syncFromObject()
-	})
-})
-onUnmounted(() => {
-	Editor.Instance.off("UndoRedo", () => {
-	})
-})
+
 </script>
 
 <style lang="scss">
