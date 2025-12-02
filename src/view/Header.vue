@@ -6,7 +6,9 @@
     </div>
 </template>
 <script setup lang='ts'>
-import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { LocalFileSystem } from '@/3d/assets/runtimeLibrary/File';
+import { MultiCollectAssets } from '@/3d/assets/runtimeLibrary/MultiCollectAssets';
 import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
@@ -30,6 +32,10 @@ const menuItems: MenuItem[] = [
     {
         name: 'menu.file.title',
         children: [
+            {
+                name: 'menu.file.open',
+                callback: open
+            },
             {
                 name: 'menu.file.import',
                 callback: importScene
@@ -109,17 +115,19 @@ const menuItems: MenuItem[] = [
 ]
 
 async function exportFile() {
-    const files = await RuntimeLibrary.Instance.exportAll()
     const sceneList = useScene().getAllScene();
+    const multiCollectAssets = new MultiCollectAssets(RuntimeLibrary.Instance.sceneAssets)
     const sceneDatas = new Array<any>(sceneList.length);
     for (let index = 0; index < sceneList.length; index++) {
         const scene = sceneList[index];
-        const sceneData = serializeScene(scene, null, false);
+        const sceneData = serializeScene(scene, multiCollectAssets);
         sceneDatas.push(sceneData);
     }
+    const files = await RuntimeLibrary.Instance.saveAll()
     files.push(['scene.json', JSON.stringify(sceneDatas)]);
-    const zip = await zipFiles(files);
-    Tools.Download(zip, ID.generateUUID().replace(/-/g, '') + '.zip');
+    files.forEach((file) => {
+        LocalFileSystem.Instance.saveFile(file[0], file[1]);
+    })
 }
 
 function importScene() {
@@ -136,6 +144,19 @@ function importScene() {
 }
 function importAssets() {
 
+}
+
+async function open() {
+    await LocalFileSystem.Instance.init();
+    const sceneList = await RuntimeLibrary.Instance.loadAssets(LocalFileSystem.Instance);
+    if (sceneList.length > 0) {
+        useScene().setSceneList(sceneList)
+        Editor.Instance.setCurrentScene(sceneList[0].uuid);
+    } else {
+        const scene = await Editor.Instance.createNewScene('默认场景');
+        useScene().addScene(scene);
+        Editor.Instance.setCurrentScene(scene.uuid)
+    }
 }
 
 </script>

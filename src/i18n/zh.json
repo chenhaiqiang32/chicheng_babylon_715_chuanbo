@@ -19,6 +19,7 @@
   },
   "menu": {
     "file": {
+      "open": "打开...",
       "title": "文件",
       "export": "导出场景",
       "import": "导入模型",

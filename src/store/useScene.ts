@@ -5,7 +5,8 @@ import { ViewFlagsMode } from '@/3d/core/utils/viewFlagsMode';
 import { CC } from '@/3d/assets/BaseRes';
 import { deserializeScene, serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
-import { MultiAssets, RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { MultiLoaderAssets } from '@/3d/assets/runtimeLibrary/MultiLoaderAssets';
 
 function buildHierarchy(node: Node): HierarchyNode {
   return {
@@ -69,7 +70,7 @@ export const useScene = defineStore('scene', () => {
     } else {
       const ccNode = sceneInfoList.value.find((x) => x.uuid == uuid) as CC.Scene;
       if (ccNode) {
-        const assets = new MultiAssets(RuntimeLibrary.Instance.sceneAssets);
+        const assets = new MultiLoaderAssets(RuntimeLibrary.Instance.sceneAssets);
         const scene = new Scene(Editor.Instance.Engine);
         RuntimeLibrary.Instance.sceneAssets.forEach((asset) => {
           asset.serializeToScene(scene);
