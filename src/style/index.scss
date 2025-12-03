@@ -9,7 +9,8 @@ body,
 #app {
   height: 100%;
   font-size: 12px;
-  font-family: 'Inter', sans-serif;
+  font-family:
+    'Helvetica Neue', Helvetica, 'Nohemi', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-weight: 500;
   overflow: hidden;
 }
@@ -26,5 +27,12 @@ html {
 * {
   &:focus-visible {
     outline: none !important;
+  }
+}
+.el-dialog {
+  .dialog-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--title--color);
   }
 }

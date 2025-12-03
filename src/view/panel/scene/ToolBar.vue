@@ -3,31 +3,31 @@
         <div class="transform">
             <div class="item-icon" :class="{ 'selected': selectedControlMode === ControlMode.Select }"
                 @click="onControlIconClick(ControlMode.Select)">
-                <SVG name="cursor" :size="iconSize" :title="$t('23123')"></SVG>
+                <SVG name="cursor" :size="iconSize" :title="$t('toolsBar.cursor')"></SVG>
             </div>
             <div class="item-icon" :class="{ 'selected': selectedControlMode === ControlMode.Move }"
                 @click="onControlIconClick(ControlMode.Move)">
-                <SVG name="move" :size="iconSize" :title="$t('23123')"></SVG>
+                <SVG name="move" :size="iconSize" :title="$t('toolsBar.move')"></SVG>
             </div>
             <div class="item-icon" :class="{ 'selected': selectedControlMode === ControlMode.Rotate }"
                 @click="onControlIconClick(ControlMode.Rotate)">
-                <SVG name="rotate" :size="iconSize" :title="$t('23123')"></SVG>
+                <SVG name="rotate" :size="iconSize" :title="$t('toolsBar.rotate')"></SVG>
             </div>
             <div class="item-icon" :class="{ 'selected': selectedControlMode === ControlMode.Scale }"
                 @click="onControlIconClick(ControlMode.Scale)">
-                <SVG name="scale" :size="iconSize" :title="$t('23123')"></SVG>
+                <SVG name="scale" :size="iconSize" :title="$t('toolsBar.scale')"></SVG>
             </div>
         </div>
         <div class="view">
             <div class="item-icon" name="gizmo" size="24px"
                 :class="{ 'selected': hasViewFlag(viewFlagsMode, ViewFlagsMode.Gizmos) }"
                 @click="onViewIconClick(ViewFlagsMode.Gizmos)">
-                <SVG name="gizmo" :size="iconSize" :title="$t('23123')"></SVG>
+                <SVG name="gizmo" :size="iconSize" :title="$t('toolsBar.gizmo')"></SVG>
             </div>
             <div class="item-icon" name="mask" size="24px"
                 :class="{ 'selected': hasViewFlag(viewFlagsMode, ViewFlagsMode.Mask) }"
                 @click="onViewIconClick(ViewFlagsMode.Mask)">
-                <SVG name="mask" :size="iconSize" :title="$t('23123')"></SVG>
+                <SVG name="mask" :size="iconSize" :title="$t('toolsBar.overlay')"></SVG>
             </div>
         </div>
     </div>

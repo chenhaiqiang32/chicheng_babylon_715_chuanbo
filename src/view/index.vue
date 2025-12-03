@@ -47,6 +47,16 @@ import { ElTabPane } from 'element-plus';
 import { storeToRefs } from 'pinia';
 import { useEditor } from '@/store/useEditor';
 
+import { useDialog } from './dialog/index';
+import SetupDialog from './dialog/SetupDialog.vue'
+import { onMounted } from 'vue'
+
+
+onMounted(() => {
+    useDialog(SetupDialog)
+})
+
+
 const { editorLayout } = storeToRefs(useEditor());
 
 function sizeChange(size: number, type: 'left' | 'bottom' | 'right') {

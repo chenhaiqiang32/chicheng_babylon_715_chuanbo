@@ -1,4 +1,4 @@
-import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
 import { defineStore } from 'pinia';
 import { shallowRef } from 'vue';
 

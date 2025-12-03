@@ -28,11 +28,15 @@
   color: var(--title--color) !important;
   box-shadow: none !important;
 }
-.el-popper.is-light
-{ 
-min-width: 300px;
+.el-popper.is-light {
+  min-width: 300px;
 }
-.el-select__wrapper{
+.el-message-box {
+  .el-input__wrapper {
+    background-color: var(--bg-color-2) !important;
+  }
+}
+.el-select__wrapper {
   line-height: 18px;
   font-size: 12px;
 }
