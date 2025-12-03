@@ -13,10 +13,10 @@ export class IndexDBFileSystem implements IFile {
     await this.db.saveData(name, data);
   }
   getFileArrayBuffer(name: string, dir?: string): Promise<ArrayBuffer> {
-    return this.db.loadData(name);
+    return this.db.loadData(dir ? `${dir}/${name}` : name);
   }
   getFileText(name: string, dir?: string): Promise<string> {
-    return this.db.loadData(name);
+    return this.db.loadData(dir ? `${dir}/${name}` : name);
   }
   clear() {
     this.db.close();
