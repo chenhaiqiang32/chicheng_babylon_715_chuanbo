@@ -1,10 +1,10 @@
 <template>
     <ElDialog :title="$t(`dialog.chooseSaveMode.title`)" v-model="model" @close="close" width="550">
         <div class="dialog-content">
-            <div class="item" @click="onChooseMode?.(FileMode.LOCAL)">
+            <div class="item" @click="onChooseMode(FileMode.LOCAL)">
                 {{ $t(`dialog.chooseSaveMode.local`) }}
             </div>
-            <div class="item" @click="onChooseMode?.(FileMode.INDEXEDDB)">
+            <div class="item" @click="onChooseMode(FileMode.INDEXEDDB)">
                 {{ $t(`dialog.chooseSaveMode.indexDB`) }}
             </div>
         </div>
@@ -21,6 +21,11 @@ const props = defineProps<{
     onChooseMode: (mode: FileMode) => void
 }>()
 
+function onChooseMode(mode: FileMode) {
+    props.onChooseMode?.(mode);
+    model.value = false;
+}
+
 
 
 
@@ -31,6 +36,7 @@ const props = defineProps<{
     align-items: center;
     justify-content: center;
     gap: 20px;
+    padding: 40px;
 
     .item {
         width: 200px;

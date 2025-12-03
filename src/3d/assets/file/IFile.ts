@@ -3,6 +3,7 @@ import { IndexDBFileSystem } from './IndexDBFileSystem';
 import { LocalFileSystem } from './LocalFileSystem';
 import { useDialog } from '@/view/dialog';
 import ChooseSaveModeDialog from '@/view/dialog/ChooseSaveModeDialog.vue';
+import { useIndexDBProject } from '@/store/useIndexDBProject';
 
 export interface IFile {
   name: string;
@@ -23,6 +24,11 @@ export class EditorFileSystem {
   static fileSystem: EditorFileSystem;
   file: IFile;
   name: string;
+
+  private _mode: FileMode;
+  get mode() {
+    return this._mode;
+  }
   static get Instance() {
     if (!EditorFileSystem.fileSystem) {
       EditorFileSystem.fileSystem = new EditorFileSystem();
@@ -38,6 +44,7 @@ export class EditorFileSystem {
         this.file = new IndexDBFileSystem();
         break;
     }
+    this._mode = mode;
     if (this.file) {
       await this.file.init(arg);
       this.name = this.file.name;
@@ -58,14 +65,16 @@ export class EditorFileSystem {
         });
       });
       if (result === FileMode.NONE) {
-        ElMessage.error('未选择文件系统');
-        return Promise.reject('未选择文件系统');
+        return Promise.reject('未选择项目');
       } else if (result === FileMode.INDEXEDDB) {
         const dbName = await ElMessageBox.prompt('请输入名称', '项目名称名称', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           inputValue: '',
         });
+        if (useIndexDBProject().exit(dbName.value)) {
+          return Promise.reject('项目名称已存在');
+        }
         await this.init(FileMode.INDEXEDDB, dbName.value);
       } else if (result === FileMode.LOCAL) {
         await this.init(result);
