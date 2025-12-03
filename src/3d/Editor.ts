@@ -30,12 +30,14 @@ import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
 import { registerLeftClick } from '@/3d/core/utils/registerLeftClick';
 import { focusOnNode } from '@/3d/core/utils/focusOnNode';
 import { Dispatch } from '@/utils/dispatch';
+import { createDefaultRenderingPipeline } from '@/rendering/default-pipeline';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
   numberChanged: { newNumber: number; id: string };
   textureChanged: { newTexture: string; id: string };
   switchChanged: { newSwitch: boolean; id: string };
+  sceneSettingChanged: boolean;
 
 }
 
@@ -56,6 +58,13 @@ export class Editor extends Dispatch<EditorEvent> {
 
   private resScene: Scene;
 
+  get SceneSetting() {
+    return this.sceneSetting;
+  }
+  set SceneSetting(v: boolean) {
+    this.sceneSetting = v;
+    this.dispatch('sceneSettingChanged', v);
+  }
   get ResScene() {
     if (this.resScene == null) {
       this.resScene = new Scene(this.engine);
@@ -82,6 +91,7 @@ export class Editor extends Dispatch<EditorEvent> {
   private enableGizmo: boolean = true;
 
   private enableMask: boolean = true;
+  private sceneSetting: boolean = false;
 
   private lightGizmos: LightGizmo;
   private light: DirectionalLight;
@@ -147,6 +157,7 @@ export class Editor extends Dispatch<EditorEvent> {
     this.initViewMode();
     this.initPointerObservale();
     this.initFocus();
+    this.initPostProcess();
     // const sphere = MeshBuilder.CreateSphere('Sphere');
     // sphere.material = new PBRMaterial('PBR', this.scene);
     this.engine.runRenderLoop(() => {
@@ -196,6 +207,9 @@ export class Editor extends Dispatch<EditorEvent> {
     this.watcher.push(selectWatcher);
     this.watcher.push(controlModeWatcher);
     this.watcher.push(viewFlagsModeWatcher);
+  }
+  initPostProcess() {
+    createDefaultRenderingPipeline();
   }
 
   newScene() {
@@ -255,10 +269,6 @@ export class Editor extends Dispatch<EditorEvent> {
     }
     if (!node) {
       node = this.scene.getLightByUniqueId(id);
-    }
-    if (!node && id === this.scene.uniqueId) {
-      node = new Node('SceneSetttings', this.scene, null);
-      console.log(node.getClassName());
     }
     return node;
   }

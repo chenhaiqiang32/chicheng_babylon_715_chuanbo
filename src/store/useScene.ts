@@ -3,7 +3,6 @@ import { defineStore } from 'pinia';
 import { Node, Scene } from '@babylonjs/core';
 import { ViewFlagsMode } from '@/3d/core/utils/viewFlagsMode';
 import { CC } from '@/3d/assets/BaseRes';
-import { Editor } from '@/3d/Editor';
 
 function buildHierarchy(node: Node): HierarchyNode {
   return {
@@ -31,8 +30,7 @@ export const useScene = defineStore('scene', () => {
   const sceneList = shallowReactive<Scene[]>([]);
 
   function setHierarchy(rootNodes: Node[]) {
-    const sceneSettings = { name: 'SceneSettings', type: 'SceneSettings', id: Editor.Instance.Scene.uniqueId, children: [] } as HierarchyNode;
-    hierarchy.value = [sceneSettings, ...rootNodes.map(buildHierarchy)];
+    hierarchy.value = rootNodes.map(buildHierarchy);
   }
 
   function setCurrentSelect(objectIds?: number[]) {

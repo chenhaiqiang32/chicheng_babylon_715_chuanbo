@@ -18,6 +18,7 @@
                             </el-icon>
                         </template>
                     </ElInput>
+                    <ElButton size="small" @click="toggleSceneSetting">{{ $t('view.sceneSetting') }}</ElButton>
                     <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                         :data="hierarchy" highlight-current :props="treeProps" node-key="id" :default-expanded="true"
                         :default-active="true" @node-click="handleNodeClick">
@@ -45,10 +46,11 @@ const searchText = ref('');
 const treeProps = {
     label: 'name',
 }
-
+const sceneSettingVisible = ref(false);
 const { hierarchy, currentSelected, sceneList } = storeToRefs(useScene());
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
+const lastSelectedNodeId = ref<string | null>(null)
 
 onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
@@ -67,6 +69,18 @@ const handleNodeClick = (node: HierarchyNode) => {
         treeRef.value?.setCurrentKey(node.id);
     } else {
         treeRef.value?.setCurrentKey(null);
+    }
+}
+
+const toggleSceneSetting = () => {
+    sceneSettingVisible.value = !sceneSettingVisible.value;
+    if (sceneSettingVisible.value) {
+        Editor.Instance.SceneSetting = true;
+        currentSelected.value = [];
+
+    } else {
+        treeRef.value?.setCurrentKey(null);
+        Editor.Instance.SceneSetting = false;
     }
 }
 

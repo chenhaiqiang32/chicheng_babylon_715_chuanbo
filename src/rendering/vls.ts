@@ -21,10 +21,11 @@ export function disposeVLSPostProcess(): void {
 	if (vlsPostProcess && activeCamera) {
 		vlsPostProcess.dispose(activeCamera);
 		vlsPostProcess = null;
+
 	}
 }
 
-export function createVLSPostProcess( mesh?: Mesh | null): VolumetricLightScatteringPostProcess {
+export function createVLSPostProcess(mesh?: Mesh | null): VolumetricLightScatteringPostProcess {
 	const scene = Editor.Instance.Scene;
 	mesh ??= scene.meshes.find((mesh) => isMesh(mesh)) as Mesh;
 
@@ -59,7 +60,7 @@ export function serializeVLSPostProcess(): any {
 	};
 }
 
-export function parseVLSPostProcess( data: any): VolumetricLightScatteringPostProcess {
+export function parseVLSPostProcess(data: any): VolumetricLightScatteringPostProcess {
 	let mesh: Mesh | null = null;
 
 	if (data.meshId) {
@@ -69,7 +70,7 @@ export function parseVLSPostProcess( data: any): VolumetricLightScatteringPostPr
 		}
 	}
 
-	const vlsPostProcess = createVLSPostProcess( mesh);
+	const vlsPostProcess = createVLSPostProcess(mesh);
 
 	vlsPostProcess.exposure = data.exposure;
 	vlsPostProcess.decay = data.decay;

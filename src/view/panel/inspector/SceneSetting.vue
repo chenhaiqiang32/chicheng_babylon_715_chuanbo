@@ -10,7 +10,7 @@
                 property="environmentTexture" @change="force" />
         </SectionField>
         <SectionField :title="$t('component.sceneSetting.fog')">
-            <Switch :label="$t('component.sceneSetting.fogEnabled')" :object="object" property="fogEnabled"
+            <Switch :label="$t('component.sceneSetting.enabled')" :object="object" property="fogEnabled"
                 @change="force" />
 
             <template v-if="object.fogEnabled">
@@ -38,168 +38,217 @@
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.renderingPipeline')">
-            <Switch label="Enabled" :object="defaultPipelineConfig" property="enabled" :noUndoRedo="true"
-                @change="toggleDefaultPipeline" />
+            <Switch :label="$t('component.sceneSetting.enabled')" :object="defaultPipelineConfig" property="enabled"
+                :noUndoRedo="true" @change="toggleDefaultPipeline" />
             <template v-if="defaultRenderingPipeline">
                 <Switch label="FXAA Enabled" :object="defaultRenderingPipeline" property="fxaaEnabled" />
             </template>
         </SectionField>
 
         <template v-if="defaultRenderingPipeline">
-            <SectionField title="Image Processing">
-                <Switch label="Enabled" :object="defaultRenderingPipeline" property="imageProcessingEnabled"
-                    @change="force" />
+            <SectionField :title="$t('component.sceneSetting.imageProcessing')">
+                <Switch :label="$t('component.sceneSetting.enabled')" :object="defaultRenderingPipeline"
+                    property="imageProcessingEnabled" />
                 <template v-if="defaultRenderingPipeline.imageProcessingEnabled">
-                    <Number label="Exposure" :object="defaultRenderingPipeline.imageProcessing" property="exposure" />
-                    <Number label="Contrast" :object="defaultRenderingPipeline.imageProcessing" property="contrast" />
-                    <Switch label="From Linear Space" :object="defaultRenderingPipeline.imageProcessing"
-                        property="fromLinearSpace" />
-                    <Switch label="Tone Mapping Enabled" :object="defaultRenderingPipeline.imageProcessing"
-                        property="toneMappingEnabled" @change="force" />
+                    <Number :label="$t('component.sceneSetting.exposure')"
+                        :object="defaultRenderingPipeline.imageProcessing" property="exposure" />
+                    <Number :label="$t('component.sceneSetting.contrast')"
+                        :object="defaultRenderingPipeline.imageProcessing" property="contrast" />
+                    <Switch :label="$t('component.sceneSetting.fromLinearSpace')"
+                        :object="defaultRenderingPipeline.imageProcessing" property="fromLinearSpace" />
+                    <Switch :label="$t('component.sceneSetting.toneMappingEnabled')"
+                        :object="defaultRenderingPipeline.imageProcessing" property="toneMappingEnabled"
+                        @change="force" />
                     <template v-if="defaultRenderingPipeline.imageProcessing.toneMappingEnabled">
                         <div class="flex items-center gap-2">
-                            <div class="w-40">Tone Mapping Type</div>
+                            <div class="w-40">{{ $t('component.sceneSetting.toneMappingType') }}</div>
                             <el-select v-model="toneMappingType" @change="onToneMappingTypeChange">
-                                <el-option :label="'Hable'" :value="TonemappingOperator.Hable" />
-                                <el-option :label="'Reinhard'" :value="TonemappingOperator.Reinhard" />
-                                <el-option :label="'Heji Dawson'" :value="TonemappingOperator.HejiDawson" />
-                                <el-option :label="'Photographic'" :value="TonemappingOperator.Photographic" />
+                                <el-option :label="$t('component.sceneSetting.hable')"
+                                    :value="TonemappingOperator.Hable" />
+                                <el-option :label="$t('component.sceneSetting.reinhard')"
+                                    :value="TonemappingOperator.Reinhard" />
+                                <el-option :label="$t('component.sceneSetting.hejiDawson')"
+                                    :value="TonemappingOperator.HejiDawson" />
+                                <el-option :label="$t('component.sceneSetting.photographic')"
+                                    :value="TonemappingOperator.Photographic" />
                             </el-select>
                         </div>
                     </template>
-                    <Switch label="Dithering Enabled" :object="defaultRenderingPipeline.imageProcessing"
-                        property="ditheringEnabled" @change="force" />
+                    <Switch :label="$t('component.sceneSetting.ditheringEnabled')"
+                        :object="defaultRenderingPipeline.imageProcessing" property="ditheringEnabled"
+                        @change="force" />
                     <template v-if="defaultRenderingPipeline.imageProcessing.ditheringEnabled">
-                        <Number label="Dithering Intensity" :object="defaultRenderingPipeline.imageProcessing"
-                            property="ditheringIntensity" />
+                        <Number :label="$t('component.sceneSetting.ditheringIntensity')"
+                            :object="defaultRenderingPipeline.imageProcessing" property="ditheringIntensity" />
                     </template>
                 </template>
             </SectionField>
 
-            <SectionField title="Color Grading" v-if="defaultRenderingPipeline.imageProcessingEnabled">
-                <Switch label="Enabled" :object="defaultRenderingPipeline.imageProcessing"
+            <SectionField :title="$t('component.sceneSetting.colorGrading')"
+                v-if="defaultRenderingPipeline.imageProcessingEnabled">
+                <Switch :label="$t('component.sceneSetting.enabled')" :object="defaultRenderingPipeline.imageProcessing"
                     property="colorGradingEnabled" @change="force" />
                 <template v-if="defaultRenderingPipeline.imageProcessing.colorGradingEnabled">
-                    <Texture accept3dlTexture title="Texture" property="colorGradingTexture" :scene="scene"
+                    <Texture accept3dlTexture :title="$t('component.sceneSetting.texture')"
+                        property="colorGradingTexture" :scene="scene"
                         :object="defaultRenderingPipeline.imageProcessing">
-                        <Switch label="Use Green Depth"
+                        <Switch :label="$t('component.sceneSetting.useGreenDepth')"
                             :object="defaultRenderingPipeline.imageProcessing.imageProcessingConfiguration"
                             property="colorGradingWithGreenDepth" />
                     </Texture>
                 </template>
             </SectionField>
 
-            <SectionField title="Color Curves">
-                <Switch label="Enabled" :object="defaultRenderingPipeline.imageProcessing" property="colorCurvesEnabled"
-                    @change="force" />
+            <SectionField :title="$t('component.sceneSetting.colorCurves')">
+                <Switch :label="$t('component.sceneSetting.enabled')" :object="defaultRenderingPipeline.imageProcessing"
+                    property="colorCurvesEnabled" @change="force" />
                 <template v-if="defaultRenderingPipeline.imageProcessing.colorCurvesEnabled">
-                    <div class="text-xl font-semibold px-2 text-center">Global</div>
-                    <Number label="Hue" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="globalHue" :min="0" :max="360" />
-                    <Number label="Exposure" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="globalExposure" :min="-100" :max="100" />
-                    <Number label="Density" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="globalDensity" :min="-100" :max="100" />
-                    <Number label="Saturation" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="globalSaturation" :min="-100" :max="100" />
+                    <div class="colorCurvesClild">{{ $t('component.sceneSetting.global') }}
+                        <Number :label="$t('component.sceneSetting.hue')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="globalHue" :min="0"
+                            :max="360" />
+                        <Number :label="$t('component.sceneSetting.exposure')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="globalExposure"
+                            :min="-100" :max="100" />
+                        <Number :label="$t('component.sceneSetting.density')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="globalDensity"
+                            :min="-100" :max="100" />
+                        <Number :label="$t('component.sceneSetting.saturation')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="globalSaturation"
+                            :min="-100" :max="100" />
 
-                    <div class="text-xl font-semibold px-2 text-center">Highlights</div>
-                    <Number label="Hue" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="highlightsHue" :min="0" :max="360" />
-                    <Number label="Exposure" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="highlightsExposure" :min="-100" :max="100" />
-                    <Number label="Density" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="highlightsDensity" :min="-100" :max="100" />
-                    <Number label="Saturation" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="highlightsSaturation" :min="-100" :max="100" />
+                    </div>
 
-                    <div class="text-xl font-semibold px-2 text-center">Midtones</div>
-                    <Number label="Hue" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="midtonesHue" :min="0" :max="360" />
-                    <Number label="Exposure" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="midtonesExposure" :min="-100" :max="100" />
-                    <Number label="Density" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="midtonesDensity" :min="-100" :max="100" />
-                    <Number label="Saturation" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="midtonesSaturation" :min="-100" :max="100" />
+                    <div class="colorCurvesClild">{{ $t('component.sceneSetting.highlights') }}
+                        <Number :label="$t('component.sceneSetting.hue')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="highlightsHue"
+                            :min="0" :max="360" />
+                        <Number :label="$t('component.sceneSetting.exposure')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="highlightsExposure"
+                            :min="-100" :max="100" />
+                        <Number :label="$t('component.sceneSetting.density')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="highlightsDensity"
+                            :min="-100" :max="100" />
+                        <Number :label="$t('component.sceneSetting.saturation')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves"
+                            property="highlightsSaturation" :min="-100" :max="100" />
+                    </div>
 
-                    <div class="text-xl font-semibold px-2 text-center">Shadows</div>
-                    <Number label="Hue" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="shadowsHue" :min="0" :max="360" />
-                    <Number label="Exposure" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="shadowsExposure" :min="-100" :max="100" />
-                    <Number label="Density" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="shadowsDensity" :min="-100" :max="100" />
-                    <Number label="Saturation" :object="defaultRenderingPipeline.imageProcessing.colorCurves"
-                        property="shadowsSaturation" :min="-100" :max="100" />
+
+                    <div class="colorCurvesClild">{{ $t('component.sceneSetting.midtones') }}
+                        <Number :label="$t('component.sceneSetting.hue')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="midtonesHue"
+                            :min="0" :max="360" />
+                        <Number :label="$t('component.sceneSetting.exposure')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="midtonesExposure"
+                            :min="-100" :max="100" />
+                        <Number :label="$t('component.sceneSetting.density')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="midtonesDensity"
+                            :min="-100" :max="100" />
+                        <Number :label="$t('component.sceneSetting.saturation')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="midtonesSaturation"
+                            :min="-100" :max="100" />
+                    </div>
+
+
+                    <div class="colorCurvesClild">{{ $t('component.sceneSetting.shadows') }}
+                        <Number :label="$t('component.sceneSetting.hue')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="shadowsHue"
+                            :min="0" :max="360" />
+                        <Number :label="$t('component.sceneSetting.exposure')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="shadowsExposure"
+                            :min="-100" :max="100" />
+                        <Number :label="$t('component.sceneSetting.density')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="shadowsDensity"
+                            :min="-100" :max="100" />
+                        <Number :label="$t('component.sceneSetting.saturation')"
+                            :object="defaultRenderingPipeline.imageProcessing.colorCurves" property="shadowsSaturation"
+                            :min="-100" :max="100" />
+                    </div>
+
                 </template>
             </SectionField>
 
-            <SectionField title="Bloom">
-                <Switch label="Enabled" :object="defaultRenderingPipeline" property="bloomEnabled" @change="force" />
+            <SectionField :title="$t('component.sceneSetting.bloom')">
+                <Switch :label="$t('component.sceneSetting.enabled')" :object="defaultRenderingPipeline"
+                    property="bloomEnabled" @change="force" />
                 <template v-if="defaultRenderingPipeline.bloomEnabled">
-                    <Number label="Threshold" :object="defaultRenderingPipeline" property="bloomThreshold" />
-                    <Number label="Weight" :object="defaultRenderingPipeline" property="bloomWeight" />
-                    <Number label="Scale" :object="defaultRenderingPipeline" property="bloomScale" :min="0" :max="1" />
-                    <Number label="Kernal" :object="defaultRenderingPipeline" property="bloomKernel" :step="1" :min="0"
-                        :max="512" />
+                    <Number :label="$t('component.sceneSetting.threshold')" :object="defaultRenderingPipeline"
+                        property="bloomThreshold" />
+                    <Number :label="$t('component.sceneSetting.weight')" :object="defaultRenderingPipeline"
+                        property="bloomWeight" />
+                    <Number :label="$t('component.sceneSetting.scale')" :object="defaultRenderingPipeline"
+                        property="bloomScale" :min="0" :max="1" />
+                    <Number :label="$t('component.sceneSetting.kernal')" :object="defaultRenderingPipeline"
+                        property="bloomKernel" :step="1" :min="0" :max="512" />
                 </template>
             </SectionField>
 
-            <SectionField title="Sharpen">
-                <Switch label="Enabled" :object="defaultRenderingPipeline" property="sharpenEnabled" @change="force" />
+            <SectionField :title="$t('component.sceneSetting.sharpen')">
+                <Switch :label="$t('component.sceneSetting.enabled')" :object="defaultRenderingPipeline"
+                    property="sharpenEnabled" @change="force" />
                 <template v-if="defaultRenderingPipeline.sharpenEnabled">
-                    <Number label="Edge Amount" :object="defaultRenderingPipeline.sharpen" property="edgeAmount" />
-                    <Number label="Color Amount" :object="defaultRenderingPipeline.sharpen" property="colorAmount" />
+                    <Number :label="$t('component.sceneSetting.edgeAmount')" :object="defaultRenderingPipeline.sharpen"
+                        property="edgeAmount" />
+                    <Number :label="$t('component.sceneSetting.colorAmount')" :object="defaultRenderingPipeline.sharpen"
+                        property="colorAmount" />
                 </template>
             </SectionField>
 
-            <SectionField title="Grain">
-                <Switch label="Enabled" :object="defaultRenderingPipeline" property="grainEnabled" @change="force" />
+            <SectionField :title="$t('component.sceneSetting.grain')">
+                <Switch :label="$t('component.sceneSetting.enabled')" :object="defaultRenderingPipeline"
+                    property="grainEnabled" @change="force" />
                 <template v-if="defaultRenderingPipeline.grainEnabled">
-                    <Number label="Intensity" :object="defaultRenderingPipeline.grain" property="intensity" />
-                    <Switch label="Animated" :object="defaultRenderingPipeline.grain" property="animated" />
+                    <Number :label="$t('component.sceneSetting.intensity')" :object="defaultRenderingPipeline.grain"
+                        property="intensity" />
+                    <Switch :label="$t('component.sceneSetting.animated')" :object="defaultRenderingPipeline.grain"
+                        property="animated" />
                 </template>
             </SectionField>
 
-            <SectionField title="Depth-of-field">
-                <Switch label="Enabled" :object="defaultRenderingPipeline" property="depthOfFieldEnabled"
-                    @change="force" />
+            <SectionField :title="$t('component.sceneSetting.depthOfField')">
+                <Switch :label="$t('component.sceneSetting.enabled')" :object="defaultRenderingPipeline"
+                    property="depthOfFieldEnabled" @change="force" />
                 <template v-if="defaultRenderingPipeline.depthOfFieldEnabled">
                     <div class="flex items-center gap-2">
-                        <div class="w-40">Blur Level</div>
+                        <div class="w-40">{{ $t('component.sceneSetting.blurLevel') }}</div>
                         <el-select v-model="dofBlurLevel" @change="onDofBlurLevelChange">
-                            <el-option :label="'Low'" :value="DepthOfFieldEffectBlurLevel.Low" />
-                            <el-option :label="'Medium'" :value="DepthOfFieldEffectBlurLevel.Medium" />
-                            <el-option :label="'High'" :value="DepthOfFieldEffectBlurLevel.High" />
+                            <el-option :label="$t('component.sceneSetting.low')"
+                                :value="DepthOfFieldEffectBlurLevel.Low" />
+                            <el-option :label="$t('component.sceneSetting.medium')"
+                                :value="DepthOfFieldEffectBlurLevel.Medium" />
+                            <el-option :label="$t('component.sceneSetting.high')"
+                                :value="DepthOfFieldEffectBlurLevel.High" />
                         </el-select>
                     </div>
-                    <Number label="Lens Size" :object="defaultRenderingPipeline.depthOfField" property="lensSize"
-                        :step="0.1" :min="0" />
-                    <Number label="F-stop" :object="defaultRenderingPipeline.depthOfField" property="fStop" :step="0.01"
-                        :min="0" />
-                    <Number label="Focus Distance" :object="defaultRenderingPipeline.depthOfField"
-                        property="focusDistance" :min="0" :step="focusStep" :max="focusMax" />
-                    <Number label="Focal Length" :object="defaultRenderingPipeline.depthOfField" property="focalLength"
-                        :step="0.01" :min="0" />
+                    <Number :label="$t('component.sceneSetting.lensSize')"
+                        :object="defaultRenderingPipeline.depthOfField" property="lensSize" :step="0.1" :min="0" />
+                    <Number :label="$t('component.sceneSetting.fStop')" :object="defaultRenderingPipeline.depthOfField"
+                        property="fStop" :step="0.01" :min="0" />
+                    <Number :label="$t('component.sceneSetting.focusDistance')"
+                        :object="defaultRenderingPipeline.depthOfField" property="focusDistance" :min="0"
+                        :step="focusStep" :max="focusMax" />
+                    <Number :label="$t('component.sceneSetting.focalLength')"
+                        :object="defaultRenderingPipeline.depthOfField" property="focalLength" :step="0.01" :min="0" />
                 </template>
             </SectionField>
         </template>
 
-        <SectionField title="SSAO2">
-            <Switch label="Enabled" :object="ssaoConfig" property="enabled" :noUndoRedo="true" @change="toggleSSAO2" />
+        <SectionField :title="$t('component.sceneSetting.ssao2')">
+            <Switch :label="$t('component.sceneSetting.enabled')" :object="ssaoConfig" property="enabled"
+                :noUndoRedo="true" @change="toggleSSAO2" />
             <template v-if="ssao2">
-                <Number label="Radius" :object="ssao2" property="radius" />
-                <Number label="Total Strength" :object="ssao2" property="totalStrength" />
-                <Number label="Area" :object="ssao2" property="area" />
-                <Number label="Falloff" :object="ssao2" property="fallOff" />
-                <Number label="Base" :object="ssao2" property="base" />
+                <Number :label="$t('component.sceneSetting.radius')" :object="ssao2" property="radius" />
+                <Number :label="$t('component.sceneSetting.totalStrength')" :object="ssao2" property="totalStrength" />
+                <Number :label="$t('component.sceneSetting.area')" :object="ssao2" property="area" />
+                <Number :label="$t('component.sceneSetting.falloff')" :object="ssao2" property="fallOff" />
+                <Number :label="$t('component.sceneSetting.base')" :object="ssao2" property="base" />
             </template>
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.motionBlur')">
-            <Switch label="Enabled" :object="motionBlurConfig" property="enabled" :noUndoRedo="true"
-                @change="toggleMotionBlur" />
+            <Switch :label="$t('component.sceneSetting.enabled')" :object="motionBlurConfig" property="enabled"
+                :noUndoRedo="true" @change="toggleMotionBlur" />
             <template v-if="motionBlur">
                 <Switch :label="$t('component.sceneSetting.objectBased')" :object="motionBlur"
                     property="isObjectBased" />
@@ -211,7 +260,8 @@
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.reflections')">
-            <Switch label="Enabled" :object="ssrConfig" property="enabled" :noUndoRedo="true" @change="toggleSSR" />
+            <Switch :label="$t('component.sceneSetting.enabled')" :object="ssrConfig" property="enabled"
+                :noUndoRedo="true" @change="toggleSSR" />
             <template v-if="ssr">
                 <Number :label="$t('component.sceneSetting.step')" :object="ssr" property="step" :min="0" />
                 <Number :label="$t('component.sceneSetting.thickness')" :object="ssr" property="thickness" />
@@ -239,7 +289,7 @@
             </template>
         </SectionField>
 
-        <SectionField :title="$t('component.sceneSetting.volumetricLightScattering')">
+        <!-- <SectionField :title="$t('component.sceneSetting.volumetricLightScattering')">
             <Switch label="Enabled" :object="vlsConfig" property="enabled" :noUndoRedo="true" @change="toggleVLS" />
             <template v-if="vls">
                 <Number :label="$t('component.sceneSetting.exposure')" :object="vls" property="exposure" :min="0" />
@@ -266,13 +316,13 @@
                     </template>
                 </div>
             </template>
-        </SectionField>
+        </SectionField> -->
     </div>
 
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Scene, DepthOfFieldEffectBlurLevel, TonemappingOperator, VolumetricLightScatteringPostProcess } from "@babylonjs/core";
 import { registerUndoRedo } from "@/tools/undoredo";
 import { updateAllLights } from "@/tools/light/shadows";
@@ -295,7 +345,9 @@ const props = defineProps<{ object: Scene; }>();
 const scene = computed(() => Editor.Instance.Scene);
 const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
 
-const force = () => { };
+const force = () => {
+
+};
 
 const gravityProxy = ref({ gravity: physicsEngine.value?.gravity?.clone?.() });
 
@@ -305,13 +357,17 @@ const applyGravity = () => {
     registerUndoRedo({ executeRedo: true, undo: () => { physicsEngine.value?.setGravity(oldGravity); physicsEngine.value?.gravity?.copyFrom(oldGravity); }, redo: () => { physicsEngine.value?.setGravity(gravityProxy.value.gravity); physicsEngine.value?.gravity?.copyFrom(gravityProxy.value.gravity); } });
 };
 
-const defaultRenderingPipeline = computed(() => getDefaultRenderingPipeline());
+const defaultRenderingPipeline = ref(getDefaultRenderingPipeline());
 const defaultPipelineConfig = ref({ enabled: !!defaultRenderingPipeline.value });
 
 const toggleDefaultPipeline = () => {
     const pipeline = defaultRenderingPipeline.value;
+    console.log("pipeline", pipeline);
+
     const serializedPipeline = serializeDefaultRenderingPipeline();
     registerUndoRedo({ executeRedo: true, undo: () => { if (!pipeline) { disposeDefaultRenderingPipeline(); } else if (serializedPipeline) { parseDefaultRenderingPipeline(serializedPipeline); } }, redo: () => { if (pipeline) { disposeDefaultRenderingPipeline(); } else if (serializedPipeline) { parseDefaultRenderingPipeline(serializedPipeline); } else { createDefaultRenderingPipeline(); } } });
+    defaultRenderingPipeline.value = getDefaultRenderingPipeline();
+    defaultPipelineConfig.value.enabled = !!defaultRenderingPipeline.value;
 };
 
 const toneMappingType = ref<number>(defaultRenderingPipeline.value?.imageProcessing?.toneMappingType ?? TonemappingOperator.Hable);
@@ -323,37 +379,55 @@ const focusMax = computed(() => (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) 
 const dofBlurLevel = ref<number>(defaultRenderingPipeline.value?.depthOfFieldBlurLevel ?? DepthOfFieldEffectBlurLevel.Low);
 const onDofBlurLevelChange = (v: number) => { if (defaultRenderingPipeline.value) defaultRenderingPipeline.value.depthOfFieldBlurLevel = v; };
 
-const ssao2 = computed(() => getSSAO2RenderingPipeline());
+const ssao2 = ref(getSSAO2RenderingPipeline());
 const ssaoConfig = ref({ enabled: !!ssao2.value });
 const toggleSSAO2 = () => {
     const pipeline = ssao2.value;
     const serialized = serializeSSAO2RenderingPipeline();
     registerUndoRedo({ executeRedo: true, undo: () => { if (!pipeline) { disposeSSAO2RenderingPipeline(); } else if (serialized) { parseSSAO2RenderingPipeline(serialized); } }, redo: () => { if (pipeline) { disposeSSAO2RenderingPipeline(); } else if (serialized) { parseSSAO2RenderingPipeline(serialized); } else { createSSAO2RenderingPipeline(); } } });
+    ssao2.value = getSSAO2RenderingPipeline();
+    ssaoConfig.value.enabled = !!ssao2.value;
 };
 
-const motionBlur = computed(() => getMotionBlurPostProcess());
+const motionBlur = ref(getMotionBlurPostProcess());
 const motionBlurConfig = ref({ enabled: !!motionBlur.value });
 const toggleMotionBlur = () => {
     const post = motionBlur.value;
     const serialized = serializeMotionBlurPostProcess();
     registerUndoRedo({ executeRedo: true, undo: () => { if (!post) { disposeMotionBlurPostProcess(); } else if (serialized) { parseMotionBlurPostProcess(serialized); } }, redo: () => { if (post) { disposeMotionBlurPostProcess(); } else if (serialized) { parseMotionBlurPostProcess(serialized); } else { createMotionBlurPostProcess(); } } });
+    motionBlur.value = getMotionBlurPostProcess();
+    motionBlurConfig.value.enabled = !!motionBlur.value;
 };
 
-const ssr = computed(() => getSSRRenderingPipeline());
+const ssr = ref(getSSRRenderingPipeline());
 const ssrConfig = ref({ enabled: !!ssr.value });
 const toggleSSR = () => {
     const pipeline = ssr.value;
     const serialized = serializeSSRRenderingPipeline();
     registerUndoRedo({ executeRedo: true, undo: () => { if (!pipeline) { disposeSSRRenderingPipeline(); } else if (serialized) { parseSSRRenderingPipeline(serialized); } }, redo: () => { if (pipeline) { disposeSSRRenderingPipeline(); } else if (serialized) { parseSSRRenderingPipeline(serialized); } else { createSSRRenderingPipeline(); } } });
+    ssr.value = getSSRRenderingPipeline();
+    ssrConfig.value.enabled = !!ssr.value;
 };
 
-const vls = computed(() => getVLSPostProcess());
+const vls = ref(getVLSPostProcess());
 const vlsConfig = ref({ enabled: !!vls.value });
 const toggleVLS = () => {
     const post = vls.value;
     const serialized = serializeVLSPostProcess();
-    registerUndoRedo({ executeRedo: true, undo: () => { if (!post) { disposeVLSPostProcess(); } else if (serialized) { parseVLSPostProcess(serialized); } }, redo: () => { if (post) { disposeVLSPostProcess(); } else if (serialized) { parseVLSPostProcess(serialized); } else { createVLSPostProcess(); } } });
+    registerUndoRedo({
+        executeRedo: true, undo: () => { if (!post) { disposeVLSPostProcess(); } else if (serialized) { parseVLSPostProcess(serialized); } }, redo: () => {
+            console.log(post + "" + serialized);
+
+            if (post) { disposeVLSPostProcess(); } else if (serialized) { parseVLSPostProcess(serialized); } else {
+                createVLSPostProcess();
+            }
+        }
+    });
+    vls.value = getVLSPostProcess();
+    vlsConfig.value.enabled = !!vls.value;
 };
+
+
 
 const dragOverVlsMesh = ref(false);
 const handleDragOverVlsMesh = (event: DragEvent) => { event.preventDefault(); dragOverVlsMesh.value = true; };
@@ -375,3 +449,12 @@ const fogMode = ref<number>(props.object.fogMode);
 const onFogModeChange = (v: number) => { const oldValue = props.object.fogMode; const newValue = v; props.object.fogMode = newValue; registerUndoRedo({ executeRedo: true, undo: () => { props.object.fogMode = oldValue; }, redo: () => { props.object.fogMode = newValue; } }); }
 
 </script>
+<style scoped>
+.w-24 {
+    padding: 10px;
+}
+
+.colorCurvesClild {
+    padding-left: 20px;
+}
+</style>
