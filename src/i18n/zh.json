@@ -116,5 +116,12 @@
       "environmentTexture": "环境贴图",
       "fog": "雾"
     }
+  },
+  "dialog": {
+    "chooseSaveMode": {
+      "title": "选择保存模式",
+      "local": "保存到本地",
+      "indexDB": "保存到浏览器"
+    }
   }
 }

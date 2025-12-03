@@ -8,7 +8,7 @@ import { CC } from '../BaseRes';
 import { deserializeNode } from '../serialze/node/Node';
 import { vertexToBuffer, bufferToVertex } from '../utils/GeometryUtils';
 import { serializeTextureBuffer } from '.';
-import { IFile } from './File';
+import { IFile } from '../file/IFile';
 import { ArrayUtils } from '@/utils/Array';
 
 export class Assets implements ICollectAssets, ILoaderAssets {
