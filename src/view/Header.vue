@@ -7,7 +7,7 @@
 </template>
 <script setup lang='ts'>
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
-import { LocalFileSystem } from '@/3d/assets/runtimeLibrary/File';
+import { LocalFileSystem } from '@/3d/assets/file/LocalFileSystem';
 import { MultiCollectAssets } from '@/3d/assets/runtimeLibrary/MultiCollectAssets';
 import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
@@ -17,6 +17,8 @@ import { Utils } from '@/utils';
 import { useDark, useToggle } from '@vueuse/core'
 import { ElMessage } from 'element-plus';
 import { ref } from 'vue'
+import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
+import { useIndexDBProject } from '@/store/useIndexDBProject';
 
 const isDark = useDark({
     valueDark: 'dark',
@@ -107,7 +109,7 @@ const menuItems: MenuItem[] = [
 
 async function exportFile() {
     try {
-        await LocalFileSystem.Instance.init();
+        await EditorFileSystem.Instance.check();
         const sceneList = useScene().getAllScene();
         const multiCollectAssets = new MultiCollectAssets(RuntimeLibrary.Instance.sceneAssets)
         const sceneDatas = new Array<any>(sceneList.length);
@@ -119,11 +121,18 @@ async function exportFile() {
         const files = await RuntimeLibrary.Instance.saveAll()
         files.push(['scene.json', JSON.stringify(sceneDatas)]);
         files.forEach((file) => {
-            LocalFileSystem.Instance.saveFile(file[0], file[1]);
+            EditorFileSystem.Instance.saveFile(file[0], file[1]);
         })
         RuntimeLibrary.Instance.sceneAssets.forEach((asset) => {
             asset.createNew = false;
         })
+        if (EditorFileSystem.Instance.mode === FileMode.INDEXEDDB) {
+            useIndexDBProject().addProject({
+                name: EditorFileSystem.Instance.name,
+                time: new Date().toLocaleString(),
+            })
+        }
+        ElMessage.success('保存成功');
     } catch (error) {
         ElMessage.error(error);
     }
@@ -146,18 +155,7 @@ function importAssets() {
 
 }
 
-async function open() {
-    await LocalFileSystem.Instance.init();
-    const sceneList = await RuntimeLibrary.Instance.loadAssets(LocalFileSystem.Instance);
-    if (sceneList.length > 0) {
-        useScene().setSceneList(sceneList)
-        Editor.Instance.setCurrentScene(sceneList[0].uuid);
-    } else {
-        const scene = await Editor.Instance.createNewScene('默认场景');
-        useScene().addScene(scene);
-        Editor.Instance.setCurrentScene(scene.uuid)
-    }
-}
+
 
 </script>
 <style scoped lang='scss'>

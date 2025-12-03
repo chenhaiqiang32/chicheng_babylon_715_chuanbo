@@ -5,7 +5,7 @@ import { serializeNode } from '../serialze/node/Node';
 import { CC } from '../BaseRes';
 import { ZipFile } from '@/utils/Zip';
 import { Assets } from './Assets';
-import { IFile } from './File';
+import { IFile } from '../file/IFile';
 
 interface RuntimeAssetsEventBus {
   onChanged: () => void;

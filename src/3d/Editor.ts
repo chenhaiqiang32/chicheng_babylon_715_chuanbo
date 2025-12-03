@@ -202,20 +202,22 @@ export class Editor extends Dispatch<EditorEvent> {
     const scene = new Scene(this.engine);
     scene.useRightHandedSystem = false;
     const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), scene);
+    camera.allowUpsideDown = true;
     camera.minZ = 0.001;
     camera.maxZ = 5000;
     camera.attachControl();
     camera.lowerRadiusLimit = 0.01;
     camera.upperRadiusLimit = 5000;
-    camera.wheelPrecision = 60; // 鼠标滚轮（传统鼠标）
-    camera.wheelDeltaPercentage = 0.08; // 触控板滚轮（Mac/Windows 触控板）
-    camera.pinchDeltaPercentage = 0.15; // 手机/平板双指缩放
+    camera.wheelPrecision = 40; // 鼠标滚轮（传统鼠标）
+    // camera.wheelDeltaPercentage = 0.08; // 触控板滚轮（Mac/Windows 触控板）
+    // camera.pinchDeltaPercentage = 0.15; // 手机/平板双指缩放
+
+    camera.angularSensibilityX = 300; // 水平拖动速度（越小越快）
+    camera.angularSensibilityY = 300; // 垂直拖动速度
+    camera.panningSensibility = 300; // 鼠标中键缩放速度（越小越快）
     camera.inertia = 0;
     camera.panningInertia = 0;
 
-    camera.angularSensibilityX = 200; // 水平拖动速度（越小越快）
-    camera.angularSensibilityY = 200; // 垂直拖动速度
-    camera.panningSensibility = 500; // 鼠标中键缩放速度（越小越快）
     this.camera = camera;
 
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);

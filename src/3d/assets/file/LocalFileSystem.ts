@@ -1,24 +1,17 @@
 import { FileSystem, FileSystemItem } from '@/utils/FileSystem';
-export interface IFile {
-  getFileArrayBuffer(name: string, dir?: string): Promise<ArrayBuffer>;
-  getFileText(name: string, dir?: string): Promise<string>;
-  saveFile(name: string, data: ArrayBuffer | string, dir?: string): void;
-}
-
+import { IFile } from './IFile';
 export class LocalFileSystem implements IFile {
-  private static _instance: LocalFileSystem;
-  static get Instance() {
-    return this._instance || (this._instance = new this());
-  }
   root: FileSystemDirectoryHandle;
   private items: FileSystemItem[] = [];
   private dirs: FileSystemItem[] = [];
+  name: string;
   async init() {
     if (this.root) {
       return;
     }
     try {
       this.root = await FileSystem.Instance.openDirectory();
+      this.name = this.root.name;
       const children = await FileSystem.Instance.readDirectoryRecursive(this.root);
       children.forEach((item) => getAllFile(item, this.items));
       children.forEach((item) => getAllDir(item, this.dirs));

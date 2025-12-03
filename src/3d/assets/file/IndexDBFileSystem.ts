@@ -1,0 +1,24 @@
+import { IFile } from './IFile';
+import { IndexedDBClient } from '@/utils/IndexDB';
+export class IndexDBFileSystem implements IFile {
+  db: IndexedDBClient;
+  name: string;
+
+  async init(name: string) {
+    this.db = new IndexedDBClient(name);
+    this.name = name;
+    await this.db.open();
+  }
+  async saveFile(name: string, data: FileSystemWriteChunkType, dir?: string) {
+    await this.db.saveData(name, data);
+  }
+  getFileArrayBuffer(name: string, dir?: string): Promise<ArrayBuffer> {
+    return this.db.loadData(dir ? `${dir}/${name}` : name);
+  }
+  getFileText(name: string, dir?: string): Promise<string> {
+    return this.db.loadData(dir ? `${dir}/${name}` : name);
+  }
+  clear() {
+    this.db.close();
+  }
+}
