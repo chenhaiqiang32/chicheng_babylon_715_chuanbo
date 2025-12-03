@@ -1,5 +1,5 @@
 <template>
-    <ElDialog v-model="model" draggable width="900px" :close-on-click-modal="false" :show-close="false"
+    <ElDialog v-model="model" @close="close" draggable width="900px" :close-on-click-modal="false" :show-close="false"
         class="setup-dialog">
         <div class="dialog-content">
             <div class="left">
@@ -13,7 +13,7 @@
                     </div>
                     <div class="actions">
                         <ElButton type="primary" size="small" @click="createProject">新建项目</ElButton>
-                        <ElButton type="primary" size="small" @click="openProject">打开项目</ElButton>
+                        <ElButton type="primary" size="small" @click="openLocalProject">打开项目</ElButton>
                     </div>
                 </div>
 
@@ -22,7 +22,7 @@
                     <ElScrollbar class="recent-list">
                         <div class="recent-item" v-for="p in recentProjects" :key="p.name">
                             <span class="name">{{ p.name }}</span>
-                            <ElButton text size="small" @click="openProject">打开</ElButton>
+                            <ElButton text size="small" @click="openLocalProject">打开</ElButton>
                         </div>
                     </ElScrollbar>
                 </div>
@@ -36,7 +36,7 @@ import { ref } from 'vue';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
-import { LocalFileSystem } from '@/3d/assets/runtimeLibrary/File';
+import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
 
 const model = ref(true);
 const creating = ref(false);
@@ -58,12 +58,12 @@ async function createProject() {
     }
 }
 
-async function openProject() {
+async function openLocalProject() {
     if (opening.value) return;
     opening.value = true;
     try {
-        await LocalFileSystem.Instance.init();
-        const sceneList = await RuntimeLibrary.Instance.loadAssets(LocalFileSystem.Instance);
+        await EditorFileSystem.Instance.init(FileMode.LOCAL);
+        const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file);
         if (sceneList.length > 0) {
             useScene().setSceneList(sceneList);
             Editor.Instance.setCurrentScene(sceneList[0].uuid);
@@ -72,14 +72,28 @@ async function openProject() {
             useScene().addScene(scene);
             Editor.Instance.setCurrentScene(scene.uuid);
         }
-        const name = LocalFileSystem.Instance.root?.name;
-        if (name) {
-            const next = [{ name, time: Date.now() }, ...recentProjects.value.filter(i => i.name !== name)].slice(0, 5);
-            recentProjects.value = next;
-            localStorage.setItem('recentProjects', JSON.stringify(next));
+        props.close();
+    } catch (error) {
+        console.error(error);
+    } finally {
+        opening.value = false;
+    }
+}
+async function openIndexDBProject(name: string) {
+    if (opening.value) return;
+    opening.value = true;
+    try {
+        await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, name);
+        const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file);
+        if (sceneList.length > 0) {
+            useScene().setSceneList(sceneList);
+            Editor.Instance.setCurrentScene(sceneList[0].uuid);
+        } else {
+            const scene = await Editor.Instance.createNewScene('默认场景');
+            useScene().addScene(scene);
+            Editor.Instance.setCurrentScene(scene.uuid);
         }
         props.close();
-
     } catch (error) {
         console.error(error);
     } finally {

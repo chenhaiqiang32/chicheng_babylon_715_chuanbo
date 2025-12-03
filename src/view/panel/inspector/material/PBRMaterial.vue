@@ -260,6 +260,5 @@ const toggleRoughness = (v: boolean) => {
   // registerSimpleUndoRedo({ object: props.material, property: "roughness", oldValue: props.material.roughness, newValue: v ? 1 : null, executeRedo: true })
 }
 onMounted(() => {
-
 })
 </script>

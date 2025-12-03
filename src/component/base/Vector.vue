@@ -84,7 +84,6 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 const onFinishChange = () => {
 	emit("finishChange")
 }
-
 </script>
 
 <style lang="scss">

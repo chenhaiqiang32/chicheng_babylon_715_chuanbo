@@ -24,10 +24,8 @@ import {
 import '@babylonjs/loaders/glTF';
 import '@babylonjs/materials';
 import { watch, type WatchHandle } from 'vue';
-import { AssetsManager } from './assets/AssetsManager';
 import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
-import { registerLeftClick } from '@/3d/core/utils/registerLeftClick';
 import { focusOnNode } from '@/3d/core/utils/focusOnNode';
 import { Dispatch } from '@/utils/dispatch';
 import { createDefaultRenderingPipeline } from '@/rendering/default-pipeline';
@@ -37,12 +35,11 @@ interface EditorEvent {
   numberChanged: { newNumber: number; id: string };
   textureChanged: { newTexture: string; id: string };
   switchChanged: { newSwitch: boolean; id: string };
-  sceneSettingChanged: boolean;
-
+  UndoRedo: void;
 }
 
 export class Editor extends Dispatch<EditorEvent> {
-  loadScene(arg0: string) { }
+  loadScene(arg0: string) {}
   private scene: Scene;
   private engine: Engine;
   private camera: Camera;
@@ -63,7 +60,6 @@ export class Editor extends Dispatch<EditorEvent> {
   }
   set SceneSetting(v: boolean) {
     this.sceneSetting = v;
-    this.dispatch('sceneSettingChanged', v);
   }
   get ResScene() {
     if (this.resScene == null) {
@@ -183,7 +179,7 @@ export class Editor extends Dispatch<EditorEvent> {
     useScene().setCurrentControlMode(ControlMode.Move);
   }
 
-  test() { }
+  test() {}
 
   initWatch() {
     const selectWatcher = watch(
@@ -222,22 +218,24 @@ export class Editor extends Dispatch<EditorEvent> {
 
   async createScene() {
     const scene = new Scene(this.engine);
-    scene.useRightHandedSystem = true;
-    const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), this.scene);
+    scene.useRightHandedSystem = false;
+    const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), scene);
+    camera.allowUpsideDown = true;
     camera.minZ = 0.001;
     camera.maxZ = 5000;
     camera.attachControl();
     camera.lowerRadiusLimit = 0.01;
     camera.upperRadiusLimit = 5000;
-    camera.wheelPrecision = 60; // 鼠标滚轮（传统鼠标）
-    camera.wheelDeltaPercentage = 0.08; // 触控板滚轮（Mac/Windows 触控板）
-    camera.pinchDeltaPercentage = 0.15; // 手机/平板双指缩放
+    camera.wheelPrecision = 40; // 鼠标滚轮（传统鼠标）
+    // camera.wheelDeltaPercentage = 0.08; // 触控板滚轮（Mac/Windows 触控板）
+    // camera.pinchDeltaPercentage = 0.15; // 手机/平板双指缩放
+
+    camera.angularSensibilityX = 300; // 水平拖动速度（越小越快）
+    camera.angularSensibilityY = 300; // 垂直拖动速度
+    camera.panningSensibility = 300; // 鼠标中键缩放速度（越小越快）
     camera.inertia = 0;
     camera.panningInertia = 0;
 
-    camera.angularSensibilityX = 200; // 水平拖动速度（越小越快）
-    camera.angularSensibilityY = 200; // 垂直拖动速度
-    camera.panningSensibility = 500; // 鼠标中键缩放速度（越小越快）
     this.camera = camera;
 
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
@@ -314,14 +312,7 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   /** 初始化光标事件 */
-  initPointerObservale() {
-    registerLeftClick(this.scene, {
-      dragThreshold: 3,
-      onClick: () => {
-        this.raycastSelect();
-      },
-    });
-  }
+  initPointerObservale() {}
 
   initFocus() {
     window.addEventListener('keydown', (k) => {
@@ -417,7 +408,6 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   export() {
-    AssetsManager.Instance.exportScene(this.scene);
     // const json = SceneSerializer.Serialize(this.scene);
     // const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
     // Tools.Download(blob, 'scene.json');

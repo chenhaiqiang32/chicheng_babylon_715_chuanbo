@@ -63,6 +63,17 @@ const onEnter = () => {
   emit("change", newValue)
 
 }
+onMounted(() => {
+  Editor.Instance.on("UndoRedo", () => {
+    syncFromObject()
+  })
+})
+onUnmounted(() => {
+  Editor.Instance.off("UndoRedo", () => {
+  })
+})
+
+
 
 
 
