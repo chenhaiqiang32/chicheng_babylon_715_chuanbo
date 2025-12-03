@@ -77,7 +77,12 @@ export class EditorFileSystem {
         }
         await this.init(FileMode.INDEXEDDB, dbName.value);
       } else if (result === FileMode.LOCAL) {
-        await this.init(result);
+        try {
+          await this.init(result);
+        } catch (error) {
+          ElMessage.error('打开文件夹失败');
+          return Promise.reject(error);
+        }
       }
     }
     return Promise.resolve();
