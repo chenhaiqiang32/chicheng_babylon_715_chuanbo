@@ -17,7 +17,8 @@ import { Utils } from '@/utils';
 import { useDark, useToggle } from '@vueuse/core'
 import { ElMessage } from 'element-plus';
 import { ref } from 'vue'
-import { EditorFileSystem } from '@/3d/assets/file/IFile';
+import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
+import { useIndexDBProject } from '@/store/useIndexDBProject';
 
 const isDark = useDark({
     valueDark: 'dark',
@@ -125,6 +126,12 @@ async function exportFile() {
         RuntimeLibrary.Instance.sceneAssets.forEach((asset) => {
             asset.createNew = false;
         })
+        if (EditorFileSystem.Instance.mode === FileMode.INDEXEDDB) {
+            useIndexDBProject().addProject({
+                name: EditorFileSystem.Instance.name,
+                time: new Date().toLocaleString(),
+            })
+        }
         ElMessage.success('保存成功');
     } catch (error) {
         ElMessage.error(error);

@@ -1,6 +1,6 @@
 <template>
-    <ElDialog v-model="model" @close="close" draggable width="900px" :close-on-click-modal="false" :show-close="false"
-        class="setup-dialog">
+    <ElDialog v-model="model" @close="close" align-center draggable width="900px" :close-on-click-modal="false"
+        :show-close="false" class="setup-dialog">
         <div class="dialog-content">
             <div class="left">
                 <img src="@/assets/setup.png" alt="">
@@ -12,17 +12,17 @@
                         <div class="desc">创建或打开你的项目</div>
                     </div>
                     <div class="actions">
-                        <ElButton type="primary" size="small" @click="createProject">新建项目</ElButton>
-                        <ElButton type="primary" size="small" @click="openLocalProject">打开项目</ElButton>
+                        <ElButton type="primary" @click="createProject">新建项目</ElButton>
+                        <ElButton type="primary" @click="openLocalProject">打开本地项目</ElButton>
                     </div>
                 </div>
 
-                <div class="recent" v-if="recentProjects.length">
+                <div class="recent" v-if="projects.length > 0">
                     <div class="recent-title">最近项目</div>
                     <ElScrollbar class="recent-list">
-                        <div class="recent-item" v-for="p in recentProjects" :key="p.name">
+                        <div class="recent-item" v-for="p in projects" :key="p.name">
                             <span class="name">{{ p.name }}</span>
-                            <ElButton text size="small" @click="openLocalProject">打开</ElButton>
+                            <ElButton text size="small" @click="openIndexDBProject(p.name)">打开</ElButton>
                         </div>
                     </ElScrollbar>
                 </div>
@@ -37,6 +37,11 @@ import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
 import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
+import { useIndexDBProject } from '@/store/useIndexDBProject';
+import { storeToRefs } from 'pinia';
+
+const { projects } = storeToRefs(useIndexDBProject());
+console.log(projects);
 
 const model = ref(true);
 const creating = ref(false);
@@ -191,6 +196,11 @@ async function openIndexDBProject(name: string) {
                 justify-content: space-between;
                 padding: 6px 8px;
                 border-radius: var(--border-radius);
+                cursor: pointer;
+
+                &:hover {
+                    background-color: var(--bg-color-2);
+                }
             }
 
             .name {

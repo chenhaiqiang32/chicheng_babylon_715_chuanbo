@@ -22,8 +22,6 @@ export class MultiLoaderAssets implements ILoaderAssets {
     for (let index = 0; index < this.assets.length; index++) {
       const element = this.assets[index];
       const mat = await element.getMaterial(uuid);
-      console.log('getMaterial', mat);
-
       if (mat) {
         return Promise.resolve(mat);
       }
