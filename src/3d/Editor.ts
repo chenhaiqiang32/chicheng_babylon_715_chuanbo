@@ -39,7 +39,7 @@ interface EditorEvent {
   nameChanged: { newName: string; id: string };
   numberChanged: { newNumber: number; id: string };
   textureChanged: { newTexture: string; id: string };
-  switchChanged: { newSwitch: boolean; id: string };
+  sceneSettingChanged: boolean;
   UndoRedo: void;
 }
 
@@ -53,6 +53,7 @@ export class Editor extends Dispatch<EditorEvent> {
   private downX = 0;
   private downY = 0;
   private isDown = false;
+  private sceneSetting: boolean = false;
   static get Instance() {
     if (Editor.instance == null) {
       Editor.instance = new Editor();
@@ -61,7 +62,13 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   private resScene: Scene;
-
+  get SceneSetting() {
+    return this.sceneSetting;
+  }
+  set SceneSetting(v: boolean) {
+    this.sceneSetting = v;
+    this.dispatch('sceneSettingChanged', v);
+  }
   get ResScene() {
     if (this.resScene == null) {
       this.resScene = new Scene(this.engine);
@@ -298,10 +305,17 @@ export class Editor extends Dispatch<EditorEvent> {
 
     this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {
       // TODO:监听BoundingBoxGizmos拖拽开始
+      console.log(2323);
+
     });
 
     this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {
       // TODO:监听BoundingBoxGizmos拖拽结束
+      console.log(21323);
+    });
+    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {
+      // TODO:监听BoundingBoxGizmos拖拽中
+      console.log(123);
     });
 
     // 非等比例下无法缩放，需要将 update... 设置为 false
