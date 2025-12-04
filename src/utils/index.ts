@@ -1,3 +1,4 @@
+import gsap from 'gsap';
 export namespace Utils {
   export function downloadFile(content: string, fileName: string) {
     const a = document.createElement('a');
@@ -33,5 +34,16 @@ export namespace Utils {
       i++;
     }
     return `${baseName} (${i})`;
+  }
+  export function animate(event: (n: number) => void, time: number) {
+    const v = { v: 0 };
+    gsap
+      .to(v, {
+        duration: time,
+        v: 1,
+      })
+      .eventCallback('onUpdate', () => {
+        event?.(v.v);
+      });
   }
 }

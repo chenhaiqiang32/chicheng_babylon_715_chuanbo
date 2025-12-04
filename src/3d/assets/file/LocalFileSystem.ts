@@ -6,9 +6,6 @@ export class LocalFileSystem implements IFile {
   private dirs: FileSystemItem[] = [];
   name: string;
   async init() {
-    if (this.root) {
-      return;
-    }
     try {
       this.root = await FileSystem.Instance.openDirectory();
       this.name = this.root.name;

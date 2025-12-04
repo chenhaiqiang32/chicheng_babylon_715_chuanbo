@@ -75,9 +75,19 @@ export class EditorFileSystem {
         if (useIndexDBProject().exit(dbName.value)) {
           return Promise.reject('项目名称已存在');
         }
-        await this.init(FileMode.INDEXEDDB, dbName.value);
+        try {
+          await this.init(FileMode.INDEXEDDB, dbName.value);
+        } catch (error) {
+          this.file = null;
+          return Promise.reject(error);
+        }
       } else if (result === FileMode.LOCAL) {
-        await this.init(result);
+        try {
+          await this.init(result);
+        } catch (error) {
+          this.file = null;
+          return Promise.reject('打开文件夹失败');
+        }
       }
     }
     return Promise.resolve();
