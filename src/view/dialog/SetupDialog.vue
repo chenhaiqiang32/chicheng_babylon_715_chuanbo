@@ -41,7 +41,6 @@ import { useIndexDBProject } from '@/store/useIndexDBProject';
 import { storeToRefs } from 'pinia';
 
 const { projects } = storeToRefs(useIndexDBProject());
-console.log(projects);
 
 const model = ref(true);
 const creating = ref(false);

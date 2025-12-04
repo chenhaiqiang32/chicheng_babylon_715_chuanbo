@@ -50,14 +50,10 @@ const selectedObject = shallowRef<any>(null);
 
 // 监听 currentSelected 变化，更新选中的对象
 watch(currentSelected, (newSelected) => {
-    console.log('newSelected', currentSelected);
-
     if (newSelected && newSelected.length > 0) {
         const objectId = newSelected[0];
         try {
             const sceneObject = Editor.Instance.getNodeById(objectId);
-            console.log('sceneObject', sceneObject);
-
             if (sceneObject) {
                 selectedObject.value = sceneObject;
                 editedObject.value = sceneObject;

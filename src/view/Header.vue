@@ -7,8 +7,6 @@
 </template>
 <script setup lang='ts'>
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
-import { LocalFileSystem } from '@/3d/assets/file/LocalFileSystem';
-import { MultiCollectAssets } from '@/3d/assets/runtimeLibrary/MultiCollectAssets';
 import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
@@ -111,11 +109,10 @@ async function exportFile() {
     try {
         await EditorFileSystem.Instance.check();
         const sceneList = useScene().getAllScene();
-        const multiCollectAssets = new MultiCollectAssets(RuntimeLibrary.Instance.sceneAssets)
         const sceneDatas = new Array<any>(sceneList.length);
         for (let index = 0; index < sceneList.length; index++) {
             const scene = sceneList[index];
-            const sceneData = serializeScene(scene, multiCollectAssets);
+            const sceneData = serializeScene(scene, RuntimeLibrary.Instance);
             sceneDatas.push(sceneData);
         }
         const files = await RuntimeLibrary.Instance.saveAll()
@@ -123,15 +120,14 @@ async function exportFile() {
         files.forEach((file) => {
             EditorFileSystem.Instance.saveFile(file[0], file[1]);
         })
-        RuntimeLibrary.Instance.sceneAssets.forEach((asset) => {
-            asset.createNew = false;
-        })
         if (EditorFileSystem.Instance.mode === FileMode.INDEXEDDB) {
             useIndexDBProject().addProject({
                 name: EditorFileSystem.Instance.name,
                 time: new Date().toLocaleString(),
             })
         }
+        console.log(files);
+        RuntimeLibrary.Instance.saveComplate();
         ElMessage.success('保存成功');
     } catch (error) {
         ElMessage.error(error);
@@ -142,12 +138,11 @@ async function exportFile() {
 function importModel() {
     Utils.chooseFile('.glb').then(async (fileList) => {
         if (fileList[0]) {
-            RuntimeLibrary.Instance.importMesh(fileList[0]).then(async (assets) => {
-                await assets.addToScene(Editor.Instance.Scene);
-                setTimeout(() => {
-                    useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
-                }, 1000);
-            })
+            const node = await RuntimeLibrary.Instance.importMesh(fileList[0]);
+            await RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, node);
+            setTimeout(() => {
+                useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
+            }, 1000);
         }
     })
 }

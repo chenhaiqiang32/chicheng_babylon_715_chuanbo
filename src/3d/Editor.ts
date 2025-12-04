@@ -22,6 +22,7 @@ import {
   PointerEventTypes,
   TransformNode,
   Scalar,
+  MeshBuilder,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -164,10 +165,8 @@ export class Editor extends Dispatch<EditorEvent> {
       useScene().currentScene = uuid;
     }
     this.scene = scene;
-    setTimeout(() => {
-      useScene().setHierarchy(scene.rootNodes);
-      useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
-    }, 1);
+    useScene().setHierarchy(scene.rootNodes);
+    useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
   }
 
   async createNewScene(arg0: string) {
@@ -306,7 +305,6 @@ export class Editor extends Dispatch<EditorEvent> {
     this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {
       // TODO:监听BoundingBoxGizmos拖拽开始
       console.log(2323);
-
     });
 
     this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {

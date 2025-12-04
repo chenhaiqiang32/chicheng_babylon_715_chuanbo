@@ -29,8 +29,8 @@ export class LocalFileSystem implements IFile {
       if (dir) {
         const dirItem = this.dirs.find((item) => item.name === dir);
         if (dirItem) {
-          FileSystem.Instance.createFileInDirectory(
-            item.handle as FileSystemDirectoryHandle,
+          await FileSystem.Instance.createFileInDirectory(
+            dirItem.handle as FileSystemDirectoryHandle,
             name,
             data,
           );

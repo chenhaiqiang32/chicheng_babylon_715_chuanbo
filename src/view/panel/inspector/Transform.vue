@@ -25,12 +25,9 @@ import SectionField from '@/component/common/SectionField.vue'
 import { onNodeModifiedObservable } from "@/tools/observables"
 
 const props = defineProps<{ object: TransformNode }>();
-const label = (t: string) => t;
 const getEulerAnglesFromQuaternion = () => {
 	if (!hasQuaternion.value) return
 	const euler = props.object.rotationQuaternion.toEulerAngles()
-	console.log(euler);
-
 	return {
 		x: euler.x,
 		y: euler.y,

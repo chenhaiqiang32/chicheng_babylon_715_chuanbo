@@ -39,9 +39,9 @@ const data = shallowRef<any[]>([]);
 
 onMounted(() => {
     if (props.type == 'material') {
-        data.value = RuntimeLibrary.Instance.sceneAssets.flatMap(item => item.material);
+        data.value = RuntimeLibrary.Instance.material
     } else {
-        data.value = RuntimeLibrary.Instance.sceneAssets.flatMap(item => item.texture);
+        data.value = RuntimeLibrary.Instance.texture
     }
 });
 

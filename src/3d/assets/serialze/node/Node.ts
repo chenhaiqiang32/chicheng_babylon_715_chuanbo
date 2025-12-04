@@ -64,6 +64,8 @@ export async function deserializeNode(
   }
   currentNode.inheritVisibility = true;
   currentNode.isVisible = node.visible;
-
-  node.children?.forEach((item) => deserializeNode(item, scene, assets, currentNode));
+  for (let index = 0; index < node.children.length; index++) {
+    const element = node.children[index];
+    await deserializeNode(element, scene, assets, currentNode);
+  }
 }

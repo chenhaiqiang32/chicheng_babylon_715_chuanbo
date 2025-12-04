@@ -1,12 +1,10 @@
-import { ref, shallowReactive, shallowRef } from 'vue';
+import { ref, shallowRef } from 'vue';
 import { defineStore } from 'pinia';
 import { Node, Scene } from '@babylonjs/core';
 import { ViewFlagsMode } from '@/3d/core/utils/viewFlagsMode';
 import { CC } from '@/3d/assets/BaseRes';
-import { deserializeScene, serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
-import { MultiLoaderAssets } from '@/3d/assets/runtimeLibrary/MultiLoaderAssets';
 
 function buildHierarchy(node: Node): HierarchyNode {
   return {
@@ -70,12 +68,10 @@ export const useScene = defineStore('scene', () => {
     } else {
       const ccNode = sceneInfoList.value.find((x) => x.uuid == uuid) as CC.Scene;
       if (ccNode) {
-        const assets = new MultiLoaderAssets(RuntimeLibrary.Instance.sceneAssets);
-        const scene = new Scene(Editor.Instance.Engine);
-        RuntimeLibrary.Instance.sceneAssets.forEach((asset) => {
-          asset.serializeToScene(scene);
-        });
-        await deserializeScene(ccNode, Editor.Instance.Engine, assets, scene);
+        const scene = await RuntimeLibrary.Instance.deserializeScene(
+          new Scene(Editor.Instance.Engine),
+          ccNode,
+        );
         scenelist.push(scene);
         return scene;
       }
