@@ -11,7 +11,6 @@ import { Color3, Color4 } from "@babylonjs/core"
 import { registerUndoRedo } from "../../tools/undoredo"
 import { getInspectorPropertyValue } from "../../tools/property"
 import Field from "@/component/common/Field.vue"
-import { Editor } from "@/3d/Editor"
 
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; noUndoRedo?: boolean; noClamp?: boolean; noColorPicker?: boolean }>()
 const emit = defineEmits<{ (e: "change", value: Color3 | Color4): void; (e: "finishChange", value: Color3 | Color4, oldValue: Color3 | Color4): void }>()
@@ -92,41 +91,39 @@ const onPickerChange = () => {
 
 }
 
-const onChannelChange = (val: number, channel: "r" | "g" | "b" | "a") => {
-    const col: any = getInspectorPropertyValue(props.object, props.property)
-    if (!col) return
+// const onChannelChange = (val: number, channel: "r" | "g" | "b" | "a") => {
+//     const col: any = getInspectorPropertyValue(props.object, props.property)
+//     if (!col) return
 
-    // 更新颜色对象的通道值
-    col[channel] = val
+//     // 更新颜色对象的通道值
+//     col[channel] = val
 
-    // 确保本地响应式引用同步更新
-    r.value = col.r
-    g.value = col.g
-    b.value = col.b
-    a.value = col.a ?? a.value
+//     // 确保本地响应式引用同步更新
+//     r.value = col.r
+//     g.value = col.g
+//     b.value = col.b
+//     a.value = col.a ?? a.value
 
-    // 从RGB值计算并更新hex值，以同步颜色选择器
-    const hexR = Math.round(r.value * 255).toString(16).padStart(2, "0")
-    const hexG = Math.round(g.value * 255).toString(16).padStart(2, "0")
-    const hexB = Math.round(b.value * 255).toString(16).padStart(2, "0")
-    hex.value = `#${hexR}${hexG}${hexB}`
-    //console.log( hex.value);
+//     // 从RGB值计算并更新hex值，以同步颜色选择器
+//     const hexR = Math.round(r.value * 255).toString(16).padStart(2, "0")
+//     const hexG = Math.round(g.value * 255).toString(16).padStart(2, "0")
+//     const hexB = Math.round(b.value * 255).toString(16).padStart(2, "0")
+//     hex.value = `#${hexR}${hexG}${hexB}`
+//     //console.log( hex.value);
 
-    emit("change", col)
-}
+//     emit("change", col)
+// }
 
 const onFinish = () => {
     const prev: any = currentColor.value?.clone?.() ?? null
     const next: any = getInspectorPropertyValue(props.object, props.property)
-
     registerUndoRedo({
-        undo: () => prev && (props.object[props.property] = prev.clone()), redo: () => next && (props.object[props.property] = next.clone()), executeRedo: true, action() {
+        undo: () => prev && (props.object[props.property] = prev.clone()), redo: () => next && (props.object[props.property] = next.clone()), executeRedo: false, action() {
             hex.value = toHex(getInspectorPropertyValue(props.object, props.property))
             oldHex.value = hex.value
         },
     })
     emit("finishChange", next, prev)
-
 }
 </script>
 
