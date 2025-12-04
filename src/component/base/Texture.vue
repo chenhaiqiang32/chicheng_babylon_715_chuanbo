@@ -3,7 +3,7 @@
         @dragleave="handleDragLeave" :class="{ 'is-over': dragOver }">
         <div class="title">{{ title }}</div>
         <div class="texture-preview-container">
-            <div class="texture-preview" :class="previewClass">
+            <div class="texture-preview">
                 <el-popover width="350" v-if="textureUrl" :disabled="noPopover" placement="left"
                     popper-class="texture-popover" transition="el-fade-in" :offset="8">
                     <template #reference>
@@ -32,15 +32,25 @@
                     </template>
                     <template #default>
                         <div class="popover-content">
-                            <Switch label="Gamma Space" :object="textureRef" property="gammaSpace"
+                            <Switch :label="$t('texture.gammaSpace')" :object="textureRef" property="gammaSpace"
+                                @change="emitChange(textureRef)" />
+                            <Number :label="$t('texture.vScale')" :object="textureRef" property="vScale"
+                                @change="emitChange(textureRef)" />
+                            <Number :label="$t('texture.uScale')" :object="textureRef" property="uScale"
+                                @change="emitChange(textureRef)" />
+                            <Number :label="$t('texture.uOffset')" :object="textureRef" property="uOffset"
+                                @change="emitChange(textureRef)" />
+                            <Number :label="$t('texture.vOffset')" :object="textureRef" property="vOffset"
                                 @change="emitChange(textureRef)" />
                             <slot />
                         </div>
                     </template>
                 </el-popover>
-                <div v-else class="texture-preview-inner"><el-icon>
-                        <QuestionFilled />
-                    </el-icon></div>
+                <div v-else class="texture-preview-inner">
+                    <div class="img-empty">
+
+                    </div>
+                </div>
             </div>
             <div class="texture-info">
                 <div class="texture-actions">
@@ -62,6 +72,8 @@ import { Texture, CubeTexture, ColorGradingTexture } from "@babylonjs/core"
 
 import { Loading, QuestionFilled } from "@element-plus/icons-vue"
 import Switch from "./Switch.vue"
+import Number from "./Number.vue"
+
 import { isScene } from "../../tools/guards/scene"
 import { registerUndoRedo } from "@/tools/undoredo"
 //import { updateIblShadowsRenderPipeline } from "../../editor/tools/light/ibl"
@@ -72,6 +84,7 @@ import { configureImportedTexture } from "@/tools/preview/import"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
 import { useDialog } from "@/view/dialog"
 import { Editor } from "@/3d/Editor"
+import Vector from "./Vector.vue"
 
 
 function getExtname(path: string) {
@@ -120,7 +133,6 @@ const isTextureRef = computed(() => isTexture(textureRef.value))
 const isCubeRef = computed(() => isCubeTexture(textureRef.value))
 const loadingError = computed(() => !!textureRef.value?.loadingError)
 const textureName = computed(() => textureRef.value?.name ?? "")
-const previewClass = computed(() => (textureUrl.value ? "has" : "none"))
 const sizeW = computed(() => (isTextureRef.value ? textureRef.value?.getSize?.().width ?? 0 : 0))
 const sizeH = computed(() => (isTextureRef.value ? textureRef.value?.getSize?.().height ?? 0 : 0))
 
@@ -281,8 +293,22 @@ async function changeTexture() {
     const ChooseResDialog = (await import('@/view/dialog/ChooseResDialog.vue')).default
     useDialog(ChooseResDialog, {
         choose: (res: any) => {
-            const tex = Editor.Instance.Scene.textures.find(x => x.uuid == res.uuid);
-            setInspectorEffectivePropertyValue(props.object, props.property, tex)
+            if (res) {
+                const texture = new Texture(res.url, Editor.Instance.Scene, true, false);
+                texture.sourceUUID = res.sourceUUID;
+                const oldTexture = getInspectorPropertyValue(props.object, props.property)
+                setInspectorEffectivePropertyValue(props.object, props.property, null)
+                textureRef.value = texture
+                emitChange(texture)
+                if (!props.noUndoRedo) {
+                    registerUndoRedo({
+                        executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = texture), action: () => {
+                            textureRef.value = getInspectorPropertyValue(props.object, props.property)
+                        }
+                    })
+                }
+            }
+
         },
         type: 'texture'
     })
@@ -340,6 +366,13 @@ async function changeTexture() {
     display: flex;
     justify-content: center;
     align-items: center;
+
+    .img-empty {
+        width: 96px;
+        height: 96px;
+        background-color: var(--bg-color-2);
+    }
+
 }
 
 .texture-img {

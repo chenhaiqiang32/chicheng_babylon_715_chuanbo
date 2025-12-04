@@ -1,7 +1,10 @@
 <template>
   <SectionField :title="$t('component.material.title')" :label="material.getClassName()">
 
-    <StringField :label="$t('component.material.name')" :object="material" property="name" />
+    <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
+      <StringField style="flex: 1;" :label="$t('component.material.name')" :object="material" property="name" />
+      <ElButton type="info" size="small" @click="changeMaterial">更换</ElButton>
+    </div>
 
     <SectionField title="基础">
       <Texture :object="material" :title="$t('component.material.albedoTexture')" property="albedoTexture"
@@ -13,8 +16,8 @@
             :max="1" />
         </template>
       </Texture>
-      <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
       <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
+      <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
       <Texture :object="material" :title="$t('component.material.emissiveTexture')" property="emissiveTexture">
       </Texture>
       <Color :label="$t('component.material.emissive')" :object="material" property="emissiveColor" />
@@ -25,7 +28,7 @@
       <Slider :label="$t('component.material.environmentIntensity')" :object="material" property="environmentIntensity"
         :min="0" :max="5" />
       <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity"
-        :min="0" :max="50" />
+        :min="0" :max="5" />
     </SectionField>
 
     <SectionField title="PBR">
@@ -269,6 +272,8 @@ import Number from "@/component/base/Number.vue"
 import Texture from "@/component/base/Texture.vue"
 import Color from "@/component/base/Color.vue"
 import Slider from "@/component/base/Slider.vue"
+import { Vector2 } from "@babylonjs/core"
+import { useDialog } from "@/view/dialog"
 const props = defineProps<{ mesh?: any; material: any; }>()
 const labelDiv = (t: string) => ({ render: () => t }) as any
 const force = () => { }
@@ -282,6 +287,21 @@ const toggleMetallic = (v: boolean) => {
 const toggleRoughness = (v: boolean) => {
   // registerSimpleUndoRedo({ object: props.material, property: "roughness", oldValue: props.material.roughness, newValue: v ? 1 : null, executeRedo: true })
 }
+
+async function changeMaterial() {
+  const ChooseResDialog = (await import('@/view/dialog/ChooseResDialog.vue')).default
+  useDialog(ChooseResDialog, {
+    choose: (res: any) => {
+      if (res) {
+
+      }
+
+    },
+    type: 'material'
+  })
+}
+
+
 onMounted(() => {
 })
 </script>

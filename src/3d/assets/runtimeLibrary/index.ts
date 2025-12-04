@@ -1,4 +1,4 @@
-import { ImportMeshAsync, InternalTexture, Texture, Tools } from '@babylonjs/core';
+import { ImportMeshAsync, InternalTexture, Scene, Texture, Tools } from '@babylonjs/core';
 import { Editor } from '../../Editor';
 import { Dispatch } from '@/utils/dispatch';
 import { serializeNode } from '../serialze/node/Node';
@@ -81,6 +81,7 @@ export class RuntimeLibrary extends Dispatch<RuntimeAssetsEventBus> {
     files.push(['assets.json', JSON.stringify(asssetsData)]);
     return files;
   }
+  instantiateMaterial(material: string, scene: Scene) {}
 }
 
 export async function serializeTextureBuffer(buffer: InternalTexture['_buffer']) {

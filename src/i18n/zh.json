@@ -18,7 +18,12 @@
   },
   "texture": {
     "change": "更换",
-    "clear": "清除"
+    "clear": "清除",
+    "gammaSpace": "伽马空间",
+    "vScale": "V缩放",
+    "uScale": "U缩放",
+    "uOffset": "U偏移",
+    "vOffset": "V偏移"
   },
   "toolsBar": {
     "cursor": "选择",
@@ -85,6 +90,9 @@
       "environmentIntensity": "环境光强度",
       "emissiveIntensity": "自发光强度",
       "emissiveTexture": "自发光纹理",
+      "useAmbientInGrayScale": "灰度环境光",
+      "ambientTextureStrength": "强度",
+      "ambientTextureImpactOnAnalyticalLights": "对分析光的影响",
       "specularIntensity": "镜面反射强度",
       "albedo": "基础颜色",
       "emissive": "自发光颜色",

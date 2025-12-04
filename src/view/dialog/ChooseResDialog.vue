@@ -31,14 +31,14 @@ const visible = ref<boolean>(true);
 const props = defineProps<{
     close: () => void,
     choose: (res: any) => void,
-    type: 'materail' | 'texture'
+    type: 'material' | 'texture'
 }>();
 
 const selectedItem = shallowRef<any>(null);
 const data = shallowRef<any[]>([]);
 
 onMounted(() => {
-    if (props.type == 'materail') {
+    if (props.type == 'material') {
         data.value = RuntimeLibrary.Instance.sceneAssets.flatMap(item => item.material);
     } else {
         data.value = RuntimeLibrary.Instance.sceneAssets.flatMap(item => item.texture);

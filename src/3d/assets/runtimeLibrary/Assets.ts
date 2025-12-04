@@ -99,7 +99,7 @@ export class Assets implements ICollectAssets, ILoaderAssets {
     } else {
       const data = this.texture.find((x) => x.uuid == uuid);
       if (data) {
-        const file = this.textureFile.get(uuid);
+        const file = this.textureFile.get(data.sourceUUID);
         if (!file) {
           return Promise.reject('文件不存在');
         }
@@ -107,6 +107,7 @@ export class Assets implements ICollectAssets, ILoaderAssets {
         data.url = url;
         const tex = Texture.Parse(data, this.currentScene, null);
         tex.uuid = uuid;
+        tex.sourceUUID = data.sourceUUID;
         this.sceneTexture.set(uuid, tex);
         return Promise.resolve(tex);
       }
@@ -117,6 +118,9 @@ export class Assets implements ICollectAssets, ILoaderAssets {
     if (!texture.uuid) {
       texture.uuid = ID.generateUUID();
     }
+    if (!texture.sourceUUID) {
+      texture.sourceUUID = ID.generateUUID();
+    }
     const old = this.texture.find((item) => item.uuid === texture.uuid);
     if (!old || force) {
       const data = texture.serialize();
@@ -125,12 +129,13 @@ export class Assets implements ICollectAssets, ILoaderAssets {
       if (old) {
         ArrayUtils.remove(old, this.texture);
       }
+      data.sourceUUID = texture.sourceUUID;
       this.texture.push(data);
-      if (!this.textureFile.has(texture.uuid)) {
+      if (!this.textureFile.has(data.sourceUUID)) {
         const t = texture.getInternalTexture();
         if (t._buffer) {
           const buffer = (await serializeTextureBuffer(t._buffer)) as ArrayBuffer;
-          this.textureFile.set(texture.uuid, buffer);
+          this.textureFile.set(data.sourceUUID, buffer);
         }
       }
     }
@@ -186,7 +191,7 @@ export class Assets implements ICollectAssets, ILoaderAssets {
 
     for (let index = 0; index < this.geometry.length; index++) {
       const element = this.geometry[index];
-      if (!this.textureFile.has(element.uuid)) {
+      if (!this.geomertyFile.has(element.uuid)) {
         const buffer = vertexToBuffer(element);
         this.geomertyFile.set(element.uuid, buffer);
       }
@@ -212,8 +217,8 @@ export class Assets implements ICollectAssets, ILoaderAssets {
     this.rootNode = assets.rootNode;
     for (let index = 0; index < this.texture.length; index++) {
       const element = this.texture[index];
-      const buffer = await file.getFileArrayBuffer(element.uuid, this.uuid);
-      this.textureFile.set(element.uuid, buffer);
+      const buffer = await file.getFileArrayBuffer(element.sourceUUID, this.uuid);
+      this.textureFile.set(element.sourceUUID, buffer);
     }
     this.geometry = [];
     for (let index = 0; index < assets.geometry.length; index++) {
