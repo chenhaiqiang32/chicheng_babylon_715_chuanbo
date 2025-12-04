@@ -1,7 +1,6 @@
 <template>
   <Field :title="$t('component.material.transparencyMode')" :tooltip="tooltip">
     <el-select v-model="value" @change="ChangeTransparencyMode(value)">
-      <el-option :label="$t('component.material.none')" :value="null" />
       <el-option :label="$t('component.material.opaque')" :value="Material.MATERIAL_OPAQUE" />
       <el-option :label="$t('component.material.alphaTest')" :value="Material.MATERIAL_ALPHATEST" />
       <el-option :label="$t('component.material.alphaBlend')" :value="Material.MATERIAL_ALPHABLEND" />
