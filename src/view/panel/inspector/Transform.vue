@@ -26,8 +26,19 @@ import { onNodeModifiedObservable } from "@/tools/observables"
 
 const props = defineProps<{ object: TransformNode }>();
 const label = (t: string) => t;
+const getEulerAnglesFromQuaternion = () => {
+	if (!hasQuaternion.value) return
+	const euler = props.object.rotationQuaternion.toEulerAngles()
+	console.log(euler);
+
+	return {
+		x: euler.x,
+		y: euler.y,
+		z: euler.z,
+	}
+}
 const hasQuaternion = computed(() => !!props.object?.rotationQuaternion)
-const rotationProxy = ref({ x: 0, y: 0, z: 0 })
+const rotationProxy = ref(getEulerAnglesFromQuaternion())
 const rotationProxyObj = computed(() => ({ proxy: rotationProxy.value }))
 const emits = defineEmits<{
 	(event: 'update:modelValue', value: Node): void;
@@ -48,10 +59,16 @@ const scale = reactive<Vector>({
 	z: 1,
 });
 
-watch(() => props.object, (e, o) => {
+watch([() => props.object, hasQuaternion], () => {
+	rotationProxy.value = getEulerAnglesFromQuaternion()
 }, {
-	immediate: true,
-});
+	immediate: true
+})
+// watch(() => props.object, (e, o) => {
+
+// }, {
+// 	immediate: true,
+// });
 
 onMounted(() => {
 

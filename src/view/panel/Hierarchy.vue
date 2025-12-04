@@ -18,7 +18,7 @@
                             </el-icon>
                         </template>
                     </ElInput>
-                    <ElButton size="small" @click="toggleSceneSetting">{{ $t('view.sceneSetting') }}</ElButton>
+                    <ElButton :plain="false" @click="toggleSceneSetting">{{ $t('view.sceneSetting') }}</ElButton>
                     <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                         :data="hierarchy" highlight-current :props="treeProps" node-key="id" :default-expanded="true"
                         :default-active="true" @node-click="handleNodeClick">

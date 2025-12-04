@@ -76,7 +76,6 @@ const onPickerChange = () => {
     } else {
         const prev = currentColor.value as Color3
         const next = new Color3(rr, gg, bb)
-        console.log(next);
         //  props.object[props.property] = next
         setInspectorEffectivePropertyValue(props.object, props.property, next)
         emit("change", next)
@@ -116,8 +115,6 @@ const onPickerChange = () => {
 // }
 
 const onFinish = () => {
-    console.log(111);
-
     const prev: any = currentColor.value?.clone?.() ?? null
     const next: any = getInspectorPropertyValue(props.object, props.property)
     if (!props.noUndoRedo) {
