@@ -15,6 +15,9 @@
                     <MaterialInspectorRouter v-if="selectedObject?.material" :mesh="selectedObject"
                         :material="selectedObject.material" />
                 </KeepAlive>
+                <KeepAlive>
+                    <SceneSetting v-if="sceneSettingVisible && !selectedObject" :object="Editor.Instance.Scene" />
+                </KeepAlive>
             </div>
         </el-scrollbar>
 
@@ -24,15 +27,16 @@
 import BasePanel from '@/component/common/BasePanel.vue'
 import Common from './inspector/Common.vue'
 import { isNode } from '@/tools/guards/nodes.ts';
-import { ref, watch, computed, KeepAlive, shallowRef } from 'vue'
+import { ref, watch, computed, KeepAlive, shallowRef, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
 import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
+import SceneSetting from './inspector/SceneSetting.vue';
 const { currentSelected } = storeToRefs(useScene());
 const editedObject = ref<any | null>(null)
-
+const sceneSettingVisible = ref(Editor.Instance.SceneSetting);
 const disabled = computed(() => !!(editedObject.value && isNode(editedObject.value)))
 
 const setEditedObject = (obj: any) => {
@@ -51,6 +55,8 @@ watch(currentSelected, (newSelected) => {
         const objectId = newSelected[0];
         try {
             const sceneObject = Editor.Instance.getNodeById(objectId);
+            console.log('sceneObject', sceneObject);
+
             if (sceneObject) {
                 selectedObject.value = sceneObject;
                 editedObject.value = sceneObject;
@@ -65,6 +71,17 @@ watch(currentSelected, (newSelected) => {
     }
 }, { immediate: true });
 
+const handleSceneSettingChanged = (v: boolean) => {
+    sceneSettingVisible.value = v;
+}
+
+onMounted(() => {
+    Editor.Instance.on('sceneSettingChanged', handleSceneSettingChanged)
+})
+
+onUnmounted(() => {
+    Editor.Instance.off('sceneSettingChanged', handleSceneSettingChanged)
+})
 
 
 </script>

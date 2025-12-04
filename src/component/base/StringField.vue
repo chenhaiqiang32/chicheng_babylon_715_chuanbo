@@ -48,6 +48,7 @@ const onEnter = () => {
     registerSimpleUndoRedo({
       object: object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
         Editor.Instance.dispatch('nameChanged', { newName: object.name, id: object.id })
+        syncFromObject()
       }
     })
   } else {
@@ -71,6 +72,9 @@ onUnmounted(() => {
   Editor.Instance.off("UndoRedo", () => {
   })
 })
+
+
+
 
 
 
