@@ -97,11 +97,11 @@
       "metallic": "金属度",
       "roughness": "粗糙度",
       "MetallicF0Factor": "金属F0因子",
-      "ambientTexture": "环境光纹理",
-      "useRoughnessFromMetallicTextureAlpha": "从金属纹理的Alpha通道使用粗糙度",
-      "useRoughnessFromMetallicTextureGreen": "从金属纹理的Green通道使用粗糙度",
-      "useMetallnessFromMetallicTextureBlue": "从金属纹理的Blue通道使用金属度",
-      "useAmbientOcclusionFromMetallicTextureRed": "从金属纹理的Red通道使用环境光",
+      "ambientTexture": "环境光遮蔽纹理",
+      "useRoughnessFromMetallicTextureAlpha": "从A通道使用粗糙度",
+      "useRoughnessFromMetallicTextureGreen": "从G通道使用粗糙度",
+      "useMetallnessFromMetallicTextureBlue": "从B通道使用金属度",
+      "useAmbientOcclusionFromMetallicTextureRed": "从R通道使用环境光",
       "metallicReflectanceTexture": "金属反射纹理"
     },
     "sceneSetting": {

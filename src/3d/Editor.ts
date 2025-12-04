@@ -20,6 +20,8 @@ import {
   SpotLight,
   PointerInfo,
   PointerEventTypes,
+  TransformNode,
+  Scalar,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -30,6 +32,8 @@ import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
 import { focusOnNode } from '@/3d/core/utils/focusOnNode';
 import { Dispatch } from '@/utils/dispatch';
 import { ID } from '@/utils/id';
+import gsap from 'gsap';
+import { Utils } from '@/utils';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -98,17 +102,17 @@ export class Editor extends Dispatch<EditorEvent> {
     this._selectNodes = v;
     if (v.length <= 0) {
       this.gizmoManager.attachToMesh(undefined);
-      this.gizmoManager.boundingBoxGizmoEnabled = false;
+      // this.gizmoManager.boundingBoxGizmoEnabled = false;
       return;
     }
     if (v[0] instanceof AbstractMesh) {
       this.gizmoManager.attachToMesh(v[0]);
-      if (this.enableGizmo) this.gizmoManager.boundingBoxGizmoEnabled = true;
+      // if (this.enableGizmo) this.gizmoManager.boundingBoxGizmoEnabled = true;
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
       if (v[0].getChildMeshes().length > 0) this.gizmoManager.attachToNode(v[0]);
       else {
-        this.gizmoManager.boundingBoxGizmoEnabled = false;
+        // this.gizmoManager.boundingBoxGizmoEnabled = false;
         this.gizmoManager.attachToNode(v[0]);
       }
     }
@@ -208,13 +212,10 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.attachControl();
     camera.lowerRadiusLimit = 0.01;
     camera.upperRadiusLimit = 5000;
-    camera.wheelPrecision = 40; // 鼠标滚轮（传统鼠标）
-    // camera.wheelDeltaPercentage = 0.08; // 触控板滚轮（Mac/Windows 触控板）
-    // camera.pinchDeltaPercentage = 0.15; // 手机/平板双指缩放
+    camera.wheelPrecision = 80; // 鼠标滚轮（传统鼠标）
 
     camera.angularSensibilityX = 300; // 水平拖动速度（越小越快）
     camera.angularSensibilityY = 300; // 垂直拖动速度
-    camera.panningSensibility = 300; // 鼠标中键缩放速度（越小越快）
     camera.inertia = 0;
     camera.panningInertia = 0;
 
@@ -289,10 +290,9 @@ export class Editor extends Dispatch<EditorEvent> {
     this.gizmoManager.enableAutoPicking = false;
     this.gizmoManager.positionGizmoEnabled = true;
 
-    this.gizmoManager.boundingBoxGizmoEnabled = true;
-    this.gizmoManager.gizmos.boundingBoxGizmo.fixedDragMeshBoundsSize = true;
-    this.gizmoManager.gizmos.boundingBoxGizmo.fixedDragMeshBoundsSize = true;
-    this.gizmoManager.boundingBoxGizmoEnabled = false;
+    // this.gizmoManager.boundingBoxGizmoEnabled = true;
+    // this.gizmoManager.gizmos.boundingBoxGizmo.fixedDragMeshBoundsSize = true;
+    // this.gizmoManager.boundingBoxGizmoEnabled = false;
 
     // 添加灯光 gizmo
 
@@ -313,9 +313,33 @@ export class Editor extends Dispatch<EditorEvent> {
   initFocus() {
     window.addEventListener('keydown', (k) => {
       if (k.key == 'f') {
-        focusOnNode(this.camera, this._selectNodes[0], this.scene);
+        if (this._selectNodes[0] instanceof TransformNode) {
+          this.focusTransformNode(this._selectNodes[0]);
+        }
       }
     });
+  }
+
+  focusTransformNode(node: TransformNode) {
+    const { min, max } = getTransfromBound(node);
+    const center = new Vector3().add(min).add(max).scale(0.5);
+    const size = new Vector3().add(max).subtract(min);
+    const radius = Math.max(size.x, size.y, size.z) * 1.5;
+    const position = this.scene.activeCamera.position
+      .clone()
+      .subtract(center)
+      .normalize()
+      .scale(radius);
+    if (this.scene.activeCamera instanceof ArcRotateCamera) {
+      this.scene.activeCamera.target = center;
+    }
+    Utils.animate((v) => {
+      this.scene.activeCamera.position = Vector3.Lerp(
+        this.scene.activeCamera.position,
+        position,
+        v,
+      );
+    }, 0.3);
   }
 
   /** 射线检测选中的 object */
@@ -378,7 +402,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
   setEnableGizmos(flag: boolean) {
     this.enableGizmo = flag;
-    this.gizmoManager.boundingBoxGizmoEnabled = flag;
+    // this.gizmoManager.boundingBoxGizmoEnabled = flag;
   }
 
   setEnableMask(flag: boolean) {
@@ -433,4 +457,9 @@ export function applyEnvironmentToPBR(mat: PBRMaterial, scene: Scene) {
   if (scene.environmentTexture) {
     mat.environmentBRDFTexture = scene.environmentTexture;
   }
+}
+
+function getTransfromBound(node: TransformNode) {
+  const bound = node.getHierarchyBoundingVectors(true);
+  return bound;
 }

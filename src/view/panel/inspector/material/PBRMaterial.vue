@@ -6,11 +6,11 @@
     <Switch :label="$t('component.material.backFaceCulling')" :object="material" property="backFaceCulling" />
     <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
     <Slider :label="$t('component.material.directIntensity')" :object="material" property="directIntensity" :min="0"
-      :max="50" />
+      :max="5" />
     <Slider :label="$t('component.material.environmentIntensity')" :object="material" property="environmentIntensity"
-      :min="0" :max="50" />
+      :min="0" :max="5" />
     <Slider :label="$t('component.material.emissiveIntensity')" :object="material" property="emissiveIntensity" :min="0"
-      :max="50" />
+      :max="10" />
     <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity" :min="0"
       :max="50" />
     <!-- <Switch label="Metallic" :object="metallicToggle" property="checked" :noUndoRedo="true" /> -->
