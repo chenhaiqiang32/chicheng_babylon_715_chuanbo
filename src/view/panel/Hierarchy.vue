@@ -18,7 +18,7 @@
                     </ElScrollbar>
                 </div>
             </ElSplitterPanel>
-            <ElSplitterPanel>
+            <ElSplitterPanel>.
                 <div class="hierarchy-panel">
                     <ElInput size="small" placeholder="搜索" v-model="searchText">
                         <template #prefix>
@@ -27,6 +27,8 @@
                             </el-icon>
                         </template>
                     </ElInput>
+                    <div class="sceneSetting" :class="{ selected: sceneSettingVisible }" @click="toggleSceneSetting">{{
+                        $t('view.sceneSetting') }}</div>
                     <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                         :data="hierarchy" highlight-current :props="treeProps" node-key="id" :default-expanded="true"
                         :default-active="true" @node-click="handleNodeClick">
@@ -62,7 +64,7 @@ const treeProps = {
 const { hierarchy, currentSelected, sceneInfoList, currentScene } = storeToRefs(useScene());
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
-
+const sceneSettingVisible = ref(false);
 onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
 })
@@ -98,6 +100,7 @@ const handleNodeClick = (node: HierarchyNode) => {
     currentSelected.value = node ? [node.id] : [];
     if (node) {
         treeRef.value?.setCurrentKey(node.id);
+        sceneSettingVisible.value = false;
     } else {
         treeRef.value?.setCurrentKey(null);
     }
@@ -114,7 +117,17 @@ function filterHierarchy(value: any, data: TreeNodeData, child: any) {
     }
     return data.name.includes(value);
 }
+const toggleSceneSetting = () => {
+    sceneSettingVisible.value = !sceneSettingVisible.value;
+    if (sceneSettingVisible.value) {
+        Editor.Instance.SceneSetting = true;
+        currentSelected.value = [];
 
+    } else {
+        treeRef.value?.setCurrentKey(null);
+        Editor.Instance.SceneSetting = false;
+    }
+}
 
 onUnmounted(() => {
 
@@ -180,6 +193,19 @@ onUnmounted(() => {
         flex: 1;
         height: 0;
     }
+
+}
+
+.sceneSetting {
+    border: 1px solid var(--title--color);
+    width: 100%;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+}
+
+.sceneSetting.selected {
+    color: var(--select--color);
 
 }
 </style>
