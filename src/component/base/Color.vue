@@ -1,7 +1,7 @@
 <template>
     <Field :title="label" :tooltip="tooltip">
-        <el-color-picker style="margin-left: auto;" v-if="!noColorPicker" v-model="hex" :show-alpha="hasAlpha"
-            :predefine="predefine" v-on:update:model-value="onPickerChange" @change="onPickerChange" @blur="onFinish" />
+        <el-color-picker color-format="hex" style="margin-left: auto;" v-if="!noColorPicker" v-model="hex"
+            :show-alpha="hasAlpha" :predefine="predefine" v-on:update:model-value="onPickerChange" @change="onFinish" />
     </Field>
 </template>
 
@@ -9,7 +9,7 @@
 import { ref, watch, computed, onMounted, onUnmounted } from "vue"
 import { Color3, Color4 } from "@babylonjs/core"
 import { registerUndoRedo } from "../../tools/undoredo"
-import { getInspectorPropertyValue } from "../../tools/property"
+import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
 import Field from "@/component/common/Field.vue"
 
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; noUndoRedo?: boolean; noClamp?: boolean; noColorPicker?: boolean }>()
@@ -17,7 +17,7 @@ const emit = defineEmits<{ (e: "change", value: Color3 | Color4): void; (e: "fin
 
 const predefine = ["#FFFFFF", "#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]
 
-const currentColor = computed<Color3 | Color4 | null>(() => getInspectorPropertyValue(props.object, props.property) ?? null)
+const currentColor = ref<Color3 | Color4 | null>(getInspectorPropertyValue(props.object, props.property) ?? null)
 
 const toHex = (target?: Color3 | Color4) => {
     const val = target ?? currentColor.value
@@ -54,11 +54,10 @@ watch(() => [props.object, props.property], () => {
     b.value = currentColor.value?.b ?? 1
     a.value = (currentColor.value as any)?.a ?? 1
 })
-
 const onPickerChange = () => {
-    const rr = parseInt(hex.value.slice(1, 3), 16) / 255
-    const gg = parseInt(hex.value.slice(3, 5), 16) / 255
-    const bb = parseInt(hex.value.slice(5, 7), 16) / 255
+    const rr = parseInt(hex.value.slice(1, 3), 16) / 255;
+    const gg = parseInt(hex.value.slice(3, 5), 16) / 255;
+    const bb = parseInt(hex.value.slice(5, 7), 16) / 255;
 
     // 同步更新本地RGB值
     r.value = rr
@@ -68,7 +67,8 @@ const onPickerChange = () => {
     if (hasAlpha.value) {
         const prev = currentColor.value as Color4
         const next = new Color4(rr, gg, bb, prev?.a ?? 1)
-        props.object[props.property] = next
+        // props.object[props.property] = next
+        setInspectorEffectivePropertyValue(props.object, props.property, next)
         emit("change", next)
         if (!props.noUndoRedo) {
             //    registerUndoRedo({ undo: () => (props.object[props.property] = prev?.clone()), redo: () => (props.object[props.property] = next.clone()) })
@@ -76,8 +76,9 @@ const onPickerChange = () => {
     } else {
         const prev = currentColor.value as Color3
         const next = new Color3(rr, gg, bb)
-        props.object[props.property] = next
-
+        console.log(next);
+        //  props.object[props.property] = next
+        setInspectorEffectivePropertyValue(props.object, props.property, next)
         emit("change", next)
         // if (!props.noUndoRedo) {
         //     registerUndoRedo({
@@ -115,14 +116,22 @@ const onPickerChange = () => {
 // }
 
 const onFinish = () => {
+    console.log(111);
+
     const prev: any = currentColor.value?.clone?.() ?? null
     const next: any = getInspectorPropertyValue(props.object, props.property)
-    registerUndoRedo({
-        undo: () => prev && (props.object[props.property] = prev.clone()), redo: () => next && (props.object[props.property] = next.clone()), executeRedo: false, action() {
-            hex.value = toHex(getInspectorPropertyValue(props.object, props.property))
-            oldHex.value = hex.value
-        },
-    })
+    if (!props.noUndoRedo) {
+        registerUndoRedo({
+            undo: () => prev && (props.object[props.property] = prev.clone()), redo: () => next && (props.object[props.property] = next.clone()), executeRedo: true, action() {
+
+                hex.value = toHex(getInspectorPropertyValue(props.object, props.property))
+                oldHex.value = hex.value
+                currentColor.value = getInspectorPropertyValue(props.object, props.property)
+
+            },
+        })
+    }
+
     emit("finishChange", next, prev)
 }
 </script>
