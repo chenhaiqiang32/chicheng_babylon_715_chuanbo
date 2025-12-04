@@ -20,7 +20,6 @@
                 </KeepAlive>
             </div>
         </el-scrollbar>
-
     </BasePanel>
 </template>
 <script setup lang='ts'>

@@ -1,10 +1,11 @@
 <template>
     <div class="texture-field" @drop.prevent="handleDrop" @dragover.prevent="handleDragOver"
         @dragleave="handleDragLeave" :class="{ 'is-over': dragOver }">
-        <div class="texture-row">
+        <div class="title">{{ title }}</div>
+        <div class="texture-preview-container">
             <div class="texture-preview" :class="previewClass">
-                <el-popover v-if="textureUrl" :disabled="noPopover" placement="left" popper-class="texture-popover"
-                    :offset="8">
+                <el-popover width="350" v-if="textureUrl" :disabled="noPopover" placement="left"
+                    popper-class="texture-popover" transition="el-fade-in" :offset="8">
                     <template #reference>
                         <div class="texture-preview-inner">
                             <template v-if="isCube">
@@ -31,101 +32,9 @@
                     </template>
                     <template #default>
                         <div class="popover-content">
-                            <SectionField title="Common">
-                                <Switch label="Gamma Space" :object="textureRef" property="gammaSpace"
-                                    @change="emitChange(textureRef)" />
-                            </SectionField>
-                            <!--    <template v-if="isCube">
-                                <SectionField title="Common">
-                                    <div class="kv">
-                                        <div class="kv-k">Path</div>
-                                        <div class="kv-v link" @click="openAsset(textureName)">{{ textureName }}</div>
-                                    </div>
-                                    <Switch label="Gamma Space" :object="textureRef" property="gammaSpace"
-                                        @change="emitChange(textureRef)" />
-                                    <Switch label="Invert Z" :object="textureRef" property="invertZ"
-                                        @change="emitChange(textureRef)" />
-                                </SectionField>
-                            </template>
-<template v-else-if="isColorGrading">
-                                <SectionField title="Common">
-                                    <div class="kv">
-                                        <div class="kv-k">Path</div>
-                                        <div class="kv-v link" @click="openAsset(textureName)">{{ textureName }}</div>
-                                    </div>
-                                </SectionField>
-                            </template>
-<template v-else>
-                                <SectionField title="Common">
-                                    <div class="kv">
-                                        <div class="kv-k">Dimensions</div>
-                                        <div class="kv-v end">{{ sizeW }}x{{ sizeH }}</div>
-                                    </div>
-                                    <div class="kv">
-                                        <div class="kv-k">Path</div>
-                                        <div class="kv-v link" @click="openAsset(textureName)">{{ textureName }}</div>
-                                    </div>
-                                    <Switch label="Gamma Space" :object="textureRef" property="gammaSpace"
-                                        @change="emitChange(textureRef)" />
-                                    <Switch label="Get Alpha From RGB" :object="textureRef" property="getAlphaFromRGB"
-                                        @change="emitChange(textureRef)" />
-                                </SectionField>
-
-                                <SectionField title="Scale">
-                                    <Number :label="'U Scale'" :object="textureRef" property="uScale" @change="force"
-                                        @finishChange="emitChange(textureRef)" />
-                                    <Number :label="'V Scale'" :object="textureRef" property="vScale" @change="force"
-                                        @finishChange="emitChange(textureRef)" />
-                                </SectionField>
-
-                                <SectionField title="Offset">
-                                    <Number :label="'U Offset'" :object="textureRef" property="uOffset"
-                                        @finishChange="emitChange(textureRef)" />
-                                    <Number :label="'V Offset'" :object="textureRef" property="vOffset"
-                                        @finishChange="emitChange(textureRef)" />
-                                </SectionField>
-
-                                <SectionField title="Coordinates">
-                                    <Number :label="'Index'" :object="textureRef" property="coordinatesIndex" :step="1"
-                                        :min="0" @change="roundCoordinatesIndex"
-                                        @finishChange="emitChange(textureRef)" />
-                                    <el-select v-model="coordinatesMode" @change="onCoordinatesModeChange">
-                                        <el-option v-for="opt in coordinatesModeOptions" :key="opt.value"
-                                            :label="opt.text" :value="opt.value" />
-                                    </el-select>
-                                </SectionField>
-
-                                <SectionField title="Sampling">
-                                    <el-select v-model="samplingMode" @change="onSamplingModeChange">
-                                        <el-option v-for="opt in samplingModeOptions" :key="opt.value" :label="opt.text"
-                                            :value="opt.value" />
-                                    </el-select>
-                                </SectionField>
-
-                                <SectionField title="Wrap">
-                                    <div class="wrap-row">
-                                        <span>Wrap U</span>
-                                        <el-select v-model="wrapU" @change="emitChange(textureRef)">
-                                            <el-option v-for="opt in wrapOptions" :key="opt.value" :label="opt.text"
-                                                :value="opt.value" />
-                                        </el-select>
-                                    </div>
-                                    <div class="wrap-row">
-                                        <span>Wrap V</span>
-                                        <el-select v-model="wrapV" @change="emitChange(textureRef)">
-                                            <el-option v-for="opt in wrapOptions" :key="opt.value" :label="opt.text"
-                                                :value="opt.value" />
-                                        </el-select>
-                                    </div>
-                                    <div class="wrap-row">
-                                        <span>Wrap R</span>
-                                        <el-select v-model="wrapR" @change="emitChange(textureRef)">
-                                            <el-option v-for="opt in wrapOptions" :key="opt.value" :label="opt.text"
-                                                :value="opt.value" />
-                                        </el-select>
-                                    </div>
-                                </SectionField>
-                            </template>-->
+                            <Switch label="Gamma Space" :object="textureRef" property="gammaSpace"
+                                @change="emitChange(textureRef)" />
+                            <slot />
                         </div>
                     </template>
                 </el-popover>
@@ -133,49 +42,37 @@
                         <QuestionFilled />
                     </el-icon></div>
             </div>
-
-            <div class="texture-details">
-                <div class="title">{{ title }}</div>
-
-                <!-- <template v-if="textureUrl && !loadingError">
-                    <div class="field-block">
-                        <EditorInspectorNumberField v-if="!hideLevel" label="Level" :object="textureRef"
-                            property="level" @change="emitChange(textureRef)" @finishChange="emitChange(textureRef)" />
-                        <template v-if="isTextureRef">
-                            <EditorInspectorNumberField v-if="!hideSize" label="Size" :object="textureRef"
-                                property="uScale" @change="setVScale" @finishChange="emitChange(textureRef)" />
-                            <EditorInspectorSwitchField v-if="!hideInvert" label="Invert Y" :object="textureRef"
-                                property="_invertY" @change="reloadTexture" />
-                        </template>
-                        <EditorInspectorNumberField v-if="isCubeRef" label="Rotation Y" :object="textureRef"
-                            property="rotationY" @finishChange="emitChange(textureRef)" />
-                    </div>
-                </template>
-
-                <template v-if="loadingError">
-                    <div class="error-text">Failed to load texture<br />Please ensure the file exists at the specified
-                        path: <b>{{ textureUrl }}</b></div>
-                    <el-button type="default" @click="reloadTexture">Reload</el-button>
-                </template> -->
+            <div class="texture-info">
+                <div class="texture-actions">
+                    <ElButton type="info" style="max-width: 100px;" @click="changeTexture">{{ $t('texture.change') }}
+                    </ElButton>
+                    <ElButton type="info" style="max-width: 100px;" @click="clear">{{ $t('texture.clear') }}</ElButton>
+                </div>
             </div>
-
-            <div class="texture-actions" @click="clear">
-                <span v-if="textureRef">Clear</span>
-            </div>
-        </div>
-
-        <div v-if="textureRef">
-            <slot />
         </div>
     </div>
 
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, onUnmounted } from "vue"
+import { ref, computed, watch, onMounted, } from "vue"
 
 //mport sharp from "sharp"
 import { Texture, CubeTexture, ColorGradingTexture } from "@babylonjs/core"
+
+import { Loading, QuestionFilled } from "@element-plus/icons-vue"
+import Switch from "./Switch.vue"
+import { isScene } from "../../tools/guards/scene"
+import { registerUndoRedo } from "@/tools/undoredo"
+//import { updateIblShadowsRenderPipeline } from "../../editor/tools/light/ibl"
+import { onSelectedAssetChanged, onTextureAddedObservable } from "@/tools/observables"
+import { isColorGradingTexture, isCubeTexture, isTexture } from "@/tools/guards/texture"
+import { projectConfiguration } from "@/tools/configuration"
+import { configureImportedTexture } from "@/tools/preview/import"
+import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
+import { useDialog } from "@/view/dialog"
+import { Editor } from "@/3d/Editor"
+
 
 function getExtname(path: string) {
     const lastDotIndex = path.lastIndexOf(".");
@@ -196,19 +93,6 @@ function getDirname(path: string) {
 function joinPaths(...segments: string[]) {
     return segments.filter(seg => seg).join('/').replace(/\/\/+/g, '/');
 }
-import { Loading, QuestionFilled } from "@element-plus/icons-vue"
-import SectionField from "../common/SectionField.vue"
-import Switch from "./Switch.vue"
-import Number from "./Number.vue"
-import { isScene } from "../../tools/guards/scene"
-import { registerUndoRedo } from "@/tools/undoredo"
-//import { updateIblShadowsRenderPipeline } from "../../editor/tools/light/ibl"
-import { onSelectedAssetChanged, onTextureAddedObservable } from "@/tools/observables"
-import { isColorGradingTexture, isCubeTexture, isTexture } from "@/tools/guards/texture"
-import { projectConfiguration } from "@/tools/configuration"
-import { configureImportedTexture } from "@/tools/preview/import"
-import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
-import { Editor } from "@/3d/Editor";
 const props = defineProps<{
     object: any
     title: string
@@ -392,29 +276,42 @@ watch(textureRef, () => computeTemporaryPreview())
 onMounted(() => {
     computeTemporaryPreview()
 })
+
+async function changeTexture() {
+    const ChooseResDialog = (await import('@/view/dialog/ChooseResDialog.vue')).default
+    useDialog(ChooseResDialog, {
+        choose: (res: any) => {
+            const tex = Editor.Instance.Scene.textures.find(x => x.uuid == res.uuid);
+            setInspectorEffectivePropertyValue(props.object, props.property, tex)
+        },
+        type: 'texture'
+    })
+}
 </script>
 
-<style scoped>
-:global(.texture-popover) {
-    width: 1320px;
-}
-
+<style scoped lang="scss">
 .texture-field {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 15px;
     width: 100%;
     padding: 16px;
     border-radius: 8px;
     /* border: 1px solid var(--el-border-color); */
     transition: background .3s;
-    background: var(--bg-color-2);
+    background: var(--bg-color);
     margin-bottom: 8px;
 }
 
 .texture-field.is-over {
     background: var(--el-color-info-light-9);
 }
+
+.texture-preview-container {
+    display: flex;
+
+}
+
 
 .texture-row {
     display: flex;
@@ -423,9 +320,8 @@ onMounted(() => {
 }
 
 .texture-preview {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 96px;
+    height: 96px;
 }
 
 .texture-preview.has {
@@ -463,18 +359,35 @@ onMounted(() => {
     padding: 4px 8px;
 }
 
-.texture-details {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-}
-
 .title {
     padding: 0 8px;
     font-weight: 600;
     color: var(--title--color);
 }
+
+
+.texture-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 10px;
+
+
+
+    .texture-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-left: auto;
+
+        .el-button+.el-button {
+            margin-left: 0;
+        }
+    }
+}
+
+
+
 
 .field-block {
     display: flex;
@@ -483,12 +396,7 @@ onMounted(() => {
     margin-top: 8px;
 }
 
-.texture-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 96px;
-}
+
 
 .kv {
     display: flex;

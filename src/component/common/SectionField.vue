@@ -40,9 +40,8 @@
 import { ref } from "vue"
 import { InfoFilled, Plus, Minus, Loading } from "@element-plus/icons-vue"
 
-const props = defineProps<{ title?: any; label?: any; tooltip?: any; isProcessing?: boolean }>()
-const { title, label, tooltip, isProcessing } = props
-const opened = ref(true)
+const props = defineProps<{ title?: any; label?: any; tooltip?: any; isProcessing?: boolean, open?: boolean }>()
+const opened = ref<boolean>(props.open || true)
 </script>
 
 <style scoped>

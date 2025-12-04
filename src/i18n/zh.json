@@ -10,6 +10,16 @@
     "newSceneConfirm": "完成",
     "sceneSetting": "场景设置"
   },
+  "chooseResDialog": {
+    "title": "选择资源",
+    "cancel": "取消",
+    "confirm": "确认",
+    "choose": "选择"
+  },
+  "texture": {
+    "change": "更换",
+    "clear": "清除"
+  },
   "toolsBar": {
     "cursor": "选择",
     "move": "移动",
