@@ -15,6 +15,8 @@
       </Texture>
       <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
       <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
+      <AlphaModeField :object="material" property="alphaMode" />
+      <TransparencyModeField :object="material" property="transparencyMode" />
       <Texture :object="material" :title="$t('component.material.emissiveTexture')" property="emissiveTexture">
       </Texture>
       <Color :label="$t('component.material.emissive')" :object="material" property="emissiveColor" />
@@ -269,6 +271,9 @@ import Number from "@/component/base/Number.vue"
 import Texture from "@/component/base/Texture.vue"
 import Color from "@/component/base/Color.vue"
 import Slider from "@/component/base/Slider.vue"
+import TransparencyModeField from "@/component/base/TransparencyModeField.vue"
+import AlphaModeField from "@/component/base/AlphaModeField.vue"
+
 const props = defineProps<{ mesh?: any; material: any; }>()
 const labelDiv = (t: string) => ({ render: () => t }) as any
 const force = () => { }
