@@ -30,6 +30,7 @@ function syncFromObject() {
   oldValue.value = v
 }
 const ChangeTransparencyMode = (changedValue: number) => {
+
   oldValue.value = getInspectorPropertyValue(props.object, props.property)
   value.value = changedValue
   const newValue = value.value
