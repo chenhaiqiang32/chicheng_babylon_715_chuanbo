@@ -9,14 +9,14 @@
         <template v-if="material.albedoTexture">
           <Switch :label="$t('component.material.useAlphaFromDiffuseTexture')" :object="material"
             property="useAlphaFromDiffuseTexture" />
-          <Slider :label="$t('component.material.alphaCutOff')" :object="material" property="alphaCutOff" :min="0"
-            :max="1" />
         </template>
       </Texture>
       <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
       <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
       <AlphaModeField :object="material" property="alphaMode" />
       <TransparencyModeField :object="material" property="transparencyMode" />
+      <Slider :label="$t('component.material.alphaCutOff')" :object="material" property="alphaCutOff" :min="0"
+        :max="1" />
       <Texture :object="material" :title="$t('component.material.emissiveTexture')" property="emissiveTexture">
       </Texture>
       <Color :label="$t('component.material.emissive')" :object="material" property="emissiveColor" />
