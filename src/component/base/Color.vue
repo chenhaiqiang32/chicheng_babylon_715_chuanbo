@@ -1,7 +1,8 @@
 <template>
     <Field :title="label" :tooltip="tooltip">
-        <el-color-picker style="margin-left: auto;" v-if="!noColorPicker" v-model="hex" :show-alpha="hasAlpha"
-            :predefine="predefine" v-on:update:model-value="onPickerChange" @change="onPickerChange" @blur="onFinish" />
+        <el-color-picker color-format="hex" style="margin-left: auto;" v-if="!noColorPicker" v-model="hex"
+            :show-alpha="hasAlpha" :predefine="predefine" v-on:update:model-value="onPickerChange"
+            @change="onPickerChange" @blur="onFinish" />
     </Field>
 </template>
 
@@ -54,11 +55,10 @@ watch(() => [props.object, props.property], () => {
     b.value = currentColor.value?.b ?? 1
     a.value = (currentColor.value as any)?.a ?? 1
 })
-
 const onPickerChange = () => {
-    const rr = parseInt(hex.value.slice(1, 3), 16) / 255
-    const gg = parseInt(hex.value.slice(3, 5), 16) / 255
-    const bb = parseInt(hex.value.slice(5, 7), 16) / 255
+    const rr = parseInt(hex.value.slice(1, 3), 16) / 255;
+    const gg = parseInt(hex.value.slice(3, 5), 16) / 255;
+    const bb = parseInt(hex.value.slice(5, 7), 16) / 255;
 
     // 同步更新本地RGB值
     r.value = rr
@@ -68,6 +68,7 @@ const onPickerChange = () => {
     if (hasAlpha.value) {
         const prev = currentColor.value as Color4
         const next = new Color4(rr, gg, bb, prev?.a ?? 1)
+
         props.object[props.property] = next
         emit("change", next)
         if (!props.noUndoRedo) {
@@ -76,6 +77,7 @@ const onPickerChange = () => {
     } else {
         const prev = currentColor.value as Color3
         const next = new Color3(rr, gg, bb)
+        console.log(next);
         props.object[props.property] = next
 
         emit("change", next)
