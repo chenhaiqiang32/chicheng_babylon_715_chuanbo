@@ -65,6 +65,7 @@ const treeRef = ref<InstanceType<typeof ElTree>>()
 
 onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
+
 })
 
 async function addScene() {
@@ -102,6 +103,15 @@ const handleNodeClick = (node: HierarchyNode) => {
         treeRef.value?.setCurrentKey(null);
     }
 }
+
+watch(currentSelected, (val) => {
+    if (val[0] != undefined) {
+        treeRef.value.setCurrentKey(val[0]);
+    } else {
+        treeRef.value?.setCurrentKey(null);
+    }
+
+})
 
 watch(searchText, (val) => {
     treeRef.value!.filter(val)

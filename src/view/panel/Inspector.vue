@@ -2,22 +2,7 @@
     <BasePanel title="属性">
         <el-scrollbar class="scrollbar">
             <div style="padding:  0 10px;">
-                <KeepAlive>
-                    <Common v-if="selectedObject" :object="selectedObject" />
-                </KeepAlive>
-                <KeepAlive>
-                    <Transform v-if="selectedObject" :object="selectedObject" />
-                </KeepAlive>
-                <!-- <KeepAlive>
-                    <Collision v-if="selectedObject?.geometry" :object="selectedObject" />
-                </KeepAlive> -->
-                <KeepAlive>
-                    <MaterialInspectorRouter v-if="selectedObject?.material" :mesh="selectedObject"
-                        :material="selectedObject.material" />
-                </KeepAlive>
-                <KeepAlive>
-                    <SceneSetting v-if="sceneSettingVisible && !selectedObject" :object="Editor.Instance.Scene" />
-                </KeepAlive>
+                <component v-for="comp in comps" :key="comp.uniqueId" :is="comp" :object="selectedObject" />
             </div>
         </el-scrollbar>
     </BasePanel>
@@ -25,48 +10,48 @@
 <script setup lang='ts'>
 import BasePanel from '@/component/common/BasePanel.vue'
 import Common from './inspector/Common.vue'
-import { isNode } from '@/tools/guards/nodes.ts';
-import { ref, watch, computed, KeepAlive, shallowRef, onMounted, onUnmounted } from 'vue'
+import { ref, watch, KeepAlive, shallowRef, onMounted, onUnmounted, computed } from 'vue'
 import { storeToRefs } from 'pinia';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
 import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
+import CameraComp from './inspector/Camera.vue'
 import SceneSetting from './inspector/SceneSetting.vue';
+import { Camera, Mesh, TransformNode } from '@babylonjs/core';
 const { currentSelected } = storeToRefs(useScene());
-const editedObject = ref<any | null>(null)
 const sceneSettingVisible = ref(Editor.Instance.SceneSetting);
-const disabled = computed(() => !!(editedObject.value && isNode(editedObject.value)))
-
-const setEditedObject = (obj: any) => {
-    editedObject.value = obj;
-    selectedObject.value = obj;
-}
-
-defineExpose({ setEditedObject })
-
-// 当前选中的对象
 const selectedObject = shallowRef<any>(null);
 
-// 监听 currentSelected 变化，更新选中的对象
 watch(currentSelected, (newSelected) => {
     if (newSelected && newSelected.length > 0) {
         const objectId = newSelected[0];
-        try {
-            const sceneObject = Editor.Instance.getNodeById(objectId);
-            if (sceneObject) {
-                selectedObject.value = sceneObject;
-                editedObject.value = sceneObject;
-            }
-        } catch (error) {
-            selectedObject.value = null;
-            editedObject.value = null;
+        const sceneObject = Editor.Instance.getNodeById(objectId);
+        if (sceneObject) {
+            selectedObject.value = sceneObject;
         }
     } else {
         selectedObject.value = null;
-        editedObject.value = null;
     }
 }, { immediate: true });
+
+
+const comps = computed(() => {
+    if (!selectedObject.value) {
+        return []
+    }
+    const arr = []
+    if (selectedObject.value instanceof TransformNode) {
+        arr.push(Common, Transform)
+    }
+    if (selectedObject.value instanceof Mesh) {
+        arr.push(MaterialInspectorRouter)
+    }
+    if (selectedObject.value instanceof Camera) {
+        arr.push(CameraComp)
+    }
+    return arr
+})
 
 const handleSceneSettingChanged = (v: boolean) => {
     sceneSettingVisible.value = v;

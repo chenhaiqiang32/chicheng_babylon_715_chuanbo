@@ -1,5 +1,5 @@
 <template>
-  <component :is="componentName" :mesh="mesh" :material="material" />
+  <component v-if="object?.material" :is="component" :mesh="object" :material="object.material" />
 </template>
 
 <script setup lang="ts">
@@ -18,7 +18,7 @@ import CellMaterial from "./CellMaterial.vue"
 import FireMaterial from "./FireMaterial.vue"
 import GradientMaterial from "./GradientMaterial.vue"
 
-const props = defineProps<{ mesh?: any; material: any; }>()
+const props = defineProps<{ object?: any; }>()
 
 const mapping: Record<string, any> = {
   PBRMaterial: PBRMaterial,
@@ -36,5 +36,5 @@ const mapping: Record<string, any> = {
   GradientMaterial: GradientMaterial,
 }
 
-const componentName = computed(() => mapping[props.material?.getClassName?.()] ?? StandardMaterial)
+const component = computed(() => mapping[props.object?.material?.getClassName?.()] ?? StandardMaterial)
 </script>

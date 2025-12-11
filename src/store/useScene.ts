@@ -5,6 +5,7 @@ import { ViewFlagsMode } from '@/3d/core/utils/viewFlagsMode';
 import { CC } from '@/3d/assets/BaseRes';
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { serializeScene } from '@/3d/assets/serialze/Scene';
 
 function buildHierarchy(node: Node): HierarchyNode {
   return {
@@ -29,11 +30,20 @@ export const useScene = defineStore('scene', () => {
   const currentControlMode = ref<ControlMode>();
   const currentViewFlagsMode = ref<ViewFlagsMode>();
   const currentScene = ref<string>();
-  const scenelist = new Array<Scene>();
   const sceneInfoList = shallowRef<Partial<CC.Scene>[]>([]);
 
   function setSceneList(scenes: CC.Scene[]) {
     sceneInfoList.value = scenes;
+  }
+
+  function saveScene(scene: Scene) {
+    const sceneData = serializeScene(scene, RuntimeLibrary.Instance, false);
+    sceneInfoList.value = sceneInfoList.value.map((x) => {
+      if (x.uuid == scene.uuid) {
+        return sceneData;
+      }
+      return x;
+    });
   }
 
   function setHierarchy(rootNodes: Node[]) {
@@ -56,41 +66,33 @@ export const useScene = defineStore('scene', () => {
   }
 
   function addScene(scene: Scene) {
-    scenelist.push(scene);
-    sceneInfoList.value.push({ name: scene.name, uuid: scene.uuid });
+    const sceneData = serializeScene(scene, RuntimeLibrary.Instance, true);
+    sceneInfoList.value.push(sceneData);
     sceneInfoList.value = [...sceneInfoList.value];
   }
 
   async function getScene(uuid: string): Promise<Scene> {
-    const scene = scenelist.find((x) => x.uuid == uuid);
-    if (scene) {
+    const ccNode = sceneInfoList.value.find((x) => x.uuid == uuid) as CC.Scene;
+    if (ccNode) {
+      const padding: Array<Promise<any>> = [];
+      const scene = await RuntimeLibrary.Instance.deserializeScene(
+        new Scene(Editor.Instance.Engine),
+        ccNode,
+        padding,
+      );
       return scene;
-    } else {
-      const ccNode = sceneInfoList.value.find((x) => x.uuid == uuid) as CC.Scene;
-      if (ccNode) {
-        const scene = await RuntimeLibrary.Instance.deserializeScene(
-          new Scene(Editor.Instance.Engine),
-          ccNode,
-        );
-        scenelist.push(scene);
-        return scene;
-      }
     }
-  }
-
-  function getAllScene(): Scene[] {
-    return scenelist;
   }
 
   return {
     getScene,
+    saveScene,
     currentScene,
     hierarchy,
     sceneInfoList,
     setSceneList,
     addScene,
     setHierarchy,
-    getAllScene,
     currentSelected,
     setCurrentSelect,
     currentControlMode,

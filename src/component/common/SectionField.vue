@@ -1,6 +1,6 @@
 <template>
   <div class="editor-section">
-    <div class="editor-section__header" @click="opened = !opened">
+    <div class="editor-section__header" @click="save">
       <div class="editor-section__toggle">
         <el-icon v-if="opened">
           <Minus />
@@ -41,7 +41,18 @@ import { ref } from "vue"
 import { InfoFilled, Plus, Minus, Loading } from "@element-plus/icons-vue"
 
 const props = defineProps<{ title?: any; label?: any; tooltip?: any; isProcessing?: boolean, open?: boolean }>()
-const opened = ref<boolean>(props.open || true)
+const opened = ref<boolean>(props.open || get())
+
+
+function save() {
+  opened.value = !opened.value
+  localStorage.setItem(props.title, opened.value.toString())
+}
+
+function get() {
+  return localStorage.getItem(props.title) === 'true'
+}
+
 </script>
 
 <style scoped>

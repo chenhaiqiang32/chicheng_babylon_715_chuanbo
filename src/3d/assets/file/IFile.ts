@@ -10,7 +10,7 @@ export interface IFile {
   init(arg?: string): Promise<void>;
   getFileArrayBuffer(name: string, dir?: string): Promise<ArrayBuffer>;
   getFileText(name: string, dir?: string): Promise<string>;
-  saveFile(name: string, data: ArrayBuffer | string | Blob, dir?: string): void;
+  saveFile(name: string, data: ArrayBuffer | string | Blob, dir?: string): Promise<void>;
 }
 
 export enum FileMode {
@@ -50,9 +50,9 @@ export class EditorFileSystem {
       this.name = this.file.name;
     }
   }
-  saveFile(name: string, data: ArrayBuffer | string | Blob, dir?: string) {
+  async saveFile(name: string, data: ArrayBuffer | string | Blob, dir?: string) {
     if (this.file) {
-      this.file.saveFile(name, data, dir);
+      await this.file.saveFile(name, data, dir);
     }
   }
   async check() {

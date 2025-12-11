@@ -33,6 +33,7 @@
                 <Inspector />
             </ElSplitterPanel>
         </ElSplitter>
+        <!-- <Loading :progress="loading"> </Loading> -->
     </div>
 </template>
 <script setup lang='ts'>
@@ -46,19 +47,18 @@ import Hierarchy from './panel/Hierarchy.vue'
 import { ElTabPane } from 'element-plus';
 import { storeToRefs } from 'pinia';
 import { useEditor } from '@/store/useEditor';
-
 import { useDialog } from './dialog/index';
 import SetupDialog from './dialog/SetupDialog.vue'
-
 import { onMounted } from 'vue'
-
-
 onMounted(() => {
     useDialog(SetupDialog)
 })
 
 
 const { editorLayout } = storeToRefs(useEditor());
+
+const { loading } = storeToRefs(useEditor());
+
 
 function sizeChange(size: number, type: 'left' | 'bottom' | 'right') {
     editorLayout.value[type] = size;
@@ -75,6 +75,7 @@ function sizeChange(size: number, type: 'left' | 'bottom' | 'right') {
     .el-tabs {
         height: 100%;
     }
+
 
 }
 </style>

@@ -45,3 +45,22 @@
   min-height: 25px;
 }
 
+.small-slider {
+  margin-left: auto;
+  --el-slider-button-size: 12px;
+  --el-slider-height: 4px;
+  --el-slider-main-bg-color: #d8d8d8;
+
+  .el-input-number {
+    width: 80px !important;
+  }
+
+  .el-input__wrapper {
+    padding-left: 26px !important;
+    padding-right: 26px !important;
+  }
+
+  .el-slider__runway {
+    margin-right: 10px !important;
+  }
+}

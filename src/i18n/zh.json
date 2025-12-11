@@ -23,7 +23,8 @@
     "vScale": "V缩放",
     "uScale": "U缩放",
     "uOffset": "U偏移",
-    "vOffset": "V偏移"
+    "vOffset": "V偏移",
+    "hasAlpha": "透明图"
   },
   "toolsBar": {
     "cursor": "选择",
@@ -69,6 +70,13 @@
     }
   },
   "component": {
+    "camera": {
+      "title": "相机",
+      "fov": "视野",
+      "aspectRatio": "宽高比",
+      "nearClipPlane": "近裁剪面",
+      "farClipPlane": "远裁剪面"
+    },
     "common": {
       "title": "常规",
       "type": "类型",
@@ -97,7 +105,8 @@
       "albedo": "基础颜色",
       "emissive": "自发光颜色",
       "albedoTexture": "基础颜色纹理",
-      "useAlphaFromDiffuseTexture": "使用透明度通道",
+      "useAlphaFromDiffuseTexture": "使用透明通道",
+      "useAlphaFromAlbedoTexture": "使用透明通道",
       "alphaCutOff": "透明度裁剪",
       "bumpTexture": "凹凸贴图",
       "invertNormalMapX": "反转X轴",
@@ -223,12 +232,13 @@
       "base": "基础",
       "step": "步长",
       "blurDispersionStrength": "模糊色散强度"
-    },
-    "animation": {
-      "newAnimation": "新建动画",
-      "selectAnimation": "选择动画",
-      "fog": "雾"
     }
+  },
+  "animation": {
+    "new": "新建",
+    "select": "选择",
+    "speed": "速率",
+    "scaling": "缩放"
   },
   "dialog": {
     "chooseSaveMode": {

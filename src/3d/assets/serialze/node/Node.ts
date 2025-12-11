@@ -44,10 +44,12 @@ export async function deserializeNode(
   scene: Scene,
   assets: ILoaderAssets,
   parent?: Node,
+  clone?: boolean,
+  padding: Array<Promise<any>> = [],
 ) {
   let currentNode: Node;
   if (node.type === 'mesh') {
-    currentNode = await deserializeMeshNode(node as CC.MeshNode, scene, assets);
+    currentNode = await deserializeMeshNode(node as CC.MeshNode, scene, assets, padding);
   } else if (node.type === 'camera') {
     currentNode = deserializeCamera(node as CC.CameraNode, scene, assets);
   } else if (node.type === 'light') {
@@ -55,7 +57,9 @@ export async function deserializeNode(
   } else {
     currentNode = new TransformNode(node.name, scene);
   }
-  currentNode.uniqueId = node.id;
+  if (!clone) {
+    currentNode.uniqueId = node.id;
+  }
   if (parent) {
     currentNode.parent = parent;
   }
@@ -66,6 +70,6 @@ export async function deserializeNode(
   currentNode.isVisible = node.visible;
   for (let index = 0; index < node.children.length; index++) {
     const element = node.children[index];
-    await deserializeNode(element, scene, assets, currentNode);
+    await deserializeNode(element, scene, assets, currentNode, clone, padding);
   }
 }

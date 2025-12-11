@@ -19,11 +19,11 @@
             </div>
         </div>
         <div class="view">
-            <div class="item-icon" name="gizmo" size="24px"
+            <!-- <div class="item-icon" name="gizmo" size="24px"
                 :class="{ 'selected': hasViewFlag(viewFlagsMode, ViewFlagsMode.Gizmos) }"
                 @click="onViewIconClick(ViewFlagsMode.Gizmos)">
                 <SVG name="gizmo" :size="iconSize" :title="$t('toolsBar.gizmo')"></SVG>
-            </div>
+            </div> -->
             <div class="item-icon" name="mask" size="24px"
                 :class="{ 'selected': hasViewFlag(viewFlagsMode, ViewFlagsMode.Mask) }"
                 @click="onViewIconClick(ViewFlagsMode.Mask)">

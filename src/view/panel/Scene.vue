@@ -1,6 +1,6 @@
 <template>
     <div class="scene-panel">
-        <canvas ref="canvasRef"></canvas>
+        <canvas ref="canvasRef" @drop="handleDrop" @dragover="e => e.preventDefault()"></canvas>
         <ToolBar />
     </div>
 </template>
@@ -8,6 +8,8 @@
 import { Editor } from '@/3d/Editor';
 import { onMounted, ref } from 'vue';
 import ToolBar from './scene/ToolBar.vue'
+import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { useScene } from '@/store/useScene';
 
 const canvasRef = ref<HTMLCanvasElement>()
 onMounted(async () => {
@@ -16,6 +18,13 @@ onMounted(async () => {
     // useScene().addScene(scene);
     // Editor.Instance.setCurrentScene(scene.uuid)
 })
+
+async function handleDrop(ev: DragEvent) {
+    ev.preventDefault();
+    const data = JSON.parse(ev.dataTransfer?.getData('assets') || '{}');
+    await RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, data.uuid)
+    useScene().setHierarchy(Editor.Instance.Scene.rootNodes)
+}
 
 // onMounted(async () => {
 //     Editor.Instance.init(canvasRef.value)

@@ -2,39 +2,50 @@
   <div class="animation">
     <div class="timeline-container">
       <div class="timeline-header">
-        <select class="flex-1" v-model="animation">
-          <option disabled value="">{{ $t('component.animation.selectAnimation') }}</option>
-          <!-- <option value="jack">Jack</option>
-          <option value="lucy">Lucy</option>
-          <option value="tom">Tom</option> -->
-        </select>
-        <button @click="newAnimation">{{ $t('component.animation.newAnimation') }}</button>
+        <ElSelect v-model="animation" style=" flex: 1;">
+          <ElOption disabled value="">{{ $t('animation.select') }}</ElOption>
+        </ElSelect>
+        <ElButton size="small" @click="newAnimation">{{ $t('animation.new') }}</ElButton>
       </div>
     </div>
     <div ref="domRef" class="canvas-container"></div>
     <div class="animation-controls">
       <div class="animation-controls-group">
-        <button @click="toStart">⏮</button>
-        <button @click="prev">◀</button>
-        <button v-if="playing" @click="playing = false">⏸</button>
-        <button v-else @click="playing = true">▶</button>
-        <button @click="next">⏭</button>
-        <button @click="toEnd">⏭</button>
+        <div>
+          <SVG name="end" @click="toStart" size="22px"></SVG>
+        </div>
+        <div>
+          <SVG name="next" @click="prev" size="22px"></SVG>
+        </div>
+        <div>
+          <SVG v-if="playing" @click="playing = false" name="play" size="30px"></SVG>
+          <SVG v-else @click="playing = true" name="pause" size="30px"></SVG>
+        </div>
+        <div>
+          <SVG name="next" style="transform: rotate(180deg);" size="22px" @click="next"></SVG>
+        </div>
+        <div>
+          <SVG name="end" style="transform: rotate(180deg);" size="22px" @click="toEnd"></SVG>
+        </div>
       </div>
-      <div>
-        <label v-if="width > 800" class="mr-1.5">时间</label>
-        <input type="number" step="0.1" style="width:60px" :value="time" @input="onTimeInput" />
-        <span>s</span>
+      <div class="item">
+        <span class="name" v-if="width > 800" style="margin-right:10px ;">时间</span>
+        <ElInput size="small" type="number" style="width:60px" v-model="time" @change="onTimeInput">
+          <template #suffix>
+            <span>s</span>
+          </template>
+        </ElInput>
       </div>
-      <div>
-        <label v-if="width > 800" class="mr-1.5">播放速度</label>
-        <select :value="speed" @change="onSpeedChange" style="width:60px">
-          <option v-for="opt in playSpeed" :key="opt" :value="opt">{{ opt }}</option>
-        </select>
+      <div class="item">
+        <span class="name">{{ $t('animation.speed') }}</span>
+        <ElSelect v-model="speed" @change="onSpeedChange" style="width:60px">
+          <ElOption v-for="opt in playSpeed" :key="opt" :value="opt">{{ opt }}</ElOption>
+        </ElSelect>
       </div>
-      <div class="flex items-center mr-10">
-        <label v-if="width > 800" class="mr-1.5">缩放</label>
-        <input type="range" min="0.5" max="5" step="0.1" style="width:80px" :value="scale" @input="onScaleInput" />
+      <div class="item" style="margin-left: auto">
+        <span class="name">{{ $t('animation.scaling') }}</span>
+        <ElSlider class="small-slider" v-model="scale" :min="0.5" :max="5" :step="0.1" style="width:80px"
+          @change="onScaleInput" />
       </div>
     </div>
   </div>
@@ -43,6 +54,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { Timeline } from "@/timeLine/Timeline";
+import SVG from '@/component/common/SVG.vue';
 
 const domRef = ref<HTMLDivElement | null>(null)
 
@@ -115,16 +127,15 @@ const toEnd = () => {
   Timeline.Instance.toEnd()
 }
 
-const onTimeInput = (e: Event) => {
-  const v = Number((e.target as HTMLInputElement).value)
-  time.value = isNaN(v) ? 0 : v
+const onTimeInput = (v: string) => {
+  time.value = isNaN(Number(v)) ? 0 : Number(v)
 }
 const onSpeedChange = (e: Event) => {
   const v = Number((e.target as HTMLSelectElement).value)
   speed.value = isNaN(v) ? 1 : v
 }
-const onScaleInput = (e: Event) => {
-  const v = Number((e.target as HTMLInputElement).value)
+const onScaleInput = (e: any) => {
+  const v = Number(e)
   scale.value = isNaN(v) ? 1 : v
 }
 
@@ -147,13 +158,38 @@ const newAnimation = () => {
     height: 32px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 20px;
     overflow: hidden;
+    background-color: var(--bg-color-2);
 
     .animation-controls-group {
       display: flex;
       align-items: center;
+      padding-left: 10px;
       gap: 2px;
+
+      div {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 2px;
+
+        &:hover {
+          background-color: var(--bg-color-4);
+        }
+      }
+    }
+
+    .item {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      .name {
+        margin-right: 10px;
+      }
     }
   }
 

@@ -17,7 +17,7 @@ import Switch from "@/component/base/Switch.vue";
 import { onNodeModifiedObservable } from "@/tools/observables"
 import Field from "@/component/common/Field.vue";
 import { Editor } from "@/3d/Editor";
-const props = defineProps<{ object: any | null }>()
+const props = defineProps<{ object: any }>()
 //const objectType = ref<string>("");
 // 计算属性：获取物体类型信息
 const objectType = computed(() => {

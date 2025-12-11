@@ -1,66 +1,46 @@
 <template>
-    <div class="texture-field" @drop.prevent="handleDrop" @dragover.prevent="handleDragOver"
-        @dragleave="handleDragLeave" :class="{ 'is-over': dragOver }">
-        <div class="title">{{ title }}</div>
-        <div class="texture-preview-container">
-            <div class="texture-preview">
-                <el-popover width="350" v-if="textureUrl" :disabled="noPopover" placement="left"
-                    popper-class="texture-popover" transition="el-fade-in" :offset="8">
-                    <template #reference>
-                        <div class="texture-preview-inner">
-                            <template v-if="isCube">
-                                <span class="texture-icon">ENV</span>
-                            </template>
-                            <template v-else-if="isColorGrading">
-                                <span class="texture-icon">3DL</span>
-                            </template>
-                            <template v-else-if="isExr">
-                                <span class="texture-icon">EXR</span>
-                            </template>
-                            <template v-else-if="previewTemporaryUrl">
-                                <img class="texture-img" :src="previewTemporaryUrl" />
-                            </template>
-                            <template v-else-if="previewError">
-                                <span class="texture-error">Error</span>
-                            </template>
-                            <template v-else>
-                                <el-icon>
-                                    <Loading />
-                                </el-icon>
-                            </template>
-                        </div>
-                    </template>
-                    <template #default>
-                        <div class="popover-content">
-                            <Switch :label="$t('texture.gammaSpace')" :object="textureRef" property="gammaSpace"
-                                @change="emitChange(textureRef)" />
-                            <Number :label="$t('texture.vScale')" :object="textureRef" property="vScale"
-                                @change="emitChange(textureRef)" />
-                            <Number :label="$t('texture.uScale')" :object="textureRef" property="uScale"
-                                @change="emitChange(textureRef)" />
-                            <Number :label="$t('texture.uOffset')" :object="textureRef" property="uOffset"
-                                @change="emitChange(textureRef)" />
-                            <Number :label="$t('texture.vOffset')" :object="textureRef" property="vOffset"
-                                @change="emitChange(textureRef)" />
-                            <slot />
-                        </div>
-                    </template>
-                </el-popover>
-                <div v-else class="texture-preview-inner">
-                    <div class="img-empty">
 
+
+    <Field :title="title">
+        <el-popover width="350" v-if="textureUrl" :disabled="noPopover" placement="left" popper-class="texture-popover"
+            transition="el-fade-in" :offset="8">
+            <template #reference>
+                <div class="texture-preview-inner" @drop="handleDrop" @dragover="e => e.preventDefault()">
+                    <img class="texture-img" :src="previewTemporaryUrl" />
+                </div>
+            </template>
+            <template #default>
+                <div class="popover-content">
+                    <Switch :label="$t('texture.gammaSpace')" :object="textureRef" property="gammaSpace"
+                        @change="emitChange(textureRef)" />
+                    <Number :label="$t('texture.vScale')" :object="textureRef" property="vScale"
+                        @change="emitChange(textureRef)" />
+                    <Number :label="$t('texture.uScale')" :object="textureRef" property="uScale"
+                        @change="emitChange(textureRef)" />
+                    <Number :label="$t('texture.uOffset')" :object="textureRef" property="uOffset"
+                        @change="emitChange(textureRef)" />
+                    <Number :label="$t('texture.vOffset')" :object="textureRef" property="vOffset"
+                        @change="emitChange(textureRef)" />
+                    <Switch :label="$t('texture.hasAlpha')" :object="textureRef" property="hasAlpha"
+                        @change="emitChange(textureRef)" />
+                    <slot />
+                    <div class="texture-actions">
+                        <ElButton type="info" style="width: 100%;" @click="clear">
+                            移除
+                        </ElButton>
+                        <ElButton type="info" style="width: 100%;" @click="changeTexture">
+                            更换
+                        </ElButton>
                     </div>
+
                 </div>
-            </div>
-            <div class="texture-info">
-                <div class="texture-actions">
-                    <ElButton type="info" style="max-width: 100px;" @click="changeTexture">{{ $t('texture.change') }}
-                    </ElButton>
-                    <ElButton type="info" style="max-width: 100px;" @click="clear">{{ $t('texture.clear') }}</ElButton>
-                </div>
-            </div>
-        </div>
-    </div>
+            </template>
+        </el-popover>
+        <v-else class="texture-preview-inner" v-else @click="changeTexture" @drop="handleDrop"
+            @dragover="e => e.preventDefault()">
+            <img src="@/assets/img/transparent.svg" alt="" class="empty-img">
+        </v-else>
+    </Field>
 
 </template>
 
@@ -68,24 +48,22 @@
 import { ref, computed, watch, onMounted, } from "vue"
 
 //mport sharp from "sharp"
-import { Texture, CubeTexture, ColorGradingTexture } from "@babylonjs/core"
-
-import { Loading, QuestionFilled } from "@element-plus/icons-vue"
+import { Texture, CubeTexture } from "@babylonjs/core"
+import Field from "../common/Field.vue"
 import Switch from "./Switch.vue"
 import Number from "./Number.vue"
-
-import { isScene } from "../../tools/guards/scene"
 import { registerUndoRedo } from "@/tools/undoredo"
-//import { updateIblShadowsRenderPipeline } from "../../editor/tools/light/ibl"
 import { onSelectedAssetChanged, onTextureAddedObservable } from "@/tools/observables"
 import { isColorGradingTexture, isCubeTexture, isTexture } from "@/tools/guards/texture"
 import { projectConfiguration } from "@/tools/configuration"
-import { configureImportedTexture } from "@/tools/preview/import"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
 import { useDialog } from "@/view/dialog"
 import { Editor } from "@/3d/Editor"
-import Vector from "./Vector.vue"
+import { ElMessageBox } from "element-plus"
 
+function updataTexture() {
+
+}
 
 function getExtname(path: string) {
     const lastDotIndex = path.lastIndexOf(".");
@@ -182,17 +160,24 @@ const onSamplingModeChange = (v: number) => { if (textureRef.value) { textureRef
 const setVScale = (v: number) => { if (textureRef.value) { textureRef.value.vScale = v; emitChange(textureRef.value) } }
 
 const clear = () => {
-    const oldTexture = getInspectorPropertyValue(props.object, props.property)
-    setInspectorEffectivePropertyValue(props.object, props.property, null)
-    textureRef.value = null
-    emitChange(null)
-    if (!props.noUndoRedo) {
-        registerUndoRedo({
-            executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = null), action: () => {
-                textureRef.value = getInspectorPropertyValue(props.object, props.property)
-            }
-        })
-    }
+    ElMessageBox.confirm("确认移除当前纹理吗？", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+    }).then(() => {
+        const oldTexture = getInspectorPropertyValue(props.object, props.property)
+        setInspectorEffectivePropertyValue(props.object, props.property, null)
+        textureRef.value = null
+        emitChange(null)
+        if (!props.noUndoRedo) {
+            registerUndoRedo({
+                executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = null), action: () => {
+                    textureRef.value = getInspectorPropertyValue(props.object, props.property)
+                }
+            })
+        }
+    })
+
     //  console.log(textureRef.value);
 
 }
@@ -211,64 +196,25 @@ const reloadTexture = () => {
 }
 
 const handleDrop = (ev: DragEvent) => {
-    dragOver.value = false
-    const assets = ev.dataTransfer?.getData("assets")
-    if (!assets) return
-    const absolutePath = JSON.parse(assets)[0]
-    const extension = getExtname(absolutePath).toLowerCase()
-    switch (extension) {
-        case ".png":
-        case ".webp":
-        case ".jpg":
-        case ".jpeg":
-        case ".bmp":
-        case ".exr": {
-            const oldTexture = props.object[props.property]
-            const scene = props.scene ?? (isScene(props.object) ? props.object : props.object.getScene())
-            const newTexture = configureImportedTexture(new Texture(absolutePath, scene))
-            if (oldTexture !== newTexture) {
-                props.object[props.property] = newTexture
-                emitChange(newTexture)
-                if (!props.noUndoRedo) {
-                    registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = newTexture), onLost: () => newTexture?.dispose() })
+    const json = ev.dataTransfer.getData('assets');
+    if (!json) return
+    const data = JSON.parse(json);
+    if (data.type === 'texture') {
+        const texture = new Texture(data.url, Editor.Instance.Scene, true, false);
+        texture.sourceUUID = data.sourceUUID;
+        const oldTexture = getInspectorPropertyValue(props.object, props.property)
+        setInspectorEffectivePropertyValue(props.object, props.property, null)
+        textureRef.value = texture
+        emitChange(texture)
+        if (!props.noUndoRedo) {
+            registerUndoRedo({
+                executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = texture), action: () => {
+                    textureRef.value = getInspectorPropertyValue(props.object, props.property)
                 }
-                onTextureAddedObservable.notifyObservers(newTexture)
-            }
-            computeTemporaryPreview()
-            break
-        }
-        case ".3dl": {
-            if (props.accept3dlTexture) {
-                const oldTexture = props.object[props.property]
-                // const scene = props.scene ?? (isScene(props.object) ? props.object : props.object.getScene())
-                const scene = props.scene
-                //  const newTexture = configureImportedTexture(new ColorGradingTexture(absolutePath, scene))
-                const newTexture = new ColorGradingTexture(absolutePath, scene)
-                if (oldTexture !== newTexture) {
-                    props.object[props.property] = newTexture
-                    emitChange(newTexture)
-                    if (!props.noUndoRedo) {
-                        registerUndoRedo({ executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = newTexture), onLost: () => newTexture?.dispose() })
-                    }
-                    onTextureAddedObservable.notifyObservers(newTexture)
-                }
-            }
-            break
-        }
-        case ".env": {
-            if (props.acceptCubeTexture) {
-                const oldTexture = props.object[props.property]
-                const scene = props.scene
-                const newTexture = CubeTexture.CreateFromPrefilteredData(absolutePath, scene)
-                const sc = newTexture.getScene()
-                props.object[props.property] = newTexture
-                emitChange(props.object[props.property])
-                if (oldTexture !== newTexture && !props.noUndoRedo) {
-                }
-            }
-            break
+            })
         }
     }
+
 }
 
 const computeTemporaryPreview = async () => {
@@ -315,150 +261,27 @@ async function changeTexture() {
 }
 </script>
 
-<style scoped lang="scss">
-.texture-field {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    width: 100%;
-    padding: 16px;
-    border-radius: 8px;
-    /* border: 1px solid var(--el-border-color); */
-    transition: background .3s;
-    background: var(--bg-color);
-    margin-bottom: 8px;
-}
-
-.texture-field.is-over {
-    background: var(--el-color-info-light-9);
-}
-
-.texture-preview-container {
-    display: flex;
-
-}
-
-
-.texture-row {
-    display: flex;
-    gap: 16px;
-    width: 100%;
-}
-
-.texture-preview {
-    width: 96px;
-    height: 96px;
-}
-
-.texture-preview.has {
-    width: 96px;
-    height: 96px;
-}
-
-.texture-preview.none {
-    width: 32px;
-    height: 32px;
-}
-
+<style lang="scss" scoped>
 .texture-preview-inner {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    height: 64px;
+    padding: 10px;
+    margin: 2px 0;
+    margin-left: auto;
+    background-color: var(--bg-color);
 
-    .img-empty {
-        width: 96px;
-        height: 96px;
+    .empty-img {
+        width: 100%;
+        height: 100%;
         background-color: var(--bg-color-2);
     }
 
-}
-
-.texture-img {
-    width: 96px;
-    height: 96px;
-    object-fit: contain;
-}
-
-.texture-icon {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.texture-error {
-    background: rgba(255, 0, 0, .35);
-    border-radius: 8px;
-    padding: 4px 8px;
-}
-
-.title {
-    padding: 0 8px;
-    font-weight: 600;
-    color: var(--title--color);
-}
-
-
-.texture-info {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    gap: 10px;
-
-
-
-    .texture-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-left: auto;
-
-        .el-button+.el-button {
-            margin-left: 0;
-        }
+    img {
+        max-width: 100%;
+        max-height: 100%;
     }
 }
 
-
-
-
-.field-block {
+.texture-actions {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-
-
-.kv {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 8px;
-}
-
-.kv-k {
-    width: 50%;
-}
-
-.kv-v {
-    width: 50%;
-    text-align: end;
-}
-
-.kv-v.end {
-    text-align: end;
-}
-
-.link {
-    color: var(--el-color-primary);
-    cursor: pointer;
-}
-
-.wrap-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
 }
 </style>

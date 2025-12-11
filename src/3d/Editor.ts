@@ -23,6 +23,7 @@ import {
   TransformNode,
   Scalar,
   MeshBuilder,
+  FreeCamera,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -30,10 +31,8 @@ import '@babylonjs/materials';
 import { watch, type WatchHandle } from 'vue';
 import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
-import { focusOnNode } from '@/3d/core/utils/focusOnNode';
 import { Dispatch } from '@/utils/dispatch';
 import { ID } from '@/utils/id';
-import gsap from 'gsap';
 import { Utils } from '@/utils';
 
 interface EditorEvent {
@@ -47,7 +46,7 @@ interface EditorEvent {
 export class Editor extends Dispatch<EditorEvent> {
   private scene: Scene;
   private engine: Engine;
-  private camera: Camera;
+  private camera: ArcRotateCamera;
   private gizmoManager: GizmoManager;
 
   private static instance: Editor;
@@ -137,7 +136,6 @@ export class Editor extends Dispatch<EditorEvent> {
     this.engine = new Engine(canvas, true, {
       adaptToDeviceRatio: true,
       limitDeviceRatio: 2,
-      stencil: true,
     });
     this.initFocus();
     this.engine.runRenderLoop(() => {
@@ -156,6 +154,8 @@ export class Editor extends Dispatch<EditorEvent> {
     if (this.scene) {
       this.scene.onPointerObservable.removeCallback(this.onPointerDonw);
       this.scene.activeCamera.detachControl();
+      useScene().saveScene(this.scene);
+      this.scene.dispose();
     }
     const scene = await useScene().getScene(uuid);
     if (scene) {
@@ -211,20 +211,15 @@ export class Editor extends Dispatch<EditorEvent> {
   async createScene() {
     const scene = new Scene(this.engine);
     scene.useRightHandedSystem = false;
-    const camera = new ArcRotateCamera('camera', 0, 0, 10, new Vector3(0, 0, 0), scene);
-    camera.allowUpsideDown = true;
+    const camera = new ArcRotateCamera('camera', 0, 0, 0, new Vector3(0, 0, 0), scene);
+    // camera.allowUpsideDown = true;
     camera.minZ = 0.001;
     camera.maxZ = 5000;
     camera.attachControl();
     camera.lowerRadiusLimit = 0.01;
     camera.upperRadiusLimit = 5000;
-    camera.wheelPrecision = 80; // 鼠标滚轮（传统鼠标）
-
-    camera.angularSensibilityX = 300; // 水平拖动速度（越小越快）
-    camera.angularSensibilityY = 300; // 垂直拖动速度
-    camera.inertia = 0;
-    camera.panningInertia = 0;
-
+    camera.inertia = 0.4;
+    camera.panningInertia = 0.5;
     this.camera = camera;
 
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
@@ -333,25 +328,40 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   focusTransformNode(node: TransformNode) {
-    const { min, max } = getTransfromBound(node);
+    const { min, max } = node.getHierarchyBoundingVectors(true);
     const center = new Vector3().add(min).add(max).scale(0.5);
+
     const size = new Vector3().add(max).subtract(min);
-    const radius = Math.max(size.x, size.y, size.z) * 1.5;
-    const position = this.scene.activeCamera.position
-      .clone()
-      .subtract(center)
-      .normalize()
-      .scale(radius);
-    if (this.scene.activeCamera instanceof ArcRotateCamera) {
-      this.scene.activeCamera.target = center;
+    const radius = Math.max(size.x, size.y, size.z) * 2;
+    let currentDirectionToCenter = center.subtract(this.scene.activeCamera.globalPosition);
+    const currentDistance = currentDirectionToCenter.length();
+
+    // 如果相机正好就在中心点（极少见），用一个默认方向兜底
+    if (currentDistance < 0.001) {
+      currentDirectionToCenter = new Vector3(1, 1, 1);
     }
-    Utils.animate((v) => {
-      this.scene.activeCamera.position = Vector3.Lerp(
-        this.scene.activeCamera.position,
-        position,
-        v,
-      );
-    }, 0.3);
+
+    // 归一化得到纯方向
+    const directionFromCameraToCenter = currentDirectionToCenter.normalize();
+
+    // 3. 目标距离 = 包围球半径 × multiplier（你觉得好看的倍数，3~5 都行）
+    const targetDistance = radius * 1.5;
+
+    // 4. 新相机位置 = 中心 - 方向 × 目标距离
+    //    也就是沿着「当前视线」往后退到合适距离
+    const newPosition = center.subtract(directionFromCameraToCenter.scale(targetDistance));
+
+    if (this.scene.activeCamera instanceof ArcRotateCamera) {
+      Utils.animate((x) => {
+        this.scene.activeCamera.position = Vector3.Lerp(
+          this.scene.activeCamera.globalPosition,
+          newPosition,
+          x,
+        );
+        //@ts-ignore
+        this.scene.activeCamera.target = Vector3.Lerp(this.scene.activeCamera.target, center, x);
+      }, 0.5);
+    }
   }
 
   /** 射线检测选中的 object */
@@ -469,9 +479,4 @@ export function applyEnvironmentToPBR(mat: PBRMaterial, scene: Scene) {
   if (scene.environmentTexture) {
     mat.environmentBRDFTexture = scene.environmentTexture;
   }
-}
-
-function getTransfromBound(node: TransformNode) {
-  const bound = node.getHierarchyBoundingVectors(true);
-  return bound;
 }

@@ -2,6 +2,10 @@ import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 
 export const useEditor = defineStore('editor', () => {
+  const loading = ref(0);
+  const setLoading = (v: number) => {
+    loading.value = v;
+  };
   const editorLayout = ref({
     left: 280,
     bottom: 280,
@@ -26,6 +30,8 @@ export const useEditor = defineStore('editor', () => {
   );
 
   return {
+    loading,
+    setLoading,
     editorLayout,
   };
 });

@@ -19,12 +19,12 @@ export class LocalFileSystem implements IFile {
   async saveFile(name: string, data: FileSystemWriteChunkType, dir?: string) {
     const pahts = name.split('/');
     if (pahts.length > 1) {
-      this.saveFile(pahts[1], data, pahts[0]);
+      await this.saveFile(pahts[1], data, pahts[0]);
       return;
     }
     const item = this.items.find((item) => item.name === name);
     if (item) {
-      FileSystem.Instance.updateFile(item.handle as FileSystemFileHandle, data);
+      await FileSystem.Instance.updateFile(item.handle as FileSystemFileHandle, data);
     } else {
       if (dir) {
         const dirItem = this.dirs.find((item) => item.name === dir);
@@ -41,10 +41,10 @@ export class LocalFileSystem implements IFile {
             kind: 'directory',
             handle: result,
           });
-          FileSystem.Instance.createFileInDirectory(result, name, data);
+          await FileSystem.Instance.createFileInDirectory(result, name, data);
         }
       } else {
-        FileSystem.Instance.createFileInDirectory(this.root, name, data);
+        await FileSystem.Instance.createFileInDirectory(this.root, name, data);
       }
     }
   }

@@ -12,7 +12,6 @@ import { registerSimpleUndoRedo } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
 import Field from "@/component/common/Field.vue"
 import { ElSlider } from "element-plus"
-import { Editor } from "@/3d/Editor"
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; step?: number; min?: number; max?: number; noUndoRedo?: boolean }>()
 const emit = defineEmits<{ (e: "change", value: number): void; (e: "finishChange", value: number, oldValue: number): void }>()
 
@@ -50,25 +49,4 @@ const onBlur = () => {
 
 </script>
 
-<style lang="scss">
-.small-slider {
-	margin-left: auto;
-	--el-slider-button-size: 12px;
-	--el-slider-height: 4px;
-	--el-slider-main-bg-color: #d8d8d8;
-
-	.el-input-number {
-		width: 80px !important;
-	}
-
-	.el-input__wrapper {
-		padding-left: 26px !important;
-		padding-right: 26px !important;
-
-	}
-
-	.el-slider__runway {
-		margin-right: 10px !important;
-	}
-}
-</style>
+<style lang="scss"></style>

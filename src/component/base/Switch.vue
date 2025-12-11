@@ -39,9 +39,8 @@ const handleClick = (event: MouseEvent) => {
       newValue: newValue,
       executeRedo: true,
       action: () => {
-        Editor.Instance.dispatch('switchChanged', { newSwitch: newValue, id: props.object.id })
+        // Editor.Instance.dispatch('switchChanged', { newSwitch: newValue, id: props.object.id })
         value.value = getInspectorPropertyValue(props.object, props.property) ?? false
-        console.log(newValue, 'switchChanged');
       }
     })
   }

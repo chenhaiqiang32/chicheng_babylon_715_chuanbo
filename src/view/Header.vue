@@ -108,25 +108,26 @@ const menuItems: MenuItem[] = [
 async function exportFile() {
     try {
         await EditorFileSystem.Instance.check();
-        const sceneList = useScene().getAllScene();
-        const sceneDatas = new Array<any>(sceneList.length);
-        for (let index = 0; index < sceneList.length; index++) {
-            const scene = sceneList[index];
-            const sceneData = serializeScene(scene, RuntimeLibrary.Instance);
-            sceneDatas.push(sceneData);
-        }
+        useScene().saveScene(Editor.Instance.Scene)
+        const sceneList = useScene().sceneInfoList;
         const files = await RuntimeLibrary.Instance.saveAll()
-        files.push(['scene.json', JSON.stringify(sceneDatas)]);
-        files.forEach((file) => {
-            EditorFileSystem.Instance.saveFile(file[0], file[1]);
-        })
+        files.push(['scene.json', JSON.stringify(sceneList)]);
+        let count = 0;
+        const saveFiles = await Promise.all(files.map(x => {
+            const message = EditorFileSystem.Instance.saveFile(x[0], x[1])
+            message.then(() => {
+                count++;
+                console.log(`保存成功${count / (files.length) * 100}%`);
+            });
+            return message;
+        }));
+
         if (EditorFileSystem.Instance.mode === FileMode.INDEXEDDB) {
             useIndexDBProject().addProject({
                 name: EditorFileSystem.Instance.name,
                 time: new Date().toLocaleString(),
             })
         }
-        console.log(files);
         RuntimeLibrary.Instance.saveComplate();
         ElMessage.success('保存成功');
     } catch (error) {

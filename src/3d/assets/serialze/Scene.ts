@@ -61,6 +61,7 @@ export async function deserializeScene(
   engine: Engine,
   assets: ILoaderAssets,
   scene?: Scene,
+  padding: Array<Promise<any>> = [],
 ) {
   scene = scene ?? new Scene(engine);
 
@@ -72,7 +73,6 @@ export async function deserializeScene(
   scene.clearColor = new Color4(...sceneData.clearColor);
   scene.collisionsEnabled = sceneData.collisionsEnabled;
   scene.useRightHandedSystem = false;
-
   scene.fogMode = sceneData.fog.fogMode;
   scene.fogColor = new Color3(...sceneData.fog.color);
   scene.fogStart = sceneData.fog?.fogStart;
@@ -89,7 +89,7 @@ export async function deserializeScene(
     scene.getPhysicsEngine()?.setGravity(new Vector3(...sceneData.physic?.gravity));
   }
   for (const node of sceneData.nodes) {
-    await deserializeNode(node, scene, assets);
+    await deserializeNode(node, scene, assets, null, false, padding);
   }
   if (sceneData.environment) {
     scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);

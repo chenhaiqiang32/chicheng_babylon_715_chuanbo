@@ -32,13 +32,14 @@
 </template>
 <script setup lang='ts'>
 import { ElDialog, ElScrollbar, ElButton } from 'element-plus';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
 import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
 import { useIndexDBProject } from '@/store/useIndexDBProject';
 import { storeToRefs } from 'pinia';
+import { useEditor } from '@/store/useEditor';
 
 const { projects } = storeToRefs(useIndexDBProject());
 
@@ -48,6 +49,11 @@ const opening = ref(false);
 const recentProjects = ref<Array<{ name: string; time: number }>>(JSON.parse(localStorage.getItem('recentProjects') || '[]'));
 
 const props = defineProps<{ close: () => void }>();
+
+
+onMounted(() => {
+    openIndexDBProject('1231')
+});
 
 async function createProject() {
     if (creating.value) return;
@@ -84,14 +90,18 @@ async function openLocalProject() {
     }
 }
 async function openIndexDBProject(name: string) {
+    console.time('loadSceneList');
     if (opening.value) return;
     opening.value = true;
     try {
         await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, name);
-        const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file);
+        const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file, (v) => {
+            useEditor().setLoading(v * 0.5);
+        });
         if (sceneList.length > 0) {
             useScene().setSceneList(sceneList);
-            Editor.Instance.setCurrentScene(sceneList[0].uuid);
+            await Editor.Instance.setCurrentScene(sceneList[0].uuid);
+            console.timeEnd('loadSceneList');
         } else {
             const scene = await Editor.Instance.createNewScene('默认场景');
             useScene().addScene(scene);

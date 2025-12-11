@@ -17,26 +17,36 @@ export function serializeMeshNode(
     meshData.geometry = mesh.geometry?.uuid;
   }
   if (mesh.material) {
-    if (serializeAssets) {
-      assetsManager.addMaterial(mesh.material);
-    }
+    assetsManager.addMaterial(mesh.material);
     meshData.material = mesh.material?.uuid || '';
   }
 }
 
-export async function deserializeMeshNode(data: CC.MeshNode, scene: Scene, assets: ILoaderAssets) {
+export async function deserializeMeshNode(
+  data: CC.MeshNode,
+  scene: Scene,
+  assets: ILoaderAssets,
+  padding: Array<Promise<any>> = [],
+) {
   const mesh = new Mesh(data.name, scene, {});
-  mesh.uniqueId = data.id;
   if (data.geometry) {
-    const geoInfo = await assets.getGeometry(data.geometry);
-    geoInfo.applyToMesh(mesh);
-    mesh.geometry.uuid = data.geometry;
+    const geometryPromise = assets.getGeometry(data.geometry);
+    padding.push(geometryPromise);
+
+    geometryPromise.then((g) => {
+      g.applyToMesh(mesh);
+      mesh.geometry.uuid = data.geometry;
+      mesh.sideOrientation = 0;
+    });
   } else {
   }
   if (data.material) {
-    mesh.material = await assets.getMaterial(data.material);
+    const materialPromise = assets.getMaterial(data.material);
+    padding.push(materialPromise);
+    materialPromise.then((s) => {
+      mesh.material = s;
+      mesh.markAsDirty();
+    });
   }
-  mesh.sideOrientation = 0;
-  mesh.markAsDirty();
   return mesh;
 }
