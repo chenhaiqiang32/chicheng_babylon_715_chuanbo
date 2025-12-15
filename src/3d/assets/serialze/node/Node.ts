@@ -72,4 +72,5 @@ export async function deserializeNode(
     const element = node.children[index];
     await deserializeNode(element, scene, assets, currentNode, clone, padding);
   }
+  return currentNode;
 }

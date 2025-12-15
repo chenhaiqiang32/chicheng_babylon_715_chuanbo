@@ -2,14 +2,23 @@ import {
   Color3,
   Color4,
   CubeTexture,
+  DefaultRenderingPipeline,
   Engine,
   Scene,
+  SSAO2RenderingPipeline,
+  SSRRenderingPipeline,
   Vector3,
   type TransformNode,
 } from '@babylonjs/core';
 import { deserializeNode, serializeNode } from './node/Node';
 import type { CC } from '../BaseRes';
 import { ICollectAssets, ILoaderAssets } from '../AssetsManager';
+import {
+  parseDefaultRenderingPipeline,
+  serializeDefaultRenderingPipeline,
+} from '@/3d/rendering/default-pipeline';
+import { parseSSAO2RenderingPipeline, serializeSSAO2RenderingPipeline } from '@/3d/rendering/ssao';
+import { parseSSRRenderingPipeline, serializeSSRRenderingPipeline } from '@/3d/rendering/ssr';
 
 export function serializeScene(
   scene: Scene,
@@ -53,6 +62,25 @@ export function serializeScene(
   result.nodes = scene.rootNodes.map((item) =>
     serializeNode(item as TransformNode, assets, serializeAssets),
   );
+  const defaultPipeline = scene.postProcessRenderPipelineManager.supportedPipelines.find(
+    (x) => x instanceof DefaultRenderingPipeline,
+  );
+  if (defaultPipeline) {
+    result.defaultRenderingPipeline = serializeDefaultRenderingPipeline(defaultPipeline);
+  }
+  const ssaoPipeline = scene.postProcessRenderPipelineManager.supportedPipelines.find(
+    (x) => x instanceof SSAO2RenderingPipeline,
+  );
+  if (ssaoPipeline) {
+    result.ssao2RenderingPipeline = serializeSSAO2RenderingPipeline(ssaoPipeline);
+  }
+  const ssrPostProcess = scene.postProcessRenderPipelineManager.supportedPipelines.find(
+    (x) => x instanceof SSRRenderingPipeline,
+  );
+  if (ssrPostProcess) {
+    result.ssrPostProcess = serializeSSRRenderingPipeline(ssrPostProcess);
+  }
+
   return result as CC.Scene;
 }
 
@@ -64,11 +92,9 @@ export async function deserializeScene(
   padding: Array<Promise<any>> = [],
 ) {
   scene = scene ?? new Scene(engine);
-
   scene.name = sceneData.name;
   scene.metadata = sceneData.metadata;
   scene.uuid = sceneData.uuid;
-
   scene.autoClear = sceneData.autoClear;
   scene.clearColor = new Color4(...sceneData.clearColor);
   scene.collisionsEnabled = sceneData.collisionsEnabled;
@@ -78,6 +104,7 @@ export async function deserializeScene(
   scene.fogStart = sceneData.fog?.fogStart;
   scene.fogEnd = sceneData.fog?.fogEnd;
   scene.fogDensity = sceneData.fog?.fogDensity;
+  // scene.debugLayer.show();
   if (sceneData.physic) {
     scene.physicsEnabled = sceneData.physic.enabled;
     if (sceneData.physic.gravity) {
@@ -94,6 +121,15 @@ export async function deserializeScene(
   if (sceneData.environment) {
     scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
     scene.environmentIntensity = sceneData.environment.intensity;
+  }
+  if (sceneData.defaultRenderingPipeline) {
+    parseDefaultRenderingPipeline(sceneData.defaultRenderingPipeline, scene);
+  }
+  if (sceneData.ssao2RenderingPipeline) {
+    parseSSAO2RenderingPipeline(sceneData.ssao2RenderingPipeline, scene);
+  }
+  if (sceneData.ssrPostProcess) {
+    parseSSRRenderingPipeline(sceneData.ssrPostProcess, scene);
   }
 
   return scene;

@@ -20,7 +20,6 @@ import CameraComp from './inspector/Camera.vue'
 import SceneSetting from './inspector/SceneSetting.vue';
 import { Camera, Mesh, TransformNode } from '@babylonjs/core';
 const { currentSelected } = storeToRefs(useScene());
-const sceneSettingVisible = ref(Editor.Instance.SceneSetting);
 const selectedObject = shallowRef<any>(null);
 
 watch(currentSelected, (newSelected) => {
@@ -53,17 +52,8 @@ const comps = computed(() => {
     return arr
 })
 
-const handleSceneSettingChanged = (v: boolean) => {
-    sceneSettingVisible.value = v;
-}
 
-onMounted(() => {
-    Editor.Instance.on('sceneSettingChanged', handleSceneSettingChanged)
-})
 
-onUnmounted(() => {
-    Editor.Instance.off('sceneSettingChanged', handleSceneSettingChanged)
-})
 
 
 </script>

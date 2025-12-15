@@ -16,13 +16,13 @@
                         <ElButton type="primary" @click="openLocalProject">打开本地项目</ElButton>
                     </div>
                 </div>
-
                 <div class="recent" v-if="projects.length > 0">
                     <div class="recent-title">最近项目</div>
                     <ElScrollbar class="recent-list">
                         <div class="recent-item" v-for="p in projects" :key="p.name">
                             <span class="name">{{ p.name }}</span>
                             <ElButton text size="small" @click="openIndexDBProject(p.name)">打开</ElButton>
+                            <SVG name="remove" @click="deleteProject(p.name)"></SVG>
                         </div>
                     </ElScrollbar>
                 </div>
@@ -32,6 +32,7 @@
 </template>
 <script setup lang='ts'>
 import { ElDialog, ElScrollbar, ElButton } from 'element-plus';
+import SVG from '@/component/common/SVG.vue';
 import { onMounted, ref } from 'vue';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
@@ -52,7 +53,7 @@ const props = defineProps<{ close: () => void }>();
 
 
 onMounted(() => {
-    openIndexDBProject('1231')
+    // openIndexDBProject('789')
 });
 
 async function createProject() {
@@ -90,7 +91,6 @@ async function openLocalProject() {
     }
 }
 async function openIndexDBProject(name: string) {
-    console.time('loadSceneList');
     if (opening.value) return;
     opening.value = true;
     try {
@@ -98,10 +98,10 @@ async function openIndexDBProject(name: string) {
         const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file, (v) => {
             useEditor().setLoading(v * 0.5);
         });
+
         if (sceneList.length > 0) {
             useScene().setSceneList(sceneList);
             await Editor.Instance.setCurrentScene(sceneList[0].uuid);
-            console.timeEnd('loadSceneList');
         } else {
             const scene = await Editor.Instance.createNewScene('默认场景');
             useScene().addScene(scene);
@@ -113,6 +113,10 @@ async function openIndexDBProject(name: string) {
     } finally {
         opening.value = false;
     }
+}
+
+function deleteProject(name: string) {
+    useIndexDBProject().deleteProject(name);
 }
 </script>
 <style lang='scss'>
@@ -188,6 +192,9 @@ async function openIndexDBProject(name: string) {
 
         .recent {
             margin-top: 12px;
+            flex: 1;
+            height: 0;
+            padding-bottom: 24px;
 
             .recent-title {
                 font-size: 12px;
@@ -195,25 +202,33 @@ async function openIndexDBProject(name: string) {
                 margin-bottom: 8px;
             }
 
-            .recent-list {
-                max-height: 180px;
-            }
+
 
             .recent-item {
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
-                padding: 6px 8px;
+                padding: 6px 20px;
                 border-radius: var(--border-radius);
                 cursor: pointer;
 
+                .svg-icon {
+                    opacity: 0;
+                    pointer-events: none;
+                }
+
                 &:hover {
                     background-color: var(--bg-color-2);
+
+                    .svg-icon {
+                        opacity: 1;
+                        pointer-events: auto;
+                    }
                 }
             }
 
             .name {
                 font-size: 12px;
+                margin-right: auto;
             }
         }
 

@@ -137,7 +137,7 @@ async function exportFile() {
 }
 
 function importModel() {
-    Utils.chooseFile('.glb').then(async (fileList) => {
+    Utils.chooseFile('.glb,.fbx').then(async (fileList) => {
         if (fileList[0]) {
             const node = await RuntimeLibrary.Instance.importMesh(fileList[0]);
             await RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, node);

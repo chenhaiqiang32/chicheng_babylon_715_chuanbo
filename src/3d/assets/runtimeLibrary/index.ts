@@ -8,6 +8,7 @@ import {
   PBRMaterial,
   Texture,
   Tools,
+  SceneLoader,
 } from '@babylonjs/core';
 import { Editor } from '../../Editor';
 import { Dispatch } from '@/utils/dispatch';
@@ -22,7 +23,7 @@ import { ArrayUtils } from '@/utils/Array';
 import { URLUtils } from '@/utils/URL';
 import { bufferToVertex, vertexToBuffer } from '../utils/GeometryUtils';
 import { deserializeScene } from '../serialze/Scene';
-import { Utils } from '@/utils';
+import { FBXLoader } from 'babylonjs-fbx-loader';
 import JSZip from 'jszip';
 
 const TEXTURE = 'texture';
@@ -72,6 +73,7 @@ export class RuntimeLibrary
     Texture.UseSerializedUrlIfAny = true;
     Texture.SerializeBuffers = false;
     Texture.ForceSerializeBuffers = false;
+    SceneLoader.RegisterPlugin(new FBXLoader());
   }
 
   async importMesh(file: File) {
@@ -80,7 +82,7 @@ export class RuntimeLibrary
     }
     const data = await ImportMeshAsync(file, this.resScene, {});
     const all = [...data.meshes, ...data.transformNodes];
-    const root = all.find((x) => x.name == '__root__');
+    const root = all.find((x) => x.name == '__root__') ?? all.find((x) => x.parent == null);
     root.name = file.name.split('.')[0];
     const node = serializeNode(root, this, true);
     this.rootNodes.push(node);
@@ -110,15 +112,26 @@ export class RuntimeLibrary
     }
     const assets = JSON.parse(assetsText) as any;
     this.texture = assets.texture;
-    for (let index = 0; index < this.texture.length; index++) {
-      const element = this.texture[index];
-      delete element.url;
+    const ids = new Set<string>();
+    const padding = new Set<Promise<any>>();
+    // for (let index = 0; index < this.texture.length; index++) {
+    //   const element = this.texture[index];
+    //   delete element.url;
+    //   if (texSet.has(element.sourceUUID)) {
+    //     continue;
+    //   }
+    //   texSet.add(element.sourceUUID);
 
-      if (!this.textureFile.has(element.sourceUUID)) {
-        const file = await this.fileSystem.getFileArrayBuffer(element.sourceUUID, TEXTURE);
-        this.textureFile.set(element.sourceUUID, file);
-      }
-    }
+    //   if (!this.textureFile.has(element.sourceUUID)) {
+    //     const padding = this.fileSystem.getFileArrayBuffer(element.sourceUUID, TEXTURE);
+    //     padding.then((file) => {
+    //       this.textureFile.set(element.sourceUUID, file);
+    //       console.log('load texture', element.sourceUUID);
+    //     });
+    //     texPadding.add(padding);
+    //   }
+    // }
+    // await Promise.all(texPadding);
     this.material = assets.material;
     this.geomertyZips = assets.geomertyZips;
     this.rootNodes = assets.rootNode;
@@ -129,11 +142,16 @@ export class RuntimeLibrary
       await zipFile.loadAsync(blob);
       const files = zipFile.files;
       for (const element in files) {
-        const buffer = await files[element].async('arraybuffer');
-        this.geomertyFile.set(element, buffer);
+        const buffer = files[element].async('arraybuffer');
+        padding.add(buffer);
+        buffer.then((buffer) => {
+          this.geomertyFile.set(element, buffer);
+        });
+        index++;
+        console.log(index);
       }
+      await Promise.all(padding);
       loading?.(0.1 + (index / this.geomertyZips.length) * 0.9);
-      this.geomertyZipFiles.push(zipFile);
     }
     const sceneText = await fileSystem.getFileText('scene.json');
     const scene = JSON.parse(sceneText) as CC.Scene[];
@@ -183,8 +201,6 @@ export class RuntimeLibrary
 
   textureFile: Map<string, ArrayBuffer> = new Map();
   geomertyFile: Map<string, ArrayBuffer> = new Map();
-
-  geomertyZipFiles: JSZip[] = [];
 
   tempGeometryFile: Map<string, ArrayBuffer> = new Map();
   tempTextureFile: Map<string, ArrayBuffer> = new Map();
@@ -263,29 +279,11 @@ export class RuntimeLibrary
       if (!buffer) {
         buffer = this.tempGeometryFile.get(uuid);
       }
-      if (!buffer) {
-        buffer = await this.getGeometryFile(uuid);
-        if (!buffer) {
-          return Promise.reject('geometry not found');
-        }
-        this.geomertyFile.set(uuid, buffer);
-      }
-
       const geoInfo = bufferToVertex(buffer);
       const geo = Geometry.Parse(geoInfo, this.currentScene, null);
       this.sceneGeometry.set(uuid, geo);
       return Promise.resolve(geo);
     }
-  }
-
-  async getGeometryFile(uuid: string): Promise<ArrayBuffer> {
-    for (const zip of this.geomertyZipFiles) {
-      const file = zip.file(uuid);
-      if (file) {
-        return await file.async('arraybuffer');
-      }
-    }
-    return Promise.reject('geometry not found');
   }
 
   async getMaterial(uuid: string): Promise<Material> {
@@ -295,15 +293,15 @@ export class RuntimeLibrary
       const data = this.material.find((x) => x.uuid == uuid);
       if (data) {
         const mat = Material.Parse(data, this.currentScene, null) as PBRMaterial;
-        for (const key in data) {
-          if (key.endsWith('_MAP')) {
-            const uuid = data[key];
-            this.getTexture(uuid).then((tex) => {
-              //@ts-ignore
-              mat[key.replace('_MAP', '')] = tex;
-            });
-          }
-        }
+        // for (const key in data) {
+        //   if (key.endsWith('_MAP')) {
+        //     const uuid = data[key];
+        //     // this.getTexture(uuid).then((tex) => {
+        //     //   //@ts-ignore
+        //     //   mat[key.replace('_MAP', '')] = tex;
+        //     // });
+        //   }
+        // }
 
         mat.uuid = uuid;
         this.sceneMaterial.set(uuid, mat);
@@ -340,7 +338,7 @@ export class RuntimeLibrary
       typeof rootNode === 'number'
         ? this.rootNodes.find((x) => x.id === rootNode)
         : <CC.ObjectNode>rootNode;
-    await deserializeNode(node, scene, this, null, true);
+    return await deserializeNode(node, scene, this, null, true);
   }
 
   async deserializeScene(scene: Scene, rootNode: CC.Scene, padding: Array<Promise<any>> = []) {

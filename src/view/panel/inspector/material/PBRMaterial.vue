@@ -5,33 +5,31 @@
       <StringField style="flex: 1;" :label="$t('component.material.name')" :object="material" property="name" />
       <ElButton type="info" size="small" @click="changeMaterial">更换</ElButton>
     </div>
+    <SectionField :title="$t('component.material.base')">
 
-    <SectionField title="基础">
+      <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
+      <Color :label="$t('component.material.emissive')" :object="material" property="emissiveColor" />
+
+
+      <Slider v-if="material.metallicTexture" :label="$t('component.material.metallic')" :object="material"
+        property="metallicF0Factor" :min="0" />
+      <Slider v-if="!material.metallicTexture" :label="$t('component.material.metallic')" :object="material"
+        property="metallic" :min="0" />
+      <Slider :label="$t('component.material.roughness')" :object="material" property="roughness" :min="0" />
+
+      <TransparencyModeField :object="material" property="transparencyMode" />
+      <AlphaModeField :object="material" property="alphaMode" />
+      <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
+      <Slider :label="$t('component.material.alphaCutOff')" :object="material" property="alphaCutOff" :min="0"
+        :max="1" />
+    </SectionField>
+
+    <SectionField :title="$t('component.material.texture')">
       <Texture :object="material" :title="$t('component.material.albedoTexture')" property="albedoTexture"
         @change="force">
         <Switch :label="$t('component.material.useAlphaFromAlbedoTexture')" :object="material"
           property="useAlphaFromAlbedoTexture" />
       </Texture>
-      <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
-      <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
-      <AlphaModeField :object="material" property="alphaMode" />
-      <TransparencyModeField :object="material" property="transparencyMode" />
-      <Slider :label="$t('component.material.alphaCutOff')" :object="material" property="alphaCutOff" :min="0"
-        :max="1" />
-      <Texture :object="material" :title="$t('component.material.emissiveTexture')" property="emissiveTexture">
-      </Texture>
-      <Color :label="$t('component.material.emissive')" :object="material" property="emissiveColor" />
-    </SectionField>
-    <SectionField title="强度">
-      <Slider :label="$t('component.material.directIntensity')" :object="material" property="directIntensity" :min="0"
-        :max="5" />
-      <Slider :label="$t('component.material.environmentIntensity')" :object="material" property="environmentIntensity"
-        :min="0" :max="5" />
-      <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity"
-        :min="0" :max="5" />
-    </SectionField>
-
-    <SectionField title="PBR">
       <Texture :object="material" :title="$t('component.material.bumpTexture')" property="bumpTexture" @change="force">
         <template v-if="material.bumpTexture">
           <Switch :label="$t('component.material.invertNormalMapX')" :object="material" property="invertNormalMapX" />
@@ -50,7 +48,8 @@
             @change="force" />
         </template>
       </Texture>
-
+      <Texture :object="material" :title="$t('component.material.emissiveTexture')" property="emissiveTexture">
+      </Texture>
       <Texture :object="material" :title="$t('component.material.metallicTexture')" property="metallicTexture"
         @change="force">
         <template v-if="material.metallicTexture">
@@ -68,13 +67,6 @@
           </template>
         </template>
       </Texture>
-
-
-      <Slider v-if="material.metallicTexture" :label="$t('component.material.metallic')" :object="material"
-        property="metallicF0Factor" :min="0" />
-      <Slider v-if="!material.metallicTexture" :label="$t('component.material.metallic')" :object="material"
-        property="metallic" :min="0" />
-      <Slider :label="$t('component.material.roughness')" :object="material" property="roughness" :min="0" />
       <Texture :object="material" :title="$t('component.material.ambientTexture')" property="ambientTexture"
         @change="force">
         <template v-if="material.ambientTexture">
@@ -89,15 +81,13 @@
       <Texture :object="material" :title="$t('component.material.reflectionTexture')" property="reflectionTexture"
         @change="force" />
 
-
-
-      <Texture :object="material" :title="$t('component.material.metallicReflectanceTexture')"
+      <!-- <Texture :object="material" :title="$t('component.material.metallicReflectanceTexture')"
         property="metallicReflectanceTexture" @change="force">
         <template v-if="material.metallicReflectanceTexture">
           <Switch :label="$t('component.material.useOnlyMetallicFromMetallicReflectanceTexture')" :object="material"
             property="useOnlyMetallicFromMetallicReflectanceTexture" @change="force" />
         </template>
-      </Texture>
+      </Texture> -->
       <Texture :object="material" :title="$t('component.material.lightmapTexture')" property="lightmapTexture">
         <template v-if="material.lightmapTexture">
           <Switch :label="$t('component.material.useLightmapAsShadowmap')" :object="material"
@@ -114,6 +104,19 @@
       </template>
 
     </SectionField>
+    <SectionField :title="$t('component.material.light')">
+      <Slider :label="$t('component.material.directIntensity')" :object="material" property="directIntensity" :min="0"
+        :max="5" />
+      <Slider :label="$t('component.material.environmentIntensity')" :object="material" property="environmentIntensity"
+        :min="0" :max="5" />
+      <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity"
+        :min="0" :max="5" />
+    </SectionField>
+    <SectionField :title="$t('component.material.clearCoat')">
+      <Switch :label="$t('component.material.enable')" :object="material" property="clearCoat.isEnabled" />
+    </SectionField>
+
+
 
     <SectionField title="其他">
       <Switch :label="$t('component.material.backFaceCulling')" :object="material" property="backFaceCulling" />
@@ -149,7 +152,6 @@ async function changeMaterial() {
           props.mesh.material = material
         }
       }
-
     },
     type: 'material'
   })

@@ -96,5 +96,8 @@ export namespace CC {
     };
     iblIntensity: number;
     nodes: ObjectNode[];
+    defaultRenderingPipeline: any;
+    ssao2RenderingPipeline: any;
+    ssrPostProcess: any;
   }
 }

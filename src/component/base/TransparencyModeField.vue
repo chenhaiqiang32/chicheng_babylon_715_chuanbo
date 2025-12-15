@@ -24,6 +24,14 @@ const props = defineProps<{
 }>()
 const value = ref(props.object[props.property] ?? null)
 const oldValue = ref(props.object[props.property] ?? null)
+
+watch(() => props.object, (newValue) => {
+  if (newValue !== value.value) {
+    syncFromObject()
+  }
+})
+
+
 function syncFromObject() {
   const v = getInspectorPropertyValue(props.object, props.property) ?? 0
   value.value = v

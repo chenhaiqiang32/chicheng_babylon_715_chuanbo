@@ -46,7 +46,8 @@ const showAlphaNumeric = computed<boolean>(() => !!props.noColorPicker && hasAlp
 const min = computed(() => (props.noClamp ? undefined : 0))
 const max = computed(() => (props.noClamp ? undefined : 1))
 
-watch(() => [props.object, props.property], () => {
+watch(() => [props.object], () => {
+    currentColor.value = getInspectorPropertyValue(props.object, props.property) ?? null;
     hex.value = toHex()
     oldHex.value = hex.value
     r.value = currentColor.value?.r ?? 1
@@ -120,11 +121,9 @@ const onFinish = () => {
     if (!props.noUndoRedo) {
         registerUndoRedo({
             undo: () => prev && (props.object[props.property] = prev.clone()), redo: () => next && (props.object[props.property] = next.clone()), executeRedo: true, action() {
-
                 hex.value = toHex(getInspectorPropertyValue(props.object, props.property))
                 oldHex.value = hex.value
                 currentColor.value = getInspectorPropertyValue(props.object, props.property)
-
             },
         })
     }

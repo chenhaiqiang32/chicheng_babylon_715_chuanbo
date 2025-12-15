@@ -21,11 +21,11 @@ html {
   --bg-color-3: #3f3f3f;
   --bg-color-4: #646464;
   --input-color: #161616;
-
+  --el-bg-color: var(--bg-color) !important;
   --title--color: #ffffff;
   --border-radius: 5px;
   --border-radius: 5px;
-  --select--color: #FF4000;
+  --select--color: #ff4000;
 }
 * {
   &:focus-visible {

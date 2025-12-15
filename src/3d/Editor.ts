@@ -2,7 +2,6 @@ import { ControlMode, ViewFlagsMode, useScene } from '@/store/useScene';
 import {
   ArcRotateCamera,
   CubeTexture,
-  Engine,
   GizmoManager,
   AbstractMesh,
   PBRMaterial,
@@ -14,16 +13,20 @@ import {
   DirectionalLight,
   LightGizmo,
   Matrix,
-  Camera,
   Light,
   PointLight,
   SpotLight,
   PointerInfo,
   PointerEventTypes,
   TransformNode,
-  Scalar,
-  MeshBuilder,
-  FreeCamera,
+  WebGPUEngine,
+  RenderTargetTexture,
+  AbstractEngine,
+  Plane,
+  DefaultRenderingPipeline,
+  SSAO2RenderingPipeline,
+  SSRRenderingPipeline,
+  MotionBlurPostProcess,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -34,6 +37,10 @@ import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
 import { Dispatch } from '@/utils/dispatch';
 import { ID } from '@/utils/id';
 import { Utils } from '@/utils';
+import { createDefaultRenderingPipeline } from './rendering/default-pipeline';
+import { createSSAO2RenderingPipeline } from './rendering/ssao';
+import { createSSRRenderingPipeline } from './rendering/ssr';
+import { createMotionBlurPostProcess } from './rendering/motion-blur';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -45,30 +52,20 @@ interface EditorEvent {
 
 export class Editor extends Dispatch<EditorEvent> {
   private scene: Scene;
-  private engine: Engine;
-  private camera: ArcRotateCamera;
+  private engine: AbstractEngine;
   private gizmoManager: GizmoManager;
 
   private static instance: Editor;
   private downX = 0;
   private downY = 0;
   private isDown = false;
-  private sceneSetting: boolean = false;
   static get Instance() {
     if (Editor.instance == null) {
       Editor.instance = new Editor();
     }
     return Editor.instance;
   }
-
   private resScene: Scene;
-  get SceneSetting() {
-    return this.sceneSetting;
-  }
-  set SceneSetting(v: boolean) {
-    this.sceneSetting = v;
-    this.dispatch('sceneSettingChanged', v);
-  }
   get ResScene() {
     if (this.resScene == null) {
       this.resScene = new Scene(this.engine);
@@ -114,12 +111,10 @@ export class Editor extends Dispatch<EditorEvent> {
     }
     if (v[0] instanceof AbstractMesh) {
       this.gizmoManager.attachToMesh(v[0]);
-      // if (this.enableGizmo) this.gizmoManager.boundingBoxGizmoEnabled = true;
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
       if (v[0].getChildMeshes().length > 0) this.gizmoManager.attachToNode(v[0]);
       else {
-        // this.gizmoManager.boundingBoxGizmoEnabled = false;
         this.gizmoManager.attachToNode(v[0]);
       }
     }
@@ -133,11 +128,15 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   async init(canvas: HTMLCanvasElement) {
-    this.engine = new Engine(canvas, true, {
+    this.engine = new WebGPUEngine(canvas, {
       adaptToDeviceRatio: true,
       limitDeviceRatio: 2,
     });
+    if (this.engine instanceof WebGPUEngine) {
+      await this.engine.initAsync();
+    }
     this.initFocus();
+
     this.engine.runRenderLoop(() => {
       this.scene?.render();
     });
@@ -167,6 +166,45 @@ export class Editor extends Dispatch<EditorEvent> {
     this.scene = scene;
     useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
+  }
+
+  getRaycastPoint(x?: number, y?: number) {
+    // 1. 创建拾取射线
+    const ray = this.scene.createPickingRay(
+      x ?? this.scene.pointerX,
+      y ?? this.scene.pointerY,
+      null, // 推荐写法
+      this.scene.activeCamera,
+    );
+
+    // 2. 先尝试拾取场景中的网格
+    const pickInfo = this.scene.pickWithRay(ray);
+    if (pickInfo?.hit && pickInfo.pickedPoint) {
+      return pickInfo.pickedPoint;
+    }
+
+    // 3. 没点到任何物体 → 与地面求交
+    const groundPlane = new Plane(0, 1, 0, 0); // 平面方程：y = 0
+
+    const distance = ray.intersectsPlane(groundPlane);
+
+    if (distance !== null) {
+      // 根据距离计算交点坐标：origin + direction * distance
+      return ray.origin.add(ray.direction.scale(distance));
+    }
+
+    // 极少数情况：射线与平面完全平行（几乎不可能在正常视角下发生）
+    return null;
+  }
+  getRaycastMesh(x?: number, y?: number) {
+    const ray = this.scene.createPickingRay(
+      x ?? this.scene.pointerX,
+      y ?? this.scene.pointerY,
+      null,
+      this.scene.activeCamera,
+    );
+    const pickInfo = this.scene.pickWithRay(ray);
+    return pickInfo;
   }
 
   async createNewScene(arg0: string) {
@@ -220,7 +258,6 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.upperRadiusLimit = 5000;
     camera.inertia = 0.4;
     camera.panningInertia = 0.5;
-    this.camera = camera;
 
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
@@ -297,19 +334,10 @@ export class Editor extends Dispatch<EditorEvent> {
 
     // 添加灯光 gizmo
 
-    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {
-      // TODO:监听BoundingBoxGizmos拖拽开始
-      console.log(2323);
-    });
+    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {});
 
-    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {
-      // TODO:监听BoundingBoxGizmos拖拽结束
-      console.log(21323);
-    });
-    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {
-      // TODO:监听BoundingBoxGizmos拖拽中
-      console.log(123);
-    });
+    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {});
 
     // 非等比例下无法缩放，需要将 update... 设置为 false
     this.gizmoManager.rotationGizmoEnabled = true;
@@ -365,17 +393,17 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   /** 射线检测选中的 object */
-  raycastSelect() {
+  raycastSelect(x: number, y: number) {
     const ray = this.scene.createPickingRay(
-      this.scene.pointerX,
-      this.scene.pointerY,
-      Matrix.Identity(),
-      this.camera,
+      x ?? this.scene.pointerX,
+      y ?? this.scene.pointerY,
+      null,
+      this.scene.activeCamera,
     );
-    const raycastHit = this.scene.pickWithRay(ray);
+    const pickInfo = this.scene.pickWithRay(ray);
     // 赋值当前选中的 Object
-    if (raycastHit.hit) {
-      useScene().setCurrentSelect([raycastHit.pickedMesh.uniqueId]);
+    if (pickInfo.hit) {
+      useScene().setCurrentSelect([pickInfo.pickedMesh.uniqueId]);
     } else {
       useScene().setCurrentSelect();
     }
@@ -447,7 +475,6 @@ export class Editor extends Dispatch<EditorEvent> {
       mesh.renderOverlay = false;
     }
   }
-
   onPointerDonw = (pointerInfo: PointerInfo) => {
     const evt = pointerInfo.event;
     switch (pointerInfo.type) {
@@ -465,13 +492,52 @@ export class Editor extends Dispatch<EditorEvent> {
           const dy = evt.clientY - this.downY;
           const isDrag = Math.sqrt(dx * dx + dy * dy) > 3;
           if (!isDrag) {
-            this.raycastSelect();
+            const bound = this.engine.getRenderingCanvas().getBoundingClientRect();
+            this.raycastSelect(evt.clientX - bound.left, evt.clientY - bound.top);
           }
         }
         this.isDown = false;
         break;
     }
   };
+
+  getRenderingPipeline(createNew = true) {
+    let renderingPipeline = this.scene.postProcessRenderPipelineManager.supportedPipelines.find(
+      (x) => x instanceof DefaultRenderingPipeline,
+    );
+    if (!renderingPipeline && createNew) {
+      renderingPipeline = createDefaultRenderingPipeline(this.scene);
+    }
+    return renderingPipeline;
+  }
+  getSSAORenderingPipeline(createNew = true) {
+    let ssaoRenderingPipeline = this.scene.postProcessRenderPipelineManager.supportedPipelines.find(
+      (x) => x instanceof SSAO2RenderingPipeline,
+    );
+    if (!ssaoRenderingPipeline && createNew) {
+      ssaoRenderingPipeline = createSSAO2RenderingPipeline(this.scene);
+    }
+    return ssaoRenderingPipeline;
+  }
+  getSSRRenderingPipeline(createNew = true) {
+    let ssrRenderingPipeline = this.scene.postProcessRenderPipelineManager.supportedPipelines.find(
+      (x) => x instanceof SSRRenderingPipeline,
+    );
+    if (!ssrRenderingPipeline && createNew) {
+      ssrRenderingPipeline = createSSRRenderingPipeline(this.scene);
+    }
+    return ssrRenderingPipeline;
+  }
+  getMotionBlurPostProcess(createNew = true) {
+    let motionBlurPostProcess = this.scene.postProcesses.find(
+      (x) => x instanceof MotionBlurPostProcess,
+    );
+    if (!motionBlurPostProcess && createNew) {
+      motionBlurPostProcess = createMotionBlurPostProcess(this.scene);
+      this.scene.postProcesses.push(motionBlurPostProcess);
+    }
+    return motionBlurPostProcess;
+  }
 }
 
 export function applyEnvironmentToPBR(mat: PBRMaterial, scene: Scene) {
@@ -479,4 +545,44 @@ export function applyEnvironmentToPBR(mat: PBRMaterial, scene: Scene) {
   if (scene.environmentTexture) {
     mat.environmentBRDFTexture = scene.environmentTexture;
   }
+}
+
+function preiver() {
+  // const sphere = MeshBuilder.CreateSphere('sphere', {
+  //   diameter: 1,
+  // });
+  // sphere.layerMask = 0x20000000;
+  // const mat = new PBRMaterial('mat', this.scene);
+  // mat.emissiveColor = Color3.Random();
+  // sphere.material = mat;
+  // const size = 256;
+  // // 2. 创建专用预览相机（不影响主相机）
+  // if (!this.rt) {
+  //   const cam = new ArcRotateCamera(
+  //     'previewCam',
+  //     Math.PI / 4,
+  //     Math.PI / 3.5,
+  //     2,
+  //     sphere.getBoundingInfo().boundingBox.center,
+  //     this.scene,
+  //   );
+  //   this.rt = new RenderTargetTexture('previewRT', size, this.scene, false, true);
+  //   this.scene.customRenderTargets.push(this.rt);
+  //   this.rt.activeCamera = cam;
+  //   this.rt.clearColor = new Color4(0.1, 0.1, 0.1, 0);
+  //   cam.layerMask = 0x20000000;
+  // }
+  // this.rt.activeCamera.setTarget(sphere.position);
+  // this.rt.renderList?.push(sphere);
+  // Tools.CreateScreenshotUsingRenderTarget(
+  //   this.engine,
+  //   this.rt.activeCamera,
+  //   size,
+  //   (e) => {},
+  //   'image/png',
+  //   8,
+  //   true,
+  //   '1.png',
+  //   false,
+  // );
 }

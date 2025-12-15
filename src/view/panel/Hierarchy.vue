@@ -18,21 +18,27 @@
                     </ElScrollbar>
                 </div>
             </ElSplitterPanel>
-            <ElSplitterPanel>.
+            <ElSplitterPanel>
                 <div class="hierarchy-panel">
-                    <ElInput size="small" placeholder="搜索" v-model="searchText">
-                        <template #prefix>
-                            <el-icon>
-                                <Search />
-                            </el-icon>
-                        </template>
-                    </ElInput>
-                    <div class="sceneSetting" :class="{ selected: sceneSettingVisible }" @click="toggleSceneSetting">{{
-                        $t('view.sceneSetting') }}</div>
-                    <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
-                        :data="hierarchy" highlight-current :props="treeProps" node-key="id" :default-expanded="true"
-                        :default-active="true" @node-click="handleNodeClick">
-                    </ElTree>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <ElInput size="small" placeholder="搜索" v-model="searchText">
+                            <template #prefix>
+                                <el-icon>
+                                    <Search />
+                                </el-icon>
+                            </template>
+                        </ElInput>
+                        <SVG name="setting" @click="toggleSceneSetting"></SVG>
+                    </div>
+                    <div style="height: 0;flex: 1;">
+                        <ElScrollbar style="height: 100%;">
+                            <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
+                                :data="hierarchy" highlight-current :props="treeProps" node-key="id"
+                                :default-expanded="true" :default-active="true" @node-click="handleNodeClick">
+                            </ElTree>
+                        </ElScrollbar>
+                    </div>
+
                 </div>
             </ElSplitterPanel>
 
@@ -47,14 +53,14 @@ import BasePanel from '@/component/common/BasePanel.vue'
 import { useScene } from '@/store/useScene';
 import { ElInput, ElMessageBox, type ElTree, type TreeNodeData } from 'element-plus';
 import { Search } from '@element-plus/icons-vue'
-import SVG from '@/component/common/SVG.vue'
 
 
 
 import { storeToRefs } from 'pinia';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Editor } from '@/3d/Editor';
-import { Scene } from '@babylonjs/core';
+import SVG from '@/component/common/SVG.vue';
+import { useDialog } from '../dialog';
 
 const searchText = ref('');
 const treeProps = {
@@ -109,12 +115,21 @@ const handleNodeClick = (node: HierarchyNode) => {
 
 watch(currentSelected, (val) => {
     if (val[0] != undefined) {
-        treeRef.value.setCurrentKey(val[0]);
+        treeRef.value.setCurrentKey(val[0], true);
     } else {
         treeRef.value?.setCurrentKey(null);
     }
 
 })
+
+function isElementInViewport(element: HTMLElement) {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+    const elementRect = element.getBoundingClientRect();
+    const elementTop = elementRect.top + scrollTop;
+    const elementBottom = elementRect.bottom + scrollTop;
+    return elementTop < scrollTop + windowHeight && elementBottom > scrollTop;
+}
 
 watch(searchText, (val) => {
     treeRef.value!.filter(val)
@@ -127,16 +142,9 @@ function filterHierarchy(value: any, data: TreeNodeData, child: any) {
     }
     return data.name.includes(value);
 }
-const toggleSceneSetting = () => {
-    sceneSettingVisible.value = !sceneSettingVisible.value;
-    if (sceneSettingVisible.value) {
-        Editor.Instance.SceneSetting = true;
-        currentSelected.value = [];
-
-    } else {
-        treeRef.value?.setCurrentKey(null);
-        Editor.Instance.SceneSetting = false;
-    }
+const toggleSceneSetting = async () => {
+    const SceneSettingDialog = (await import('../dialog/SceneSettingDialog.vue')).default
+    useDialog(SceneSettingDialog)
 }
 
 onUnmounted(() => {

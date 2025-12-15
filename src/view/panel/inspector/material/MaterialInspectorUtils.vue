@@ -24,20 +24,13 @@ import SectionField from "@/component/common/SectionField.vue"
 const props = defineProps<{ mesh?: any; material: any }>()
 
 const handleRemove = async () => {
-  //  const confirm = await showConfirm("Remove Material", "Are you sure you want to remove this material?")
   if (!confirm) return
   const mesh = props.mesh!
   const material = props.material
-  // registerUndoRedo({ executeRedo: true, undo: () => (mesh.material = material), redo: () => (mesh.material = null) })
-  // onRedoObservable.notifyObservers()
 }
 
 const handleExport = async () => {
   const data = props.material.serialize()
-  // const destination = saveSingleFileDialog({ title: "Export Material", filters: [{ name: "Material File", extensions: ["material"] }], defaultPath: join(dirname(projectConfiguration.path!), "assets") })
-  //if (!destination) return
-  //  await writeJSON(destination, data, { spaces: 4 })
-  // toast.success("Material exported successfully!")
 }
 </script>
 

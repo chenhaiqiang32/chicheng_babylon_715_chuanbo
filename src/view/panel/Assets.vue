@@ -15,7 +15,8 @@
             <el-tab-pane label="材质">
                 <Grid :data="materialList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
                     <template #default="{ item, index }">
-                        <div class="grid-item" :title="item.name">
+                        <div class="grid-item" :title="item.name" draggable="true"
+                            @dragstart="e => handleDragStart(e, item)">
                             <SVG name="material" size="42px" :title="item.name"></SVG>
                             <span class="itme-name">{{ item.name }}</span>
                         </div>
