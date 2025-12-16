@@ -32,7 +32,7 @@ import {
 import '@babylonjs/loaders/glTF';
 import '@babylonjs/materials';
 import { watch, type WatchHandle } from 'vue';
-import '@babylonjs/inspector';
+// import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
 import { Dispatch } from '@/utils/dispatch';
 import { ID } from '@/utils/id';

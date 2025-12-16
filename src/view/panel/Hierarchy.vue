@@ -19,7 +19,7 @@
                 </div>
             </ElSplitterPanel>
             <ElSplitterPanel>
-                <div class="hierarchy-panel">
+                <div class="hierarchy-panel" @contextmenu="contextMenu">
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <ElInput size="small" placeholder="搜索" v-model="searchText">
                             <template #prefix>
@@ -61,6 +61,7 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
+import { openContextMenu } from '@/component/content-menu';
 
 const searchText = ref('');
 const treeProps = {
@@ -75,6 +76,40 @@ onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
 
 })
+
+function contextMenu(e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault()
+    openContextMenu({
+        position: {
+            x: e.clientX,
+            y: e.clientY
+        },
+        commands: [
+            {
+                name: '添加场景',
+                callback: () => {
+                    console.log('添加场景');
+                },
+            },
+            {
+                name: '添加节点',
+                subCommand: [{
+                    name: '添加空节点',
+                    callback: () => {
+                        console.log('添加空节点');
+                    }
+                }, {
+                    name: '添加空节点2',
+                    callback: () => {
+                        console.log('添加空节点2');
+                    }
+                }]
+            }
+        ]
+    })
+
+}
 
 async function addScene() {
     const { value } = await ElMessageBox.prompt('', {
