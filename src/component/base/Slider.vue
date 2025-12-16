@@ -1,8 +1,9 @@
 <template>
 	<Field :title="label" :tooltip="tooltip">
 		<!--@vue-ignore -->
-		<ElSlider class="small-slider" v-model="value" :step="step" :min="min ?? 0" :max="max ?? 1" :controls="false"
-			@input="onInput" @change="onBlur" size="small" show-input />
+		<ElSlider class="custom-slider" v-model="value" :step="step" :min="min ?? 0" :max="max ?? 1" :controls="false"
+			@input="onInput" @change="onBlur" size="small" />
+		<span class="slider-value">{{ value }}</span>
 	</Field>
 </template>
 
@@ -22,8 +23,6 @@ const value = ref<number>(getInspectorPropertyValue(props.object, props.property
 const oldValue = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 1)
 
 watch(() => [props.object, props.property], () => {
-
-
 	value.value = getInspectorPropertyValue(props.object, props.property) ?? 0
 	oldValue.value = getInspectorPropertyValue(props.object, props.property) ?? 0
 })
@@ -49,4 +48,12 @@ const onBlur = () => {
 
 </script>
 
-<style lang="scss"></style>
+<style lang="scss">
+.slider-value {
+	position: absolute;
+	left: 5px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 12px;
+}
+</style>

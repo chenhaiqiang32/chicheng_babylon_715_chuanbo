@@ -6,12 +6,16 @@ import { CC } from '@/3d/assets/BaseRes';
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
 import { serializeScene } from '@/3d/assets/serialze/Scene';
+import { ID } from '@/utils/id';
 
 function buildHierarchy(node: Node): HierarchyNode {
+  if (!node.uuid) {
+    node.uuid = ID.generateUUID();
+  }
   return {
     name: node.name,
     type: node.getClassName(),
-    id: node.uniqueId,
+    id: node.uuid,
     children: node.getChildren()?.map(buildHierarchy) ?? [],
   };
 }
@@ -26,7 +30,7 @@ export enum ControlMode {
 
 export const useScene = defineStore('scene', () => {
   const hierarchy = ref<HierarchyNode[]>([]);
-  const currentSelected = ref<Array<number>>([]);
+  const currentSelected = ref<Array<string>>([]);
   const currentControlMode = ref<ControlMode>();
   const currentViewFlagsMode = ref<ViewFlagsMode>();
   const currentScene = ref<string>();
@@ -50,7 +54,7 @@ export const useScene = defineStore('scene', () => {
     hierarchy.value = rootNodes.map(buildHierarchy);
   }
 
-  function setCurrentSelect(objectIds?: number[]) {
+  function setCurrentSelect(objectIds?: string[]) {
     currentSelected.value = objectIds ?? [];
   }
 

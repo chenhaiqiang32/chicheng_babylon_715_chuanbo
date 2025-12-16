@@ -358,17 +358,16 @@ export class RuntimeLibrary
     }
   }
 
-  async addToScene(scene: Scene, rootNode: CC.ObjectNode | number) {
+  async addToScene(scene: Scene, rootNode: CC.ObjectNode | string) {
     if (scene != this.currentScene) {
       this.currentScene = scene;
       this.sceneMaterial.clear();
       this.sceneGeometry.clear();
       this.sceneTexture.clear();
     }
-
     const node: CC.ObjectNode =
-      typeof rootNode === 'number'
-        ? this.rootNodes.find((x) => x.id === rootNode)
+      typeof rootNode === 'string'
+        ? this.rootNodes.find((x) => x.uuid === rootNode)
         : <CC.ObjectNode>rootNode;
     return await deserializeNode(node, scene, this, null, true);
   }

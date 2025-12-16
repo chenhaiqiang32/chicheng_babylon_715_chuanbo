@@ -1,7 +1,8 @@
 <template>
     <div class="base-panel">
         <div class="panel-header">
-            <span name="header">{{ title }}</span>
+            <slot name="header"></slot>
+            <span name="header" v-if="title">{{ title }}</span>
         </div>
         <div class="panel-content" :style="containerStyle">
             <slot></slot>
@@ -12,7 +13,7 @@
 import { CSSProperties } from 'vue';
 
 const props = defineProps<{
-    title: string,
+    title?: string,
     containerStyle?: CSSProperties
 }>()
 </script>

@@ -17,14 +17,19 @@
                     </ElSplitterPanel>
                     <ElSplitterPanel min="280px" :size="editorLayout.bottom + 'px'" collapsible
                         @update:size="e => sizeChange(e, 'bottom')">
-                        <el-tabs type="border-card">
-                            <el-tab-pane label="资源">
-                                <Assets />
-                            </el-tab-pane>
-                            <el-tab-pane label="动画">
-                                <Animation />
-                            </el-tab-pane>
-                        </el-tabs>
+                        <div class="tab-container-panel">
+                            <div class="tab-title">
+                                <div class="item" :class="{ 'active': activeTab === 'assets' }"
+                                    @click="activeTab = 'assets'">资产</div>
+                                <div class="item" :class="{ 'active': activeTab === 'animation' }"
+                                    @click="activeTab = 'animation'">动画</div>
+                            </div>
+                            <div class="tab-content">
+                                <Assets v-if="activeTab === 'assets'" />
+                                <Animation v-else-if="activeTab === 'animation'" />
+                            </div>
+                        </div>
+
                     </ElSplitterPanel>
                 </ElSplitter>
             </ElSplitterPanel>
@@ -39,21 +44,20 @@
 <script setup lang='ts'>
 import Header from './Header.vue'
 import Scene from './panel/Scene.vue'
-
 import Animation from './panel/Animation.vue'
 import Assets from './panel/Assets.vue'
 import Inspector from './panel/Inspector.vue'
 import Hierarchy from './panel/Hierarchy.vue'
-import { ElTabPane } from 'element-plus';
 import { storeToRefs } from 'pinia';
 import { useEditor } from '@/store/useEditor';
 import { useDialog } from './dialog/index';
 import SetupDialog from './dialog/SetupDialog.vue'
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import BasePanel from '@/component/common/BasePanel.vue'
 onMounted(() => {
     useDialog(SetupDialog)
 })
-
+const activeTab = ref('assets')
 
 const { editorLayout } = storeToRefs(useEditor());
 
@@ -72,9 +76,36 @@ function sizeChange(size: number, type: 'left' | 'bottom' | 'right') {
     display: flex;
     flex-direction: column;
 
-    .el-tabs {
+    .tab-container-panel {
         height: 100%;
+        display: flex;
+        flex-direction: column;
+
+        .tab-title {
+            height: 32px;
+            line-height: 32px;
+            display: flex;
+            gap: 20px;
+            padding-left: 10px;
+            border-bottom: 1px solid var(--el-border-color);
+
+            .item {
+                cursor: pointer;
+
+                &.active {
+                    color: var(--el-color-primary);
+                }
+            }
+        }
+
+        .tab-content {
+            flex: 1;
+            height: 0;
+            position: relative;
+        }
     }
+
+
 
 
 }

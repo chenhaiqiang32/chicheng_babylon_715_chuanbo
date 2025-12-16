@@ -33,6 +33,7 @@ export function serializeScene(
   result.clearColor = scene.clearColor.asArray();
   result.collisionsEnabled = scene.collisionsEnabled;
   result.useRightHandedSystem = scene.useRightHandedSystem;
+  result.animation = scene.runtimeAnimation as CC.Animation[];
   result.fog = {
     fogMode: scene.fogMode,
     color: scene.fogColor.asArray(),
@@ -50,7 +51,7 @@ export function serializeScene(
   }
 
   result.metadata = scene.metadata;
-  result.activeCamera = scene.activeCamera?.uniqueId;
+  result.activeCamera = scene.activeCamera?.uuid;
   result.reflectionProbes = scene.reflectionProbes?.map((item) => item.serialize());
   result.environment = {
     texture: scene.environmentTexture?.uniqueId,
@@ -92,6 +93,7 @@ export async function deserializeScene(
   padding: Array<Promise<any>> = [],
 ) {
   scene = scene ?? new Scene(engine);
+  scene.runtimeAnimation = sceneData.animation as any;
   scene.name = sceneData.name;
   scene.metadata = sceneData.metadata;
   scene.uuid = sceneData.uuid;
@@ -132,6 +134,7 @@ export async function deserializeScene(
   if (sceneData.ssrPostProcess) {
     parseSSRRenderingPipeline(sceneData.ssrPostProcess, scene);
   }
-
+  scene.activeCamera =
+    scene.cameras.find((x) => x.uuid == sceneData.activeCamera) ?? scene.cameras[0];
   return scene;
 }

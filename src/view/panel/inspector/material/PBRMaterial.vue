@@ -17,11 +17,12 @@
         property="metallic" :min="0" />
       <Slider :label="$t('component.material.roughness')" :object="material" property="roughness" :min="0" />
 
-      <TransparencyModeField :object="material" property="transparencyMode" />
-      <AlphaModeField :object="material" property="alphaMode" />
-      <Slider :label="$t('component.material.alpha')" :object="material" property="alpha" :min="0" :max="1" />
-      <Slider :label="$t('component.material.alphaCutOff')" :object="material" property="alphaCutOff" :min="0"
-        :max="1" />
+      <TransparencyModeField :object="material" property="transparencyMode" @change="changeTransparencyMode" />
+      <AlphaModeField v-if="transparencyMode != 0" :object="material" property="alphaMode" />
+      <Slider v-if="transparencyMode != 0" :label="$t('component.material.alpha')" :object="material" property="alpha"
+        :min="0" :max="1" />
+      <Slider v-if="transparencyMode === 1" :label="$t('component.material.alphaCutOff')" :object="material"
+        property="alphaCutOff" :min="0" :max="1" />
     </SectionField>
 
     <SectionField :title="$t('component.material.texture')">
@@ -134,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, } from "vue"
+import { computed, onMounted, ref, } from "vue"
 import SectionField from "@/component/common/SectionField.vue"
 import StringField from "@/component/base/StringField.vue"
 import Switch from "@/component/base/Switch.vue"
@@ -150,12 +151,12 @@ import { PBRMaterial } from "@babylonjs/core"
 const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
 const force = () => { }
 
-props.material.clearCoat.texture
-props.material.clearCoat.textureRoughness
-props.material.clearCoat.tintColor
-props.material.clearCoat.tintTexture
-props.material.clearCoat.tintThickness
+const transparencyMode = ref(0)
 
+
+function changeTransparencyMode() {
+  transparencyMode.value = props.material.transparencyMode;
+}
 
 async function changeMaterial() {
   const ChooseResDialog = (await import('@/view/dialog/ChooseResDialog.vue')).default

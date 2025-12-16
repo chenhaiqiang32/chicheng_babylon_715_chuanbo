@@ -65,7 +65,7 @@ function onchange() {
         return {
             type: 'object',
             name: x.name,
-            uuid: x.id,
+            uuid: x.uuid,
         }
     })
     materialList.value = RuntimeLibrary.Instance.material.map(x => {
