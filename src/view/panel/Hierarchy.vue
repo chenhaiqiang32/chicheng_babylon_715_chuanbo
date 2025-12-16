@@ -35,9 +35,10 @@
                             <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                                 :data="hierarchy" highlight-current :props="treeProps" node-key="id"
                                 :default-expanded="true" :default-active="true" @node-click="handleNodeClick">
+                                <!-- 节点类型图标 + 节点名 -->
                                 <template #default="{ node, data }">
                                     <div class="tree-node">
-                                        <SVG size="14" :name="iconMap[data.type]" ></SVG>
+                                        <SVG size="14" :color="data.isActive ? '#ffffff' : '#7d7d7d' " :name="iconMap[data.type]"></SVG>
                                         {{ data.name }}
                                     </div>
                                 </template>
@@ -63,7 +64,7 @@ import { Search } from '@element-plus/icons-vue'
 
 
 import { storeToRefs } from 'pinia';
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { isVNode, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
@@ -89,7 +90,8 @@ const iconMap: Record<string, string> = {
 
 onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
-
+    Editor.Instance.on('onActiveCameraChanged', onActiveCameraChanged);
+    Editor.Instance.on('onNodeActiveChanged', onNodeActiveChanged)
 })
 
 function contextMenu(e: MouseEvent) {
@@ -159,6 +161,21 @@ function onNameChanged(node: { id: string, newName: string }) {
     }
 }
 
+/**
+ * 切换当前激活的摄像机
+ */
+function onActiveCameraChanged(data: {newUuid: string, oldUuid: string}) {
+    treeRef.value.getNode(data.oldUuid).data.isActive = false;
+    treeRef.value.getNode(data.newUuid).data.isActive = true;
+}
+
+/**
+ * 切换节点的 isActive 字段
+ */
+function onNodeActiveChanged(data: {nodeUuid: string, isVisiable: boolean}){
+    treeRef.value.getNode(data.nodeUuid).data.isActive = data.isVisiable;
+}
+
 const handleNodeClick = (node: HierarchyNode) => {
     currentSelected.value = node ? [node.id] : [];
     if (node) {
@@ -206,8 +223,6 @@ const toggleSceneSetting = async () => {
 function addCamera()
 {
     Editor.Instance.addCamera();
-    const scene = Editor.Instance['scene'];
-    useScene().setHierarchy(scene.rootNodes);
 }
 
 onUnmounted(() => {
@@ -288,5 +303,10 @@ onUnmounted(() => {
 .sceneSetting.selected {
     color: var(--select--color);
 
+}
+
+.tree-node{
+    display: flex;
+    gap: 10px;
 }
 </style>

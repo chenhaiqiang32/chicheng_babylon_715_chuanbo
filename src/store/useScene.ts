@@ -12,11 +12,20 @@ function buildHierarchy(node: Node): HierarchyNode {
   if (!node.uuid) {
     node.uuid = ID.generateUUID();
   }
+
+  // todo:根据不同类型设置 isActive 字段
+  var isActive = true;
+    // 如果是摄像机，判断是否是 scene.activeCamera，如果是则isActive=true
+  if(node.getClassName() === 'ArcRotateCamera') {
+    isActive = Editor.Instance.Scene.activeCamera.uuid === node.uuid;
+  }
+
   return {
     name: node.name,
     type: node.getClassName(),
     id: node.uuid,
     children: node.getChildren()?.map(buildHierarchy) ?? [],
+    isActive: isActive,
   };
 }
 

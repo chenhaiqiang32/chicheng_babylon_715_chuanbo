@@ -32,7 +32,7 @@ import {
 
 import '@babylonjs/loaders/glTF';
 import '@babylonjs/materials';
-import { watch, type WatchHandle } from 'vue';
+import { nextTick, watch, type WatchHandle } from 'vue';
 // import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
 import { Dispatch } from '@/utils/dispatch';
@@ -54,6 +54,8 @@ interface EditorEvent {
   onScaleStartChanged: { object: TransformNode };
   onScaleChanged: { object: TransformNode };
   onSceneChanged: { scene: Scene };
+  onActiveCameraChanged: {newUuid: string, oldUuid: string};
+  onNodeActiveChanged: {nodeUuid: string, isVisiable: boolean};
 }
 
 export class Editor extends Dispatch<EditorEvent> {
@@ -544,13 +546,26 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.upperRadiusLimit = 5000;
     camera.inertia = 0.4;
     camera.panningInertia = 0.5;
-    this.activeCamera(camera);
+    useScene().setHierarchy(this.scene.rootNodes);
+    // 等 tree 更新完成后在更新视图
+    nextTick(() => {
+      this.activeCamera(camera);
+    })
   }
 
   activeCamera(camera:Camera){
+    const oldUuid = this.scene.activeCamera.uuid;
     this.scene.activeCamera.detachControl();
     this.scene.activeCamera = camera;
     this.scene.activeCamera.attachControl();
+    this.dispatch('onActiveCameraChanged', {oldUuid: oldUuid, newUuid: camera.uuid});
+  }
+
+  /**
+   * 切换节点的 isActive 属性，会通知给 hierarchy 切换对应图标状态
+   */
+  switchNodeActive(nodeUuid:string, isVisiable:boolean){
+    this.dispatch('onNodeActiveChanged', {nodeUuid:nodeUuid, isVisiable: isVisiable});
   }
 
   getRenderingPipeline(createNew = true) {

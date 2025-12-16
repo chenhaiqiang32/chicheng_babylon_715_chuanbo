@@ -10,7 +10,7 @@
     </SectionField>
 </template>
 <script setup lang='ts'>
-import { computed, ref, watch } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
 import SectionField from '@/component/common/SectionField.vue'
 import StringField from '@/component/base/StringField.vue'
 import Switch from "@/component/base/Switch.vue";
@@ -26,7 +26,8 @@ const objectType = computed(() => {
 });
 function setVisible(visible: boolean) {
     props.object.isVisible = visible;
-    onNodeModifiedObservable.notifyObservers(props.object)
+    //onNodeModifiedObservable.notifyObservers(props.object)
+    Editor.Instance.switchNodeActive(props.object.uuid, props.object.isVisible);
 }
 
 function onNameChanged(newName: string) {

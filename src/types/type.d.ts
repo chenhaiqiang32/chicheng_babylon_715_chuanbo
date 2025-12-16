@@ -3,6 +3,7 @@ declare interface HierarchyNode {
   type: string;
   name: string;
   children?: HierarchyNode[];
+  isActive: boolean;
 }
 declare interface Vector {
   x?: number;
