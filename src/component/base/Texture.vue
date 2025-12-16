@@ -270,10 +270,14 @@ async function changeTexture() {
 <style lang="scss" scoped>
 .texture-preview-inner {
     height: 64px;
+    width: 64px;
     padding: 10px;
     margin: 2px 0;
     margin-left: auto;
     background-color: var(--bg-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     .empty-img {
         width: 100%;
@@ -285,6 +289,8 @@ async function changeTexture() {
         max-width: 100%;
         max-height: 100%;
     }
+
+
 }
 
 .texture-actions {

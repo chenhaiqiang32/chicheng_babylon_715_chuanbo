@@ -81,7 +81,6 @@
       </Texture>
       <Texture :object="material" :title="$t('component.material.reflectionTexture')" property="reflectionTexture"
         @change="force" />
-
       <!-- <Texture :object="material" :title="$t('component.material.metallicReflectanceTexture')"
         property="metallicReflectanceTexture" @change="force">
         <template v-if="material.metallicReflectanceTexture">
@@ -125,9 +124,6 @@
       <Slider :label="$t('component.material.clearCoatTintThickness')" :object="material"
         property="clearCoat.tintThickness" :min="0" :max="1" />
     </SectionField>
-
-
-
     <SectionField title="其他">
       <Switch :label="$t('component.material.backFaceCulling')" :object="material" property="backFaceCulling" />
     </SectionField>
@@ -172,8 +168,6 @@ async function changeMaterial() {
     type: 'material'
   })
 }
-
-
 onMounted(() => {
 })
 </script>

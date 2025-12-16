@@ -67,6 +67,7 @@ import { ElMessageBox } from 'element-plus';
 import { Editor } from '@/3d/Editor';
 import { Quaternion } from '@babylonjs/core';
 import { CC } from '@/3d/assets/BaseRes';
+import { Animator } from '@/3d/animation/animator';
 
 const domRef = ref<HTMLDivElement | null>(null)
 
@@ -80,12 +81,15 @@ const time = ref(0)
 
 const runtimeAnimations = shallowRef<CC.Animation[]>([])
 let currentRuntimeAction = shallowRef<CC.Animation>(null)
+let animator: Animator
 function onSelectChange(uuid: string) {
   currentRuntimeAction.value = runtimeAnimations.value.find(item => item.uuid == uuid) || null
   if (!currentRuntimeAction.value) {
     return
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+  animator = new Animator(currentRuntimeAction.value)
+  animator.updateClip()
 }
 
 
@@ -123,6 +127,9 @@ onMounted(() => {
     timeline.init({ maxTime: 60 * 10 }, domRef.value).then(() => {
       timeline.setTimeChanged((t: number) => {
         time.value = t
+        if (animator) {
+          animator.execute(t)
+        }
       })
     })
     resizeObserver.observe(domRef.value)
