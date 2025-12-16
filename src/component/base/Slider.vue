@@ -1,8 +1,8 @@
 <template>
 	<Field :title="label" :tooltip="tooltip">
 		<!--@vue-ignore -->
-		<ElSlider class="custom-slider" v-model="value" :step="step" :min="min ?? 0" :max="max ?? 1" :controls="false"
-			@input="onInput" @change="onBlur" size="small" />
+		<ElSlider class="custom-slider" v-model="value" show-tooltip="false" :step="step" :min="min ?? 0"
+			:max="max ?? 1" :controls="false" @input="onInput" @change="onBlur" size="small" />
 		<span class="slider-value">{{ value }}</span>
 	</Field>
 </template>

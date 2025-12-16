@@ -95,6 +95,7 @@ export class Editor extends Dispatch<EditorEvent> {
   private enableGizmo: boolean = true;
 
   private enableMask: boolean = true;
+  private weakMap = new Map<string, Node>();
 
   get selectNodes() {
     return this.selectNodes;
@@ -155,6 +156,7 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   async setCurrentScene(uuid: string) {
+    this.weakMap.clear();
     if (this.scene) {
       this.scene.onPointerObservable.removeCallback(this.onPointerDonw);
       this.scene.activeCamera.detachControl();
@@ -224,7 +226,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const selectWatcher = watch(
       () => useScene().currentSelected,
       (v) => {
-        this.selectNodes = v?.map((x) => getSceneNodeByUUid(this.scene, x)) ?? [];
+        this.selectNodes = v?.map((x) => this.getNodeById(x)) ?? [];
       },
     );
     const controlModeWatcher = watch(
@@ -313,7 +315,7 @@ export class Editor extends Dispatch<EditorEvent> {
    * @returns 找到的节点，或null
    */
   getNodeById(id: string): Node {
-    let node: Node = getSceneNodeByUUid(this.scene, id);
+    let node: Node = getSceneNodeByUUid(this.scene, id, this.weakMap);
     return node;
   }
 
@@ -617,25 +619,35 @@ function preiver() {
   // );
 }
 
-function getSceneNodeByUUid(scene: Scene, uuid: string) {
+function getSceneNodeByUUid(scene: Scene, uuid: string, weakMap?: Map<string, Node>) {
+  if (weakMap) {
+    const ret = weakMap.get(uuid);
+    if (ret) {
+      return ret;
+    }
+  }
   for (const item of scene.rootNodes) {
-    const ret = getNodeByUUid(item, uuid);
+    const ret = getNodeByUUid(item, uuid, weakMap);
     if (ret) {
       return ret;
     }
   }
 }
 
-function getNodeByUUid(node: Node, uuid: string): Node | null {
+function getNodeByUUid(node: Node, uuid: string, weakMap?: Map<string, Node>): Node | null {
+  if (weakMap) {
+    weakMap.set(node.uuid, node);
+  }
   if (node.uuid === uuid) {
     return node;
   }
   const children = node.getChildren();
   if (children?.length > 0) {
-    const ret = children.find((item) => getNodeByUUid(item, uuid));
-    if (ret) {
-      return ret;
+    for (let index = 0; index < children.length; index++) {
+      const ret = getNodeByUUid(children[index], uuid, weakMap);
+      if (ret) {
+        return ret;
+      }
     }
   }
-  return null;
 }
