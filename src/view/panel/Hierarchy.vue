@@ -35,6 +35,12 @@
                             <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                                 :data="hierarchy" highlight-current :props="treeProps" node-key="id"
                                 :default-expanded="true" :default-active="true" @node-click="handleNodeClick">
+                                <template #default="{ node, data }">
+                                    <div class="tree-node">
+                                        <SVG size="14" :name="iconMap[data.type]" ></SVG>
+                                        {{ data.name }}
+                                    </div>
+                                </template>
                             </ElTree>
                         </ElScrollbar>
                     </div>
@@ -62,6 +68,7 @@ import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
+import { Camera } from '@babylonjs/core';
 
 const searchText = ref('');
 const treeProps = {
@@ -72,6 +79,14 @@ const { hierarchy, currentSelected, sceneInfoList, currentScene } = storeToRefs(
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const sceneSettingVisible = ref(false);
+
+const iconMap: Record<string, string> = {
+    ArcRotateCamera: "cameraIcon",
+    DirectionalLight: "lightIcon",
+    Mesh: "meshIcon",
+    TransformNode: "meshIcon"
+}
+
 onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
 
@@ -105,6 +120,12 @@ function contextMenu(e: MouseEvent) {
                         console.log('添加空节点2');
                     }
                 }]
+            },
+            {
+                name: '添加相机',
+                callback: () => {
+                    addCamera();
+                },
             }
         ]
     })
@@ -180,6 +201,13 @@ function filterHierarchy(value: any, data: TreeNodeData, child: any) {
 const toggleSceneSetting = async () => {
     const SceneSettingDialog = (await import('../dialog/SceneSettingDialog.vue')).default
     useDialog(SceneSettingDialog)
+}
+
+function addCamera()
+{
+    Editor.Instance.addCamera();
+    const scene = Editor.Instance['scene'];
+    useScene().setHierarchy(scene.rootNodes);
 }
 
 onUnmounted(() => {

@@ -132,6 +132,7 @@ export async function deserializeScene(
   if (sceneData.ssrPostProcess) {
     parseSSRRenderingPipeline(sceneData.ssrPostProcess, scene);
   }
+  //scene.activeCamera = scene.cameras.find(s => s.uuid = sceneData?.activeCamera);
 
   return scene;
 }

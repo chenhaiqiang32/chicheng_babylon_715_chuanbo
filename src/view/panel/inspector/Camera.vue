@@ -4,6 +4,9 @@
             :max="Math.PI" />
         <Number :label="$t('component.camera.nearClipPlane')" :object="object" property="minZ" />
         <Number :label="$t('component.camera.farClipPlane')" :object="object" property="maxZ" />
+        <div class="active-camera">
+            <ElButton style="margin-left: auto; margin-right: 10px;" type="info" size="small" @click="activeCamera">激活当前摄像机</ElButton>
+        </div>
     </SectionField>
 </template>
 <script setup lang='ts'>
@@ -11,6 +14,8 @@ import { onMounted, onUnmounted, ref, shallowRef } from 'vue';
 import SectionField from '@/component/common/SectionField.vue'
 import Slider from '@/component/base/Slider.vue';
 import Number from '@/component/base/Number.vue';
+import { ElButton } from 'element-plus';
+import { Editor } from '@/3d/Editor';
 
 
 
@@ -30,5 +35,21 @@ onMounted(() => {
 onUnmounted(() => {
 
 });
+
+// ==================== 事件 ====================
+function activeCamera(){
+    if(props.object)
+    {
+        Editor.Instance.activeCamera(props.object);
+    }
+}
+
 </script>
-<style scoped lang='scss'></style>
+<style scoped lang='scss'>
+    .active-camera{
+        height: 32px;
+        display: flex;
+        align-items: center;
+    }
+
+</style>

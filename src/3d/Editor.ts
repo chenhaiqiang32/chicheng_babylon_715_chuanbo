@@ -27,6 +27,7 @@ import {
   SSAO2RenderingPipeline,
   SSRRenderingPipeline,
   MotionBlurPostProcess,
+  Camera,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -537,6 +538,27 @@ export class Editor extends Dispatch<EditorEvent> {
         break;
     }
   };
+
+  /**
+   * 添加相机，会将相机设置为场景的activeCamera
+   * @param name 相机名
+   */
+  addCamera(name:string = null){
+    const camera = new ArcRotateCamera(name ? name : 'camera', 0, 0, 0, new Vector3(0, 0, 0), this.scene);
+    camera.minZ = 0.001;
+    camera.maxZ = 5000;
+    camera.lowerRadiusLimit = 0.01;
+    camera.upperRadiusLimit = 5000;
+    camera.inertia = 0.4;
+    camera.panningInertia = 0.5;
+    this.activeCamera(camera);
+  }
+
+  activeCamera(camera:Camera){
+    this.scene.activeCamera.detachControl();
+    this.scene.activeCamera = camera;
+    this.scene.activeCamera.attachControl();
+  }
 
   getRenderingPipeline(createNew = true) {
     let renderingPipeline = this.scene.postProcessRenderPipelineManager.supportedPipelines.find(
