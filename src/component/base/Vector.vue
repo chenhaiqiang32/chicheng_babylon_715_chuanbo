@@ -20,7 +20,6 @@ import { ref, watch, computed, onMounted, onUnmounted } from "vue"
 import Field from "@/component/common/Field.vue"
 import { registerSimpleUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
 import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
-import { Editor } from "@/3d/Editor";
 const props = defineProps<{
 	object: any
 	property: string
@@ -53,12 +52,10 @@ function syncFromObject() {
 	vw.value = toDisplay(props.object?.[props.property]?.w ?? 0)
 }
 
-watch(() => [props.object, props.property], () => {
+watch(() => [props.object], () => {
 	syncFromObject()
 }, { immediate: true })
 
-let undoObserver: any = null
-let redoObserver: any = null
 
 
 const axisMin = (i: number) => (Array.isArray(props.min) ? props.min[i] : props.min)
@@ -80,6 +77,11 @@ const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 	})
 	emit("change")
 }
+
+
+defineExpose({
+	syncFromObject,
+})
 
 const onFinishChange = () => {
 	emit("finishChange")

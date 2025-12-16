@@ -36,8 +36,7 @@
                 </div>
             </template>
         </el-popover>
-        <v-else class="texture-preview-inner" v-else @click="changeTexture" @drop="handleDrop"
-            @dragover="e => e.preventDefault()">
+        <v-else class="texture-preview-inner" v-else @click="changeTexture" @drop="handleDrop" @dragover.prevent="">
             <img src="@/assets/img/transparent.svg" alt="" class="empty-img">
         </v-else>
     </Field>
@@ -102,7 +101,7 @@ const emit = defineEmits<{ (e: "change", t?: any): void }>()
 const dragOver = ref(false)
 const previewError = ref(false)
 const previewTemporaryUrl = ref<string | null>(null)
-const textureRef = ref<any>(props.object?.[props.property] ?? null)
+const textureRef = ref<any>(getInspectorPropertyValue(props.object, props.property))
 const textureUrl = computed<string | null | false>(() => (isTexture(textureRef.value) || isCubeTexture(textureRef.value) || isColorGradingTexture(textureRef.value)) && textureRef.value?.url)
 const isCube = computed(() => isCubeTexture(textureRef.value))
 const isColorGrading = computed(() => isColorGradingTexture(textureRef.value))
@@ -243,12 +242,19 @@ async function changeTexture() {
                 const texture = new Texture(res.url, Editor.Instance.Scene, true, false);
                 texture.sourceUUID = res.sourceUUID;
                 const oldTexture = getInspectorPropertyValue(props.object, props.property)
-                setInspectorEffectivePropertyValue(props.object, props.property, null)
+
                 textureRef.value = texture
                 emitChange(texture)
                 if (!props.noUndoRedo) {
                     registerUndoRedo({
-                        executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = texture), action: () => {
+                        executeRedo: true,
+                        undo: () => {
+                            setInspectorEffectivePropertyValue(props.object, props.property, oldTexture)
+                        },
+                        redo: () => {
+                            setInspectorEffectivePropertyValue(props.object, props.property, texture)
+                        },
+                        action: () => {
                             textureRef.value = getInspectorPropertyValue(props.object, props.property)
                         }
                     })

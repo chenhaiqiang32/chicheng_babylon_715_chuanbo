@@ -35,6 +35,5 @@ const mapping: Record<string, any> = {
   FireMaterial: FireMaterial,
   GradientMaterial: GradientMaterial,
 }
-
 const component = computed(() => mapping[props.object?.material?.getClassName?.()] ?? StandardMaterial)
 </script>

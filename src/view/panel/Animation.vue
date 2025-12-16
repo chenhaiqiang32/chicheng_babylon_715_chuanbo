@@ -2,8 +2,8 @@
   <div class="animation">
     <div class="timeline-container">
       <div class="timeline-header">
-        <ElSelect v-model="animation" style=" flex: 1;">
-          <ElOption disabled value="">{{ $t('animation.select') }}</ElOption>
+        <ElSelect v-model="currentSelect" style=" flex: 1;" @change="onSelectChange">
+          <ElOption v-for="item in array" :key="item.uuid" :label="item.name" :value="item.uuid"></ElOption>
         </ElSelect>
         <ElButton size="small" @click="newAnimation">{{ $t('animation.new') }}</ElButton>
       </div>
@@ -52,9 +52,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, shallowRef, onUnmounted } from 'vue'
 import { Timeline } from "@/timeLine/Timeline";
 import SVG from '@/component/common/SVG.vue';
+import { TransformNode, Vector3 } from '@babylonjs/core';
+import { ID } from '@/utils/id';
+import { ElMessageBox } from 'element-plus';
+import { Editor } from '@/3d/Editor';
+import { Quaternion } from '@babylonjs/core';
 
 const domRef = ref<HTMLDivElement | null>(null)
 
@@ -63,6 +68,31 @@ const width = ref(0)
 const scale = ref(1)
 const speed = ref(1)
 const time = ref(0)
+
+interface Clip {
+  name: string;
+  uuid: string;
+  objectUuid: string;
+  property: string;
+  type: 'float' | 'v3' | 'quaternion' | 'v2' | 'color3' | 'boolean';
+  key: {
+    time: number,
+    value: any
+  }[];
+}
+
+interface Animation {
+  name: string;
+  uuid: string;
+  clips: Clip[]
+}
+
+const array = shallowRef<Animation[]>([])
+let currentRuntimeAction: Animation | null = null
+function onSelectChange(uuid: string) {
+  currentRuntimeAction = array.value.find(item => item.uuid == uuid) || null
+}
+
 
 watch(speed, (val) => {
   Timeline.Instance.speed = val
@@ -100,17 +130,174 @@ onMounted(() => {
     })
     resizeObserver.observe(domRef.value)
   }
-})
+  Editor.Instance.on('onPositionChanged', onPositionChanged)
+  Editor.Instance.on('onPositionStartChanged', onPositionStartChanged)
+  Editor.Instance.on('onRotationStartChanged', onRotationStartChanged)
+  Editor.Instance.on('onScaleStartChanged', onScaleStartChanged)
+  Editor.Instance.on('onRotationChanged', onRotationChanged)
+  Editor.Instance.on('onScaleChanged', onScaleChanged)
+});
 
+onUnmounted(() => {
+  Editor.Instance.off('onPositionChanged', onPositionChanged)
+  Editor.Instance.off('onPositionStartChanged', onPositionStartChanged)
+  Editor.Instance.off('onRotationChanged', onRotationChanged)
+  Editor.Instance.off('onRotationStartChanged', onRotationStartChanged)
+  Editor.Instance.off('onScaleChanged', onScaleChanged)
+  Editor.Instance.off('onScaleStartChanged', onScaleStartChanged)
+})
+let lastPosition: Vector3;
+let lastRotationQuaternion: Quaternion;
+let lastScale: Vector3;
+function onPositionStartChanged(e: { object: TransformNode }) {
+  lastPosition = e.object.position.clone()
+}
+
+
+function onRotationStartChanged(e: { object: TransformNode }) {
+  lastRotationQuaternion = e.object.rotationQuaternion.clone()
+}
+
+function onScaleStartChanged(e: { object: TransformNode }) {
+  lastScale = e.object.scaling.clone()
+}
+
+function onPositionChanged(e: { object: TransformNode }) {
+  if (!e.object.uuid) {
+    e.object.uuid = ID.generateUUID()
+  }
+  if (currentRuntimeAction) {
+    const clip = currentRuntimeAction.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'position');
+    if (clip) {
+      const key = clip.key.find(x => x.time == time.value)
+      if (key) {
+        key.value = e.object.position.asArray()
+      } else {
+        clip.key.push({
+          time: time.value,
+          value: e.object.position.asArray()
+        })
+        clip.key.sort((a, b) => a.time - b.time)
+      }
+    } else {
+      const clip: Clip = {
+        name: e.object.name + '_position',
+        uuid: ID.generateUUID(),
+        objectUuid: e.object.uuid,
+        property: 'position',
+        type: 'v3',
+        key: [],
+      }
+      if (time.value != 0) {
+        clip.key.push({
+          time: 0,
+          value: lastPosition.asArray()
+        })
+      }
+      clip.key.push({
+        time: time.value,
+        value: e.object.position.asArray()
+      })
+      currentRuntimeAction.clips.push(clip)
+    }
+    console.log(currentRuntimeAction);
+  }
+}
+function onRotationChanged(e: { object: TransformNode }) {
+  if (!e.object.uuid) {
+    e.object.uuid = ID.generateUUID()
+  }
+  if (currentRuntimeAction) {
+    const clip = currentRuntimeAction.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'rotationQuaternion');
+    if (clip) {
+      const key = clip.key.find(x => x.time == time.value)
+      if (key) {
+        key.value = e.object.rotationQuaternion.asArray()
+      } else {
+        clip.key.push({
+          time: time.value,
+          value: e.object.rotationQuaternion.asArray()
+        })
+        clip.key.sort((a, b) => a.time - b.time)
+      }
+    } else {
+      const clip: Clip = {
+        name: e.object.name + '_rotationQuaternion',
+        uuid: ID.generateUUID(),
+        objectUuid: e.object.uuid,
+        property: 'rotationQuaternion',
+        type: 'quaternion',
+        key: [],
+      }
+      if (time.value != 0) {
+        clip.key.push({
+          time: 0,
+          value: lastRotationQuaternion.asArray()
+        })
+      }
+      clip.key.push({
+        time: time.value,
+        value: e.object.rotationQuaternion.asArray()
+      })
+      currentRuntimeAction.clips.push(clip)
+    }
+  }
+}
+function onScaleChanged(e: { object: TransformNode }) {
+  if (!e.object.uuid) {
+    e.object.uuid = ID.generateUUID()
+  }
+  if (currentRuntimeAction) {
+    const clip = currentRuntimeAction.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'scaling');
+    if (clip) {
+      const key = clip.key.find(x => x.time == time.value)
+      if (key) {
+        key.value = e.object.scaling.asArray()
+      } else {
+        clip.key.push({
+          time: time.value,
+          value: e.object.scaling.asArray()
+        })
+        clip.key.sort((a, b) => a.time - b.time)
+      }
+    } else {
+      const clip: Clip = {
+        name: e.object.name + '_scale',
+        uuid: ID.generateUUID(),
+        objectUuid: e.object.uuid,
+        property: 'scaling',
+        type: 'v3',
+        key: [],
+      }
+      if (time.value != 0) {
+        clip.key.push({
+          time: 0,
+          value: lastPosition.asArray()
+        })
+      }
+      clip.key.push({
+        time: time.value,
+        value: e.object.scaling.asArray()
+      })
+      currentRuntimeAction.clips.push(clip)
+    }
+  }
+}
 onBeforeUnmount(() => {
   if (resizeObserver && domRef.value) {
     resizeObserver.unobserve(domRef.value)
     resizeObserver.disconnect()
   }
   Timeline.Instance.dispose()
+  Editor.Instance.off('onPositionChanged', onPositionChanged)
+  Editor.Instance.off('onRotationChanged', onRotationChanged)
+  Editor.Instance.off('onScaleChanged', onScaleChanged)
+  Editor.Instance.off('onRotationStartChanged', onRotationStartChanged)
+  Editor.Instance.off('onScaleStartChanged', onScaleStartChanged)
+  Editor.Instance.off('onPositionStartChanged', onPositionStartChanged)
 })
 
-const animation = ref('')
+const currentSelect = ref('')
 
 const playSpeed = [0.5, 1, 2, 4, 8]
 
@@ -126,7 +313,6 @@ const next = () => {
 const toEnd = () => {
   Timeline.Instance.toEnd()
 }
-
 const onTimeInput = (v: string) => {
   time.value = isNaN(Number(v)) ? 0 : Number(v)
 }
@@ -138,9 +324,22 @@ const onScaleInput = (e: any) => {
   const v = Number(e)
   scale.value = isNaN(v) ? 1 : v
 }
-
-const newAnimation = () => {
-
+const newAnimation = async () => {
+  const dbName = await ElMessageBox.prompt('请输入动画名称', '名称', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    inputValue: '',
+  });
+  if (!dbName) {
+    return
+  }
+  array.value.push({
+    name: dbName.value,
+    uuid: ID.generateUUID(),
+    clips: []
+  })
+  array.value = [...array.value]
+  console.log(array.value);
 }
 </script>
 

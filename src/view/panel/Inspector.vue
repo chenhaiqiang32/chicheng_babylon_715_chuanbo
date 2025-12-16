@@ -17,7 +17,7 @@ import { Editor } from '@/3d/Editor';
 import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
 import CameraComp from './inspector/Camera.vue'
-import SceneSetting from './inspector/SceneSetting.vue';
+import Animation from './inspector/Animation.vue'
 import { Camera, Mesh, TransformNode } from '@babylonjs/core';
 const { currentSelected } = storeToRefs(useScene());
 const selectedObject = shallowRef<any>(null);
@@ -49,6 +49,7 @@ const comps = computed(() => {
     if (selectedObject.value instanceof Camera) {
         arr.push(CameraComp)
     }
+    arr.push(Animation);
     return arr
 })
 

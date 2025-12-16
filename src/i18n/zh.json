@@ -70,6 +70,13 @@
     }
   },
   "component": {
+    "animation": {
+      "title": "动画",
+      "new": "新建",
+      "select": "选择",
+      "speed": "速率",
+      "scaling": "缩放"
+    },
     "camera": {
       "title": "相机",
       "fov": "视野",
@@ -91,6 +98,7 @@
     },
     "material": {
       "title": "材质",
+      "enable": "启用",
       "texture": "纹理",
       "name": "材质名称",
       "backFaceCulling": "背面裁剪",
@@ -151,9 +159,16 @@
       "opaque": "不透明",
       "reflectivityTexture": "反射率",
       "microSurfaceTexture": "光泽度",
-      "alphaTestandBlend": "测试和混合模式"
+      "alphaTestandBlend": "测试和混合模式",
+      "clearCoat": "清漆",
+      "clearCoatTexture": "清漆贴图",
+      "clearCoatTextureRoughness": "清漆粗糙度贴图",
+      "clearCoatTintColor": "清漆颜色",
+      "clearCoatTintTexture": "清漆颜色贴图",
+      "clearCoatTintThickness": "清漆厚度"
     },
     "sceneSetting": {
+      "iblIntensity": "环境光强度",
       "enabled": "启用",
       "texture": "纹理",
       "global": "全局",

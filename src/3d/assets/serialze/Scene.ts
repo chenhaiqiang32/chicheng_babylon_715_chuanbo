@@ -104,6 +104,7 @@ export async function deserializeScene(
   scene.fogStart = sceneData.fog?.fogStart;
   scene.fogEnd = sceneData.fog?.fogEnd;
   scene.fogDensity = sceneData.fog?.fogDensity;
+  scene.iblIntensity = sceneData.iblIntensity;
   // scene.debugLayer.show();
   if (sceneData.physic) {
     scene.physicsEnabled = sceneData.physic.enabled;

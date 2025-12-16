@@ -31,9 +31,7 @@
   color: var(--title--color) !important;
   box-shadow: none !important;
 }
-.el-popper.is-light {
-  min-width: 300px;
-}
+
 .el-message-box {
   .el-input__wrapper {
     background-color: var(--bg-color-2) !important;
@@ -63,4 +61,12 @@
   .el-slider__runway {
     margin-right: 10px !important;
   }
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
 }

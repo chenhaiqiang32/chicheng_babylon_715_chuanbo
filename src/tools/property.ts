@@ -28,6 +28,9 @@ export function setInspectorEffectivePropertyValue(
  * @example getInspectorPropertyValue(scene, "ambientColor.r");
  */
 export function getInspectorPropertyValue(object: any, property: string) {
+  if (!object || !property) {
+    return undefined;
+  }
   const parts = property.split('.');
 
   let value = object;

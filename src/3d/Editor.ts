@@ -46,8 +46,12 @@ interface EditorEvent {
   nameChanged: { newName: string; id: string };
   numberChanged: { newNumber: number; id: string };
   textureChanged: { newTexture: string; id: string };
-  sceneSettingChanged: boolean;
-  UndoRedo: void;
+  onPositionChanged: { object: TransformNode };
+  onPositionStartChanged: { object: TransformNode };
+  onRotationChanged: { object: TransformNode };
+  onRotationStartChanged: { object: TransformNode };
+  onScaleStartChanged: { object: TransformNode };
+  onScaleChanged: { object: TransformNode };
 }
 
 export class Editor extends Dispatch<EditorEvent> {
@@ -342,7 +346,40 @@ export class Editor extends Dispatch<EditorEvent> {
     // 非等比例下无法缩放，需要将 update... 设置为 false
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
+    this.gizmoManager.gizmos.rotationGizmo.onDragObservable.add(() => {
+      this.dispatch('onRotationChanged', {
+        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+      });
+    });
+    this.gizmoManager.gizmos.rotationGizmo.onDragStartObservable.add(() => {
+      this.dispatch('onRotationStartChanged', {
+        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+      });
+    });
     this.gizmoManager.rotationGizmoEnabled = false;
+
+    this.gizmoManager.gizmos.positionGizmo.onDragObservable.add(() => {
+      this.dispatch('onPositionChanged', {
+        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+      });
+    });
+    this.gizmoManager.gizmos.positionGizmo.onDragStartObservable.add(() => {
+      this.dispatch('onPositionStartChanged', {
+        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+      });
+    });
+    this.gizmoManager.scaleGizmoEnabled = true;
+    this.gizmoManager.gizmos.scaleGizmo.onDragObservable.add(() => {
+      this.dispatch('onScaleChanged', {
+        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+      });
+    });
+    this.gizmoManager.gizmos.scaleGizmo.onDragStartObservable.add(() => {
+      this.dispatch('onScaleStartChanged', {
+        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+      });
+    });
+    this.gizmoManager.scaleGizmoEnabled = false;
   }
 
   initFocus() {

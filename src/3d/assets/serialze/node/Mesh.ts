@@ -32,6 +32,7 @@ export async function deserializeMeshNode(
   if (data.geometry) {
     const geometryPromise = assets.getGeometry(data.geometry);
     padding.push(geometryPromise);
+
     geometryPromise.then((g) => {
       g.applyToMesh(mesh);
       mesh.geometry.uuid = data.geometry;
@@ -40,13 +41,12 @@ export async function deserializeMeshNode(
   } else {
   }
   if (data.material) {
-    // const materialPromise = assets.getMaterial(data.material);
-    // padding.push(materialPromise);
-    // materialPromise.then((s) => {
-    //   console.log(2222);
-    //   mesh.material = s;
-    //   mesh.markAsDirty();
-    // });
+    const materialPromise = assets.getMaterial(data.material);
+    padding.push(materialPromise);
+    materialPromise.then((s) => {
+      mesh.material = s;
+      mesh.markAsDirty();
+    });
   }
   return mesh;
 }

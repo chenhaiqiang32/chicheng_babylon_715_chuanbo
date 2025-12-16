@@ -114,6 +114,15 @@
     </SectionField>
     <SectionField :title="$t('component.material.clearCoat')">
       <Switch :label="$t('component.material.enable')" :object="material" property="clearCoat.isEnabled" />
+      <Switch :label="$t('component.material.enable')" :object="material" property="clearCoat.isTintEnabled" />
+      <Texture :object="material" :title="$t('component.material.clearCoatTexture')" property="clearCoat.texture" />
+      <!-- <Texture :object="material" :title="$t('component.material.clearCoatTextureRoughness')"
+        property="clearCoat.textureRoughness" /> -->
+      <Color :object="material" :title="$t('component.material.clearCoatTintColor')" property="clearCoat.tintColor" />
+      <Texture :object="material" :title="$t('component.material.clearCoatTintTexture')"
+        property="clearCoat.tintTexture" />
+      <Slider :label="$t('component.material.clearCoatTintThickness')" :object="material"
+        property="clearCoat.tintThickness" :min="0" :max="1" />
     </SectionField>
 
 
@@ -138,8 +147,14 @@ import { useDialog } from "@/view/dialog"
 import { RuntimeLibrary } from "@/3d/assets/runtimeLibrary"
 import { PBRMaterial } from "@babylonjs/core"
 
-const props = defineProps<{ mesh?: any; material: any; }>()
+const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
 const force = () => { }
+
+props.material.clearCoat.texture
+props.material.clearCoat.textureRoughness
+props.material.clearCoat.tintColor
+props.material.clearCoat.tintTexture
+props.material.clearCoat.tintThickness
 
 
 async function changeMaterial() {

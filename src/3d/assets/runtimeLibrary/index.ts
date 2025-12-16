@@ -9,6 +9,7 @@ import {
   Texture,
   Tools,
   SceneLoader,
+  StandardMaterial,
 } from '@babylonjs/core';
 import { Editor } from '../../Editor';
 import { Dispatch } from '@/utils/dispatch';
@@ -17,14 +18,14 @@ import { CC } from '../BaseRes';
 import { ZipFile, zipFiles } from '@/utils/Zip';
 import { IFile } from '../file/IFile';
 import { ICollectAssets, ILoaderAssets } from '../AssetsManager';
-import { Geometry } from '@babylonjs/core/Meshes';
+import { Geometry, TransformNode } from '@babylonjs/core/Meshes';
 import { ID } from '@/utils/id';
 import { ArrayUtils } from '@/utils/Array';
-import { URLUtils } from '@/utils/URL';
 import { bufferToVertex, vertexToBuffer } from '../utils/GeometryUtils';
 import { deserializeScene } from '../serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import JSZip from 'jszip';
+import { Mesh } from 'pixi.js';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -41,18 +42,16 @@ export class RuntimeLibrary
     if (!sourceUUID) {
       return '';
     }
-    let file = this.textureFile.get(sourceUUID);
-    if (!file) {
-      file = this.tempTextureFile.get(sourceUUID);
+
+    let buffer = this.textureMap.get(sourceUUID);
+    if (!buffer) {
+      buffer = this.tempTextureFile.get(sourceUUID);
     }
-    if (!file) {
-      file = await this.fileSystem.getFileArrayBuffer(sourceUUID, TEXTURE);
-      this.textureFile.set(sourceUUID, file);
+    if (!buffer) {
+      buffer = await this.fileSystem.getFileArrayBuffer(sourceUUID, TEXTURE);
     }
-    if (!file) {
-      return null;
-    }
-    return URLUtils.getArrayBufferURL(file);
+    const url = URL.createObjectURL(new Blob([buffer]));
+    return url;
   }
   private sceneList: CC.Scene[] = [];
   private static instance: RuntimeLibrary;
@@ -82,15 +81,25 @@ export class RuntimeLibrary
     }
     const data = await ImportMeshAsync(file, this.resScene, {});
     const all = [...data.meshes, ...data.transformNodes];
-    const root = all.find((x) => x.name == '__root__') ?? all.find((x) => x.parent == null);
+    let root = all.find((x) => x.name == '__root__');
+    if (!root) {
+      const list = all.filter((x) => x.parent == null);
+      if (list.length == 1) {
+        root = list[0];
+      } else {
+        root = new TransformNode(file.name.split('.')[0], this.resScene);
+        list.forEach((x) => (x.parent = root));
+      }
+    }
     root.name = file.name.split('.')[0];
+    fixMaterial(root);
     const node = serializeNode(root, this, true);
     this.rootNodes.push(node);
     return node;
   }
 
   async importTexture(element: File) {
-    const url = URLUtils.getBlobURL(element);
+    const url = URL.createObjectURL(element);
     const texture = new Texture(url, this.resScene);
     texture.name = element.name;
     texture.sourceUUID = ID.generateUUID();
@@ -114,24 +123,22 @@ export class RuntimeLibrary
     this.texture = assets.texture;
     const ids = new Set<string>();
     const padding = new Set<Promise<any>>();
-    // for (let index = 0; index < this.texture.length; index++) {
-    //   const element = this.texture[index];
-    //   delete element.url;
-    //   if (texSet.has(element.sourceUUID)) {
-    //     continue;
-    //   }
-    //   texSet.add(element.sourceUUID);
-
-    //   if (!this.textureFile.has(element.sourceUUID)) {
-    //     const padding = this.fileSystem.getFileArrayBuffer(element.sourceUUID, TEXTURE);
-    //     padding.then((file) => {
-    //       this.textureFile.set(element.sourceUUID, file);
-    //       console.log('load texture', element.sourceUUID);
-    //     });
-    //     texPadding.add(padding);
-    //   }
-    // }
-    // await Promise.all(texPadding);
+    for (let index = 0; index < this.texture.length; index++) {
+      const element = this.texture[index];
+      delete element.url;
+      if (ids.has(element.sourceUUID)) {
+        continue;
+      }
+      ids.add(element.sourceUUID);
+      const loadFile = this.fileSystem.getFileArrayBuffer(element.sourceUUID, TEXTURE);
+      loadFile.then((file) => {
+        this.textureMap.set(element.sourceUUID, file);
+      });
+      padding.add(loadFile);
+    }
+    await Promise.all(padding);
+    padding.clear();
+    ids.clear();
     this.material = assets.material;
     this.geomertyZips = assets.geomertyZips;
     this.rootNodes = assets.rootNode;
@@ -143,16 +150,15 @@ export class RuntimeLibrary
       const files = zipFile.files;
       for (const element in files) {
         const buffer = files[element].async('arraybuffer');
-        padding.add(buffer);
         buffer.then((buffer) => {
           this.geomertyFile.set(element, buffer);
         });
-        index++;
-        console.log(index);
+        padding.add(buffer);
       }
-      await Promise.all(padding);
+      index++;
       loading?.(0.1 + (index / this.geomertyZips.length) * 0.9);
     }
+    await Promise.all(padding);
     const sceneText = await fileSystem.getFileText('scene.json');
     const scene = JSON.parse(sceneText) as CC.Scene[];
     this.dispatch('onChanged');
@@ -199,7 +205,7 @@ export class RuntimeLibrary
   sceneTexture: Map<string, BaseTexture> = new Map();
   currentScene: Scene;
 
-  textureFile: Map<string, ArrayBuffer> = new Map();
+  textureMap: Map<string, ArrayBuffer> = new Map();
   geomertyFile: Map<string, ArrayBuffer> = new Map();
 
   tempGeometryFile: Map<string, ArrayBuffer> = new Map();
@@ -222,7 +228,7 @@ export class RuntimeLibrary
       }
       data.sourceUUID = texture.sourceUUID;
       this.texture.push(data);
-      if (!this.textureFile.has(data.sourceUUID) && !this.tempTextureFile.has(data.sourceUUID)) {
+      if (!this.tempTextureFile.has(data.sourceUUID) && !this.textureMap.has(data.sourceUUID)) {
         const t = texture.getInternalTexture();
         if (t._buffer) {
           const buffer = (await serializeTextureBuffer(t._buffer)) as ArrayBuffer;
@@ -252,6 +258,25 @@ export class RuntimeLibrary
           }
         }
       }
+      //@ts-ignore
+      const clearCoat = material['clearCoat'];
+      if (clearCoat) {
+        for (const key in clearCoat) {
+          //@ts-ignore
+          const value = clearCoat[key];
+          const clearCoatData = data['plugins']['PBRClearCoatConfiguration'];
+          //@ts-ignore
+          if (clearCoat[key] instanceof Texture) {
+            if (!key.startsWith('_') && key.indexOf('environment') == -1) {
+              this.addTexture(value);
+              data['clearCoat.' + key + '_MAP'] = value.uuid;
+              delete clearCoatData[key];
+            }
+          } else {
+          }
+        }
+      }
+
       data.uuid = material.uuid;
       if (oldMat) {
         ArrayUtils.remove(oldMat, this.material);
@@ -293,15 +318,22 @@ export class RuntimeLibrary
       const data = this.material.find((x) => x.uuid == uuid);
       if (data) {
         const mat = Material.Parse(data, this.currentScene, null) as PBRMaterial;
-        // for (const key in data) {
-        //   if (key.endsWith('_MAP')) {
-        //     const uuid = data[key];
-        //     // this.getTexture(uuid).then((tex) => {
-        //     //   //@ts-ignore
-        //     //   mat[key.replace('_MAP', '')] = tex;
-        //     // });
-        //   }
-        // }
+        for (const key in data) {
+          if (key.endsWith('_MAP')) {
+            const uuid = data[key];
+            this.getTexture(uuid).then((tex) => {
+              if (!key.includes('.')) {
+                //@ts-ignore
+                mat[key.replace('_MAP', '')] = tex;
+              } else {
+                let result = key.replace('_MAP', '');
+                const keyArray = result.split('.');
+                //@ts-ignore
+                mat[keyArray[0]][keyArray[1]] = tex;
+              }
+            });
+          }
+        }
 
         mat.uuid = uuid;
         this.sceneMaterial.set(uuid, mat);
@@ -353,9 +385,6 @@ export class RuntimeLibrary
       this.geomertyFile.set(key, item);
     });
     this.tempGeometryFile.clear();
-    this.tempTextureFile.forEach((item, key) => {
-      this.textureFile.set(key, item);
-    });
     this.tempTextureFile.clear();
   }
 }
@@ -385,4 +414,14 @@ function imgToBlob(img: HTMLImageElement | ImageBitmap) {
       resolve(blob);
     });
   });
+}
+
+function fixMaterial(node: TransformNode) {
+  // const map = new WeakMap<Material, PBRMaterial>();
+  // const meshes = node.getChildMeshes(true);
+  // meshes.forEach((mesh) => {
+  //   const mat = new PBRMaterial(mesh.material.name);
+  //   mesh.material = mat;
+  //   mat.cullBackFaces = false;
+  // });
 }
