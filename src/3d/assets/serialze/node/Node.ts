@@ -13,6 +13,9 @@ export function serializeNode(
   serializeAssets: boolean,
 ): CC.ObjectNode {
   try {
+    if (!node.uuid) {
+      node.uuid = ID.generateUUID();
+    }
     const reuslt: Partial<CC.ObjectNode> = {
       uuid: node.uuid,
       name: node.name,

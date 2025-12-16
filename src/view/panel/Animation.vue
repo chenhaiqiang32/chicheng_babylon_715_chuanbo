@@ -85,42 +85,43 @@ function onSelectChange(uuid: string) {
   if (!currentRuntimeAction.value) {
     return
   }
-  Timeline.Instance.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+  timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
 }
 
 
 
 watch(speed, (val) => {
-  Timeline.Instance.speed = val
+  timeline.speed = val
 })
 
 watch(time, (val) => {
-  if (Timeline.Instance && Timeline.Instance?.time != val) {
-    Timeline.Instance.time = val
+  if (timeline && timeline?.time != val) {
+    timeline.time = val
   }
 })
 
 watch(scale, (val) => {
-  Timeline.Instance.scale = val
+  timeline.scale = val
 })
 
 watch(playing, (val) => {
   if (val) {
-    Timeline.Instance.play()
+    timeline.play()
   } else {
-    Timeline.Instance.pause()
+    timeline.pause()
   }
 })
 
 let resizeObserver: ResizeObserver | null = null
-
+let timeline: Timeline
 onMounted(() => {
+  timeline = new Timeline()
   resizeObserver = new ResizeObserver((entries) => {
     width.value = entries[0].contentRect.width
   })
   if (domRef.value) {
-    Timeline.Instance.init({ maxTime: 60 * 10 }, domRef.value).then(() => {
-      Timeline.Instance.setTimeChanged((t: number) => {
+    timeline.init({ maxTime: 60 * 10 }, domRef.value).then(() => {
+      timeline.setTimeChanged((t: number) => {
         time.value = t
       })
     })
@@ -136,7 +137,13 @@ onMounted(() => {
   onSceneChange()
 });
 
-onUnmounted(() => {
+
+onBeforeUnmount(() => {
+  if (resizeObserver && domRef.value) {
+    resizeObserver.unobserve(domRef.value)
+    resizeObserver.disconnect()
+  }
+  timeline.dispose()
   Editor.Instance.off('onPositionChanged', onPositionChanged)
   Editor.Instance.off('onPositionStartChanged', onPositionStartChanged)
   Editor.Instance.off('onRotationChanged', onRotationChanged)
@@ -144,7 +151,6 @@ onUnmounted(() => {
   Editor.Instance.off('onScaleChanged', onScaleChanged)
   Editor.Instance.off('onScaleStartChanged', onScaleStartChanged)
   Editor.Instance.off('onSceneChanged', onSceneChange)
-
 })
 
 function onSceneChange() {
@@ -216,7 +222,7 @@ function onPositionChanged(e: { object: TransformNode }) {
 
     }
   }
-  Timeline.Instance.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+  timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
 
 }
 function onRotationChanged(e: { object: TransformNode }) {
@@ -259,7 +265,7 @@ function onRotationChanged(e: { object: TransformNode }) {
       refreshClipList()
     }
   }
-  Timeline.Instance.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+  timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
 
 }
 function onScaleChanged(e: { object: TransformNode }) {
@@ -301,38 +307,26 @@ function onScaleChanged(e: { object: TransformNode }) {
       currentRuntimeAction.value.clips.push(clip)
       refreshClipList()
     }
-    Timeline.Instance.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+    timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
   }
 }
-onBeforeUnmount(() => {
-  if (resizeObserver && domRef.value) {
-    resizeObserver.unobserve(domRef.value)
-    resizeObserver.disconnect()
-  }
-  Timeline.Instance.dispose()
-  Editor.Instance.off('onPositionChanged', onPositionChanged)
-  Editor.Instance.off('onRotationChanged', onRotationChanged)
-  Editor.Instance.off('onScaleChanged', onScaleChanged)
-  Editor.Instance.off('onRotationStartChanged', onRotationStartChanged)
-  Editor.Instance.off('onScaleStartChanged', onScaleStartChanged)
-  Editor.Instance.off('onPositionStartChanged', onPositionStartChanged)
-})
+
 
 const currentSelect = ref('')
 
 const playSpeed = [0.5, 1, 2, 4, 8]
 
 const toStart = () => {
-  Timeline.Instance.toStart()
+  timeline.toStart()
 }
 const prev = () => {
-  Timeline.Instance.prev()
+  timeline.prev()
 }
 const next = () => {
-  Timeline.Instance.next()
+  timeline.next()
 }
 const toEnd = () => {
-  Timeline.Instance.toEnd()
+  timeline.toEnd()
 }
 const onTimeInput = (v: string) => {
   time.value = isNaN(Number(v)) ? 0 : Number(v)

@@ -117,5 +117,6 @@ export namespace CC {
     name: string;
     uuid: string;
     clips: Clip[];
+    desc?: string;
   }
 }

@@ -18,7 +18,6 @@ onMounted(async () => {
 })
 
 async function handleDrop(ev: DragEvent) {
-
     ev.preventDefault();
     const data = JSON.parse(ev.dataTransfer?.getData('assets') || '{}');
     if (data.type === "object") {
@@ -30,7 +29,7 @@ async function handleDrop(ev: DragEvent) {
     }
 }
 
-async function createObject(ev: DragEvent, uuid: number) {
+async function createObject(ev: DragEvent, uuid: string) {
     const bound = canvasRef.value.getBoundingClientRect()
     const ray = Editor.Instance.getRaycastPoint(ev.clientX - bound.left, ev.clientY - bound.top)
     const node = await RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, uuid) as TransformNode
