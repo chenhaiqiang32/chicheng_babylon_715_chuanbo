@@ -31,6 +31,8 @@ watch(() => props.object, (newValue) => {
   }
 })
 
+const emit = defineEmits(['change'])
+
 
 function syncFromObject() {
   const v = getInspectorPropertyValue(props.object, props.property) ?? 0
@@ -45,8 +47,14 @@ const ChangeTransparencyMode = (changedValue: number) => {
   setInspectorEffectivePropertyValue(props.object, props.property, value.value)
   if (newValue !== oldValue.value && !props.noUndoRedo) {
     registerSimpleUndoRedo({
-      object: props.object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
+      object: props.object,
+      property: props.property,
+      oldValue: oldValue.value,
+      newValue,
+      executeRedo: true,
+      action: () => {
         syncFromObject()
+        emit('change')
       }
     })
     oldValue.value = newValue

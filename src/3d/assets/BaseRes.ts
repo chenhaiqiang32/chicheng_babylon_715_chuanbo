@@ -12,7 +12,7 @@ export namespace CC {
   }
 
   export interface ObjectNode {
-    id: number;
+    uuid: string;
     name: string;
     type: string;
     children: ObjectNode[];
@@ -74,6 +74,7 @@ export namespace CC {
     clearColor: number[];
     collisionsEnabled: boolean;
     useRightHandedSystem: boolean;
+    animation: CC.Animation[];
     fog: {
       fogMode: number;
       color: number[];
@@ -87,7 +88,7 @@ export namespace CC {
       physicsEngine: string;
     };
     metadata: any;
-    activeCamera: number;
+    activeCamera: string;
     reflectionProbes: number[];
     environment: {
       texture: number;
@@ -99,5 +100,23 @@ export namespace CC {
     defaultRenderingPipeline: any;
     ssao2RenderingPipeline: any;
     ssrPostProcess: any;
+  }
+  export interface Clip {
+    name: string;
+    uuid: string;
+    objectUuid: string;
+    property: string;
+    type: 'float' | 'v3' | 'quaternion' | 'v2' | 'color3' | 'boolean';
+    key: {
+      time: number;
+      value: any;
+    }[];
+  }
+
+  export interface Animation {
+    name: string;
+    uuid: string;
+    clips: Clip[];
+    desc?: string;
   }
 }

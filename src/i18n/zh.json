@@ -258,7 +258,11 @@
     "new": "新建",
     "select": "选择",
     "speed": "速率",
-    "scaling": "缩放"
+    "scaling": "缩放",
+    "position": "位置",
+    "rotation": "旋转",
+    "opacity": "透明度",
+    "rotationQuaternion": "四元数旋转"
   },
   "dialog": {
     "chooseSaveMode": {

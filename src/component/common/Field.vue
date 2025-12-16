@@ -47,6 +47,7 @@ const textStyle = {
     .field-content {
         flex: 1;
         display: flex;
+        position: relative;
     }
 }
 </style>

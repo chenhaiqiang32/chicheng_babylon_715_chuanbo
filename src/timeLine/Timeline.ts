@@ -11,15 +11,6 @@ export interface TimelineConfig {
 }
 
 export class Timeline {
-  private static instance: Timeline;
-
-  static get Instance() {
-    if (!Timeline.instance) {
-      Timeline.instance = new Timeline();
-    }
-    return Timeline.instance;
-  }
-
   private app: Application;
   private resizeObserver: ResizeObserver;
   private dom: HTMLElement;

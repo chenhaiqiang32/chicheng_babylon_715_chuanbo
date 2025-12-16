@@ -4,6 +4,7 @@ declare module '@babylonjs/core' {
   interface Scene {
     name: string;
     uuid: string;
+    runtimeAnimation: any[];
   }
   interface Node {
     uuid: string;

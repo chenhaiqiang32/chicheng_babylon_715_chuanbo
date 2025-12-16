@@ -5,6 +5,7 @@ import { deserializeCamera, serializeCamera } from './Camera';
 import { deserializeTransformNode, serializeTransformNode } from './Transform';
 import { deserializeLight, serializeLight } from './Light';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
+import { ID } from '@/utils/id';
 
 export function serializeNode(
   node: TransformNode,
@@ -12,9 +13,13 @@ export function serializeNode(
   serializeAssets: boolean,
 ): CC.ObjectNode {
   try {
+    if (!node.uuid) {
+      node.uuid = ID.generateUUID();
+    }
     const reuslt: Partial<CC.ObjectNode> = {
-      id: node.uniqueId,
+      uuid: node.uuid,
       name: node.name,
+      visible: node.isVisible,
       children: node
         .getChildren()
         ?.map((item) => serializeNode(item as TransformNode, assets, serializeAssets)),
@@ -31,7 +36,6 @@ export function serializeNode(
     if (node instanceof TransformNode) {
       serializeTransformNode(node, reuslt as CC.TransformNode);
     }
-    reuslt.visible = node.isVisible;
     return reuslt as CC.ObjectNode;
   } catch (error) {
     console.error('序列化节点时出错:', error);
@@ -58,7 +62,9 @@ export async function deserializeNode(
     currentNode = new TransformNode(node.name, scene);
   }
   if (!clone) {
-    currentNode.uniqueId = node.id;
+    currentNode.uuid = node.uuid;
+  } else {
+    currentNode.uuid = ID.generateUUID();
   }
   if (parent) {
     currentNode.parent = parent;

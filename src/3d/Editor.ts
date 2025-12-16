@@ -53,6 +53,7 @@ interface EditorEvent {
   onRotationStartChanged: { object: TransformNode };
   onScaleStartChanged: { object: TransformNode };
   onScaleChanged: { object: TransformNode };
+  onSceneChanged: { scene: Scene };
 }
 
 export class Editor extends Dispatch<EditorEvent> {
@@ -171,6 +172,7 @@ export class Editor extends Dispatch<EditorEvent> {
     this.scene = scene;
     useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
+    this.dispatch('onSceneChanged', { scene });
   }
 
   getRaycastPoint(x?: number, y?: number) {
@@ -223,7 +225,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const selectWatcher = watch(
       () => useScene().currentSelected,
       (v) => {
-        this.selectNodes = v?.map((x) => this.getNodeById(x)) ?? [];
+        this.selectNodes = v?.map((x) => getSceneNodeByUUid(this.scene, x)) ?? [];
       },
     );
     const controlModeWatcher = watch(
@@ -311,17 +313,8 @@ export class Editor extends Dispatch<EditorEvent> {
    * @param id 节点的唯一ID
    * @returns 找到的节点，或null
    */
-  getNodeById(id: number): Node {
-    let node: Node = this.scene.getTransformNodeByUniqueId(id);
-    if (!node) {
-      node = this.scene.getMeshByUniqueId(id);
-    }
-    if (!node) {
-      node = this.scene.getCameraByUniqueId(id);
-    }
-    if (!node) {
-      node = this.scene.getLightByUniqueId(id);
-    }
+  getNodeById(id: string): Node {
+    let node: Node = getSceneNodeByUUid(this.scene, id);
     return node;
   }
 
@@ -441,7 +434,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const pickInfo = this.scene.pickWithRay(ray);
     // 赋值当前选中的 Object
     if (pickInfo.hit) {
-      useScene().setCurrentSelect([pickInfo.pickedMesh.uniqueId]);
+      useScene().setCurrentSelect([pickInfo.pickedMesh.uuid]);
     } else {
       useScene().setCurrentSelect();
     }
@@ -644,4 +637,27 @@ function preiver() {
   //   '1.png',
   //   false,
   // );
+}
+
+function getSceneNodeByUUid(scene: Scene, uuid: string) {
+  for (const item of scene.rootNodes) {
+    const ret = getNodeByUUid(item, uuid);
+    if (ret) {
+      return ret;
+    }
+  }
+}
+
+function getNodeByUUid(node: Node, uuid: string): Node | null {
+  if (node.uuid === uuid) {
+    return node;
+  }
+  const children = node.getChildren();
+  if (children?.length > 0) {
+    const ret = children.find((item) => getNodeByUUid(item, uuid));
+    if (ret) {
+      return ret;
+    }
+  }
+  return null;
 }
