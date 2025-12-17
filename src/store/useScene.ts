@@ -15,8 +15,8 @@ function buildHierarchy(node: Node): HierarchyNode {
 
   // todo:根据不同类型设置 isActive 字段
   var isActive = true;
-    // 如果是摄像机，判断是否是 scene.activeCamera，如果是则isActive=true
-  if(node.getClassName() === 'ArcRotateCamera') {
+    // 如果是摄像机，判断是否为 scene.activeCamera，如果是则=true
+  if(node.getClassName() === 'ArcRotateCamera' || node.getClassName() === 'UniversalCamera') {
     isActive = Editor.Instance.Scene.activeCamera.uuid === node.uuid;
   }
 
@@ -63,6 +63,10 @@ export const useScene = defineStore('scene', () => {
     hierarchy.value = rootNodes.map(buildHierarchy);
   }
 
+  function addHierarchy(node: Node){
+    hierarchy.value.push(buildHierarchy(node));
+  }
+
   function setCurrentSelect(objectIds?: string[]) {
     currentSelected.value = objectIds ?? [];
   }
@@ -106,6 +110,7 @@ export const useScene = defineStore('scene', () => {
     setSceneList,
     addScene,
     setHierarchy,
+    addHierarchy,
     currentSelected,
     setCurrentSelect,
     currentControlMode,

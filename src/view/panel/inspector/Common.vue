@@ -7,6 +7,7 @@
             @change="onNameChanged" />
         <Switch :object="props.object" property="isVisible" :label="$t('component.common.visible')"
             @change="setVisible" />
+        <Switch v-if="props.object instanceof AbstractMesh" :object="props.object" property="checkCollisions" :label="$t('component.common.physics')"/>
     </SectionField>
 </template>
 <script setup lang='ts'>
@@ -14,9 +15,9 @@ import { computed, onMounted, ref, watch } from "vue"
 import SectionField from '@/component/common/SectionField.vue'
 import StringField from '@/component/base/StringField.vue'
 import Switch from "@/component/base/Switch.vue";
-import { onNodeModifiedObservable } from "@/tools/observables"
 import Field from "@/component/common/Field.vue";
 import { Editor } from "@/3d/Editor";
+import { AbstractMesh, PhysicsImpostor} from "@babylonjs/core";
 const props = defineProps<{ object: any }>()
 //const objectType = ref<string>("");
 // 计算属性：获取物体类型信息
@@ -26,7 +27,6 @@ const objectType = computed(() => {
 });
 function setVisible(visible: boolean) {
     props.object.isVisible = visible;
-    //onNodeModifiedObservable.notifyObservers(props.object)
     Editor.Instance.switchNodeActive(props.object.uuid, props.object.isVisible);
 }
 

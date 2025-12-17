@@ -28,6 +28,7 @@ import {
   SSRRenderingPipeline,
   MotionBlurPostProcess,
   Camera,
+  UniversalCamera,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -42,6 +43,7 @@ import { createDefaultRenderingPipeline } from './rendering/default-pipeline';
 import { createSSAO2RenderingPipeline } from './rendering/ssao';
 import { createSSRRenderingPipeline } from './rendering/ssr';
 import { createMotionBlurPostProcess } from './rendering/motion-blur';
+//import * as CANNON from 'cannon-es';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -174,6 +176,10 @@ export class Editor extends Dispatch<EditorEvent> {
       useScene().currentScene = uuid;
     }
     this.scene = scene;
+    this.scene.collisionsEnabled = true;
+    //this.scene.gravity = new Vector3(0, -0.9, 0);
+    // 开启物理引擎
+    //this.scene.enablePhysics(new Vector3(0, -0.9, 0), new CannonJSPlugin(true, 10, CANNON));
     useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });
@@ -535,6 +541,22 @@ export class Editor extends Dispatch<EditorEvent> {
         break;
     }
   };
+
+  addUniversalCamera(name:string = null){
+    const camera = new UniversalCamera(name ? name : '1stCamera', new Vector3(0,1,-5), this.scene);
+    camera.speed = 0.5;
+    camera.inertia = 0;
+
+    // 开启场景和摄像机碰撞
+    camera.checkCollisions = true;
+    camera.applyGravity = true;
+    // 摄像机碰撞体范围
+    camera.ellipsoid = new Vector3(1,1,1);
+    useScene().setHierarchy(this.scene.rootNodes);
+    nextTick(() => {
+      this.activeCamera(camera);
+    })
+  }
 
   /**
    * 添加相机，会将相机设置为场景的activeCamera

@@ -22,6 +22,7 @@
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vueuse/core": "^14.0.0",
     "babylonjs-fbx-loader": "^1.1.0",
+    "cannon-es": "^0.20.0",
     "element-plus": "^2.11.8",
     "gsap": "^3.13.0",
     "jszip": "^3.10.1",

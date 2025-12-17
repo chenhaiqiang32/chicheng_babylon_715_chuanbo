@@ -31,6 +31,7 @@ export namespace CC {
     geometry: string;
     material: string;
     sideOrientation: number;
+    checkCollisions: boolean;
   }
   export interface LightNode extends ObjectNode {
     type: 'light';

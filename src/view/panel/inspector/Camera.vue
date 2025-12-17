@@ -4,6 +4,10 @@
             :max="Math.PI" />
         <Number :label="$t('component.camera.nearClipPlane')" :object="object" property="minZ" />
         <Number :label="$t('component.camera.farClipPlane')" :object="object" property="maxZ" />
+        <Number  v-if="object instanceof UniversalCamera" :label="$t('component.camera.speed')" :object="object" property="speed" />
+        <Switch v-if="object instanceof UniversalCamera"  :label="$t('component.camera.collision')" :object="object" property="checkCollisions" />
+        <Switch v-if="object instanceof UniversalCamera"  :label="$t('component.camera.gravity')" :object="object" property="applyGravity"
+        @change="onGravity" />
         <div class="active-camera">
             <ElButton style="margin-left: auto; margin-right: 10px;" type="info" size="small" @click="activeCamera">激活当前摄像机</ElButton>
         </div>
@@ -14,12 +18,15 @@ import { onMounted, onUnmounted, ref, shallowRef } from 'vue';
 import SectionField from '@/component/common/SectionField.vue'
 import Slider from '@/component/base/Slider.vue';
 import Number from '@/component/base/Number.vue';
+import Switch from '@/component/base/Switch.vue';
 import { ElButton } from 'element-plus';
 import { Editor } from '@/3d/Editor';
+import { UniversalCamera } from '@babylonjs/core';
 
 
 
 import { ArcRotateCamera, Camera } from '@babylonjs/core';
+import { FirstPersonJump } from '@/3d/core/utils/FirstPersonJump';
 
 
 const props = defineProps<{
@@ -42,6 +49,10 @@ function activeCamera(){
     {
         Editor.Instance.activeCamera(props.object);
     }
+}
+
+function onGravity(){
+    var jump = new FirstPersonJump(props.object as UniversalCamera);
 }
 
 </script>

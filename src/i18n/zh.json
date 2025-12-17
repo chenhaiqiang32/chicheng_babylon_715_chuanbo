@@ -82,13 +82,17 @@
       "fov": "视野",
       "aspectRatio": "宽高比",
       "nearClipPlane": "近裁剪面",
-      "farClipPlane": "远裁剪面"
+      "farClipPlane": "远裁剪面",
+      "speed": "移动速度",
+      "collision": "碰撞检测",
+      "gravity": "重力"
     },
     "common": {
       "title": "常规",
       "type": "类型",
       "name": "名称",
-      "visible": "可见性"
+      "visible": "可见性",
+      "physics": "物理效果"
     },
     "transform": {
       "title": "矩阵信息",

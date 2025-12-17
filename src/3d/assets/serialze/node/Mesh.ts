@@ -9,6 +9,7 @@ export function serializeMeshNode(
   serializeAssets: boolean = true,
 ) {
   meshData.type = 'mesh';
+  meshData.checkCollisions = mesh.checkCollisions;
   meshData.material = mesh.material?.uuid || '';
   if (mesh.geometry) {
     if (serializeAssets) {
@@ -29,6 +30,7 @@ export async function deserializeMeshNode(
   padding: Array<Promise<any>> = [],
 ) {
   const mesh = new Mesh(data.name, scene, {});
+  mesh.checkCollisions = data.checkCollisions;
   if (data.geometry) {
     const geometryPromise = assets.getGeometry(data.geometry);
     padding.push(geometryPromise);

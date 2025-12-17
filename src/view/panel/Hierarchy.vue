@@ -69,7 +69,7 @@ import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
-import { Camera } from '@babylonjs/core';
+import { Camera, TransformNode } from '@babylonjs/core';
 
 const searchText = ref('');
 const treeProps = {
@@ -83,9 +83,10 @@ const sceneSettingVisible = ref(false);
 
 const iconMap: Record<string, string> = {
     ArcRotateCamera: "cameraIcon",
+    UniversalCamera: "cameraIcon",
     DirectionalLight: "lightIcon",
     Mesh: "meshIcon",
-    TransformNode: "meshIcon"
+    TransformNode: "transformNodeIcon"
 }
 
 onMounted(() => {
@@ -111,24 +112,24 @@ function contextMenu(e: MouseEvent) {
             },
             {
                 name: '添加节点',
-                subCommand: [{
-                    name: '添加空节点',
-                    callback: () => {
-                        console.log('添加空节点');
-                    }
-                }, {
-                    name: '添加空节点2',
-                    callback: () => {
-                        console.log('添加空节点2');
-                    }
-                }]
+                callback: () => {
+                    addEmptyHierarchy();
+                }
             },
             {
                 name: '添加相机',
-                callback: () => {
-                    addCamera();
-                },
-            }
+                subCommand: [{
+                    name: '添加第一人称相机',
+                    callback: () => {
+                        addUniCamera();
+                    }
+                }, {
+                    name: '添加第三人称相机',
+                    callback: () => {
+                        addArcCamera();
+                    }
+                }]
+            },
         ]
     })
 
@@ -162,7 +163,7 @@ function onNameChanged(node: { id: string, newName: string }) {
 }
 
 /**
- * 切换当前激活的摄像机
+ * 切换当前激活的摄像机的节点isActive属性
  */
 function onActiveCameraChanged(data: {newUuid: string, oldUuid: string}) {
     treeRef.value.getNode(data.oldUuid).data.isActive = false;
@@ -220,8 +221,26 @@ const toggleSceneSetting = async () => {
     useDialog(SceneSettingDialog)
 }
 
-function addCamera()
+/**
+ * 添加空节点
+ */
+function addEmptyHierarchy()
 {
+    var node = new TransformNode("empty", Editor.Instance.Scene);
+    useScene().addHierarchy(node);
+}
+
+/**
+ * 添加第一人称Universal摄像机
+ */
+function addUniCamera(){
+    Editor.Instance.addUniversalCamera();
+}
+
+/**
+ * 添加ArcRotate摄像机
+ */
+function addArcCamera(){
     Editor.Instance.addCamera();
 }
 
