@@ -107,6 +107,8 @@ export class Animator {
       });
     });
     this.objectInfos.length = 0;
+    this.clips.length = 0;
+    this.animation = null;
   }
 
   dispose() {

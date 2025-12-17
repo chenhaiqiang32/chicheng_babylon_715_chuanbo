@@ -89,6 +89,7 @@ const runtimeAnimations = shallowRef<CC.Animation[]>([])
 let currentRuntimeAction = shallowRef<CC.Animation>(null)
 let animator: Animator
 function onSelectChange(uuid: string) {
+  timeline.stop()
   timeline.seek(0)
   animator?.restoreDefault()
   currentRuntimeAction.value = runtimeAnimations.value.find(item => item.uuid == uuid) || null
@@ -150,6 +151,7 @@ onMounted(() => {
   onSceneChange()
 });
 function onSceneChangeBefore() {
+  timeline.stop()
   timeline?.seek(0);
   animator?.restoreDefault()
 }
