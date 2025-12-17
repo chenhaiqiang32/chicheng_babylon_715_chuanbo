@@ -9,7 +9,8 @@ import './style/element.scss';
 import 'virtual:svg-icons-register';
 
 import { i18n } from './i18n';
-import { undo, redo, onUndoObservable, onRedoObservable } from './tools/undoredo';
+import { undo, redo } from './tools/undoredo';
+import { registerKeyDown } from './utils/ShortcutKey';
 
 const app = createApp(App);
 
@@ -19,16 +20,12 @@ app.use(router);
 
 app.mount('#app');
 
-// 添加全局键盘事件监听，实现撤销/重做功能
-window.addEventListener('keydown', (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
-    event.preventDefault();
+registerKeyDown((event) => {
+  if (event.ctrlKey && event.key === 'z') {
     undo();
   } else if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
-     event.preventDefault();
     redo();
   } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z') {
-    event.preventDefault();
     redo();
   }
 });

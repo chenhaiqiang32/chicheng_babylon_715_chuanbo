@@ -6,23 +6,23 @@
       <ElButton type="info" size="small" @click="changeMaterial">更换</ElButton>
     </div>
     <SectionField :title="$t('component.material.base')">
-
-      <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor" />
+      <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor"
+        @change="(newC, oldC) => changeProperty('albedoColor', newC, oldC, 'color3')" />
       <Color :label="$t('component.material.emissive')" :object="material" property="emissiveColor" />
-
-
       <Slider v-if="material.metallicTexture" :label="$t('component.material.metallic')" :object="material"
-        property="metallicF0Factor" :min="0" />
+        property="metallicF0Factor" :min="0"
+        @change="(newC, oldC) => changeProperty('metallicF0Factor', newC, oldC, 'float')" />
       <Slider v-if="!material.metallicTexture" :label="$t('component.material.metallic')" :object="material"
-        property="metallic" :min="0" />
-      <Slider :label="$t('component.material.roughness')" :object="material" property="roughness" :min="0" />
-
+        property="metallic" :min="0" @change="(newC, oldC) => changeProperty('metallic', newC, oldC, 'float')" />
+      <Slider :label="$t('component.material.roughness')" :object="material" property="roughness" :min="0"
+        @change="(newC, oldC) => changeProperty('roughness', newC, oldC, 'float')" />
       <TransparencyModeField :object="material" property="transparencyMode" @change="changeTransparencyMode" />
       <AlphaModeField v-if="transparencyMode != 0" :object="material" property="alphaMode" />
       <Slider v-if="transparencyMode != 0" :label="$t('component.material.alpha')" :object="material" property="alpha"
-        :min="0" :max="1" />
+        :min="0" :max="1" @change="(newC, oldC) => changeProperty('alpha', newC, oldC, 'float')" />
       <Slider v-if="transparencyMode === 1" :label="$t('component.material.alphaCutOff')" :object="material"
-        property="alphaCutOff" :min="0" :max="1" />
+        property="alphaCutOff" :min="0" :max="1"
+        @change="(newC, oldC) => changeProperty('alphaCutOff', newC, oldC, 'float')" />
     </SectionField>
 
     <SectionField :title="$t('component.material.texture')">
@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, } from "vue"
+import { inject, onMounted, ref, watch, } from "vue"
 import SectionField from "@/component/common/SectionField.vue"
 import StringField from "@/component/base/StringField.vue"
 import Switch from "@/component/base/Switch.vue"
@@ -150,8 +150,21 @@ const force = () => { }
 const transparencyMode = ref(0)
 
 
+watch(() => props.material, () => {
+  transparencyMode.value = props.material.transparencyMode;
+}, {
+  immediate: true
+})
+
+
 function changeTransparencyMode() {
   transparencyMode.value = props.material.transparencyMode;
+}
+
+const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')
+
+function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
+  propertyChanged?.('material.' + property, newValue, oldValue, type);
 }
 
 async function changeMaterial() {

@@ -262,7 +262,14 @@
     "position": "位置",
     "rotation": "旋转",
     "opacity": "透明度",
-    "rotationQuaternion": "四元数旋转"
+    "rotationQuaternion": "四元数旋转",
+    "isVisible": "可见性",
+    "material": {
+      "albedoColor": "颜色",
+      "alpha": "透明度",
+      "roughness": "粗糙度",
+      "metallic": "金属度"
+    }
   },
   "dialog": {
     "chooseSaveMode": {

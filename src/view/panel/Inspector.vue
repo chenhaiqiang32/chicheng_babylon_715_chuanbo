@@ -10,7 +10,7 @@
 <script setup lang='ts'>
 import BasePanel from '@/component/common/BasePanel.vue'
 import Common from './inspector/Common.vue'
-import { ref, watch, KeepAlive, shallowRef, onMounted, onUnmounted, computed } from 'vue'
+import { watch, shallowRef, computed, provide, toRaw } from 'vue'
 import { storeToRefs } from 'pinia';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
@@ -19,8 +19,20 @@ import Transform from './inspector/Transform.vue'
 import CameraComp from './inspector/Camera.vue'
 import Animation from './inspector/Animation.vue'
 import { Camera, Mesh, TransformNode } from '@babylonjs/core';
+import { _EventBus } from '@/utils/dispatch';
 const { currentSelected } = storeToRefs(useScene());
 const selectedObject = shallowRef<any>(null);
+
+function propertyChanged(property: string, newValue: any, oldValue: any, type: string) {
+    _EventBus.dispatch('onPropertyChanged', {
+        object: toRaw(selectedObject.value),
+        property,
+        type,
+        newValue,
+        oldValue
+    })
+}
+provide('propertyChanged', propertyChanged);
 
 watch(currentSelected, (newSelected) => {
     if (newSelected && newSelected.length > 0) {
@@ -33,7 +45,6 @@ watch(currentSelected, (newSelected) => {
         selectedObject.value = null;
     }
 }, { immediate: true });
-
 
 const comps = computed(() => {
     if (!selectedObject.value) {
@@ -49,7 +60,6 @@ const comps = computed(() => {
     if (selectedObject.value instanceof Camera) {
         arr.push(CameraComp)
     }
-    arr.push(Animation);
     return arr
 })
 

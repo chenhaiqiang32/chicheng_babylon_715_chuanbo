@@ -27,6 +27,8 @@ export class Timeline {
 
   private selectBox: Graphics;
 
+  private keyframes: KeyframeData[][] = [];
+
   private maxTime = 100;
   constructor() {
     this.app = new Application();
@@ -116,6 +118,12 @@ export class Timeline {
     this.dom.addEventListener('scroll', this.onScroll);
     this.keyframeContent = new KeyframeContent(this.maxTime);
     this.app.stage.addChild(this.keyframeContent.container);
+    this.keyframeContent.onMoveEnd = () => {
+      if (this.timeControls) {
+        const times = this.keyframes.flatMap((x) => x.map((v) => v.time));
+        this.timeControls.animationMaxTime = Math.max(...times) + 1;
+      }
+    };
 
     this.header = new HeaderTime(this.maxTime);
     this.header.onSetTime = (e) => (this.time = e);
@@ -165,8 +173,15 @@ export class Timeline {
   };
 
   setKeyframes(keyframes: KeyframeData[][]) {
+    this.keyframes = keyframes;
     this.column = keyframes.length;
-    this.keyframeContent.setKeyframes(keyframes);
+    if (this.keyframeContent) {
+      this.keyframeContent.setKeyframes(keyframes);
+    }
+    if (this.timeControls) {
+      const times = keyframes.flatMap((x) => x.map((v) => v.time));
+      this.timeControls.animationMaxTime = Math.max(...times) + 1;
+    }
   }
 
   get scale() {
@@ -217,7 +232,7 @@ export class Timeline {
     }
   }
   toEnd() {
-    this.time = this.keyframeContent.getMaxTime();
+    this.time = this.timeControls.animationMaxTime;
     this.seek(this.time);
   }
   toStart() {

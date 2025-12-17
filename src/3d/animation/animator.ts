@@ -1,6 +1,7 @@
 import { Quaternion } from '@babylonjs/core';
 import { CC } from '../assets/BaseRes';
 import { Editor } from '../Editor';
+import * as ObjectUtils from '@/tools/property';
 interface RuntimeClip {
   object: any;
   clip: CC.Clip;
@@ -33,17 +34,93 @@ export class Animator {
       const startKey = keys[start];
       const endKey = keys[end];
       const value = lerpValue(startKey.value, endKey.value, percent, clip.clip.type);
-      if (clip.clip.type == 'v3') {
+      switch (clip.clip.type) {
+        case 'float':
+        case 'boolean':
+          ObjectUtils.setObjectValue(clip.object, clip.clip.property, value);
+          break;
+        case 'v3':
+          setV3Value(clip.object, clip.clip.property, value);
+          break;
+        case 'quaternion':
+          setQuaternionValue(clip.object, clip.clip.property, value);
+          break;
+        case 'color3':
+          setColor3Value(clip.object, clip.clip.property, value);
+          break;
       }
     }
   }
+  private objectInfos: {
+    target: any;
+    values: {
+      property: string;
+      value: any;
+      type: string;
+    }[];
+  }[] = [];
+  collectInfo() {
+    for (let index = 0; index < this.clips.length; index++) {
+      const clip = this.clips[index];
+      let infos = this.objectInfos.find((x) => x.target == clip.object);
+      if (!infos) {
+        infos = {
+          target: clip.object,
+          values: [],
+        };
+        this.objectInfos.push(infos);
+      }
+      const v = infos.values.find((x) => x.property == clip.clip.property);
+      if (!v) {
+        infos.values.push({
+          property: clip.clip.property,
+          type: clip.clip.type,
+          value: getObjectValue(clip.object, clip.clip.property, clip.clip.type),
+        });
+      }
+    }
+    console.log(this.objectInfos);
+  }
+  addCollectInfo(object: any, property: string, value: any, type: string) {
+    let infos = this.objectInfos.find((x) => x.target == object);
+    if (!infos) {
+      infos = {
+        target: object,
+        values: [],
+      };
+      this.objectInfos.push(infos);
+    }
+    const v = infos.values.find((x) => x.property == property);
+    if (!v) {
+      infos.values.push({
+        property,
+        type,
+        value,
+      });
+    }
+  }
+
+  restoreDefault() {
+    this.objectInfos.forEach((x) => {
+      x.values.forEach((v) => {
+        setObjectValue(x.target, v.property, v.type, v.value);
+      });
+    });
+    this.objectInfos.length = 0;
+  }
+
+  dispose() {
+    this.restoreDefault();
+  }
 }
+
 let q1 = new Quaternion();
 let q2 = new Quaternion();
+let q3 = new Quaternion();
 function lerpValue(start: any, end: any, percent: number, type: string) {
-  if (type == 'number') {
+  if (type == 'float') {
     return start + (end - start) * percent;
-  } else if (type == 'v3') {
+  } else if (type == 'v3' || type == 'color3') {
     const x = lerp(start[0], end[0], percent);
     const y = lerp(start[1], end[1], percent);
     const z = lerp(start[2], end[2], percent);
@@ -51,9 +128,10 @@ function lerpValue(start: any, end: any, percent: number, type: string) {
   } else if (type == 'quaternion') {
     q1.fromArray(start);
     q2.fromArray(end);
-    Quaternion.Slerp(q1, q2, percent);
-    return [q1.x, q1.y, q1.z, q1.w];
-  } else {
+    Quaternion.SlerpToRef(q2, q1, percent, q3);
+    return [q3.x, q3.y, q3.z, q3.w];
+  } else if (type == 'boolean') {
+    return percent < 1 ? start : end;
   }
 }
 
@@ -93,4 +171,70 @@ function getPercent(time: number, keys: { time: number; value: any }[]) {
   }
 
   return { percent, start, end };
+}
+function setV3Value(object: any, property: string, value: any) {
+  ObjectUtils.setObjectValue(object, property + '.x', value[0]);
+  ObjectUtils.setObjectValue(object, property + '.y', value[1]);
+  ObjectUtils.setObjectValue(object, property + '.z', value[2]);
+}
+
+function setQuaternionValue(object: any, property: string, value: any) {
+  ObjectUtils.setObjectValue(object, property + '.x', value[0]);
+  ObjectUtils.setObjectValue(object, property + '.y', value[1]);
+  ObjectUtils.setObjectValue(object, property + '.z', value[2]);
+  ObjectUtils.setObjectValue(object, property + '.w', value[3]);
+}
+function setColor3Value(object: any, property: string, value: any) {
+  ObjectUtils.setObjectValue(object, property + '.r', value[0]);
+  ObjectUtils.setObjectValue(object, property + '.g', value[1]);
+  ObjectUtils.setObjectValue(object, property + '.b', value[2]);
+}
+
+function getObjectValue(obj: any, property: string, type: CC.KeyType) {
+  switch (type) {
+    case 'v3':
+    case 'v2':
+    case 'color3':
+    case 'quaternion': {
+      const value = ObjectUtils.getObjectValue(obj, property);
+      return value.asArray();
+    }
+    case 'boolean':
+    case 'float': {
+      return ObjectUtils.getObjectValue(obj, property);
+    }
+  }
+}
+
+function setObjectValue(obj: any, property: string, type: string, value: any) {
+  switch (type) {
+    case 'color3': {
+      ObjectUtils.setObjectValue(obj, property + '.r', value[0]);
+      ObjectUtils.setObjectValue(obj, property + '.g', value[1]);
+      ObjectUtils.setObjectValue(obj, property + '.b', value[2]);
+      return;
+    }
+    case 'v2': {
+      ObjectUtils.setObjectValue(obj, property + '.x', value[0]);
+      ObjectUtils.setObjectValue(obj, property + '.y', value[1]);
+      return;
+    }
+    case 'v3': {
+      ObjectUtils.setObjectValue(obj, property + '.x', value[0]);
+      ObjectUtils.setObjectValue(obj, property + '.y', value[1]);
+      ObjectUtils.setObjectValue(obj, property + '.z', value[2]);
+      return;
+    }
+    case 'quaternion': {
+      ObjectUtils.setObjectValue(obj, property + '.x', value[0]);
+      ObjectUtils.setObjectValue(obj, property + '.y', value[1]);
+      ObjectUtils.setObjectValue(obj, property + '.z', value[2]);
+      ObjectUtils.setObjectValue(obj, property + '.w', value[3]);
+      return;
+    }
+    case 'boolean':
+    case 'float': {
+      return ObjectUtils.setObjectValue(obj, property, value);
+    }
+  }
 }

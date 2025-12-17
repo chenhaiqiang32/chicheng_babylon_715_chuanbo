@@ -101,12 +101,13 @@ export namespace CC {
     ssao2RenderingPipeline: any;
     ssrPostProcess: any;
   }
+  export type KeyType = 'float' | 'v3' | 'quaternion' | 'v2' | 'color3' | 'boolean';
   export interface Clip {
     name: string;
     uuid: string;
     objectUuid: string;
     property: string;
-    type: 'float' | 'v3' | 'quaternion' | 'v2' | 'color3' | 'boolean';
+    type: KeyType;
     key: {
       time: number;
       value: any;

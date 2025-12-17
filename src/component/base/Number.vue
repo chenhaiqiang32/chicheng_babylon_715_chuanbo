@@ -8,18 +8,18 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from "vue"
 import { InfoFilled } from "@element-plus/icons-vue"
-import { registerSimpleUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
-import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
+import { registerPropertyUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
+import { getObjectValue, setObjectValue } from "@/tools/property"
 import Field from "@/component/common/Field.vue"
 import { Editor } from "@/3d/Editor"
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; step?: number; min?: number; max?: number; noUndoRedo?: boolean }>()
 const emit = defineEmits<{ (e: "change", value: number): void; (e: "finishChange", value: number, oldValue: number): void }>()
 
-const value = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 0)
-const oldValue = ref<number>(getInspectorPropertyValue(props.object, props.property) ?? 0)
+const value = ref<number>(getObjectValue(props.object, props.property) ?? 0)
+const oldValue = ref<number>(getObjectValue(props.object, props.property) ?? 0)
 
 function syncFromObject() {
-	const v = getInspectorPropertyValue(props.object, props.property) ?? 0
+	const v = getObjectValue(props.object, props.property) ?? 0
 	value.value = v
 	oldValue.value = v
 }
@@ -33,16 +33,16 @@ let redoObserver: any = null
 
 const onInput = (newValue: number) => {
 	value.value = newValue
-	setInspectorEffectivePropertyValue(props.object, props.property, newValue)
+	setObjectValue(props.object, props.property, newValue)
 	emit("change", newValue)
 }
 
 const onBlur = () => {
 	const newValue = value.value
 	if (newValue !== oldValue.value && !props.noUndoRedo) {
-		registerSimpleUndoRedo({
-			object: props.object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
-				Editor.Instance.dispatch('numberChanged', { newNumber: value.value, id: props.object.id })
+		registerPropertyUndoRedo({
+			object: props.object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true,
+			action: () => {
 				syncFromObject()
 			}
 		})

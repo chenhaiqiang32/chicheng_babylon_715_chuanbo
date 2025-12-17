@@ -6,15 +6,14 @@
         <StringField :object="props.object" property="name" :label="$t('component.common.name')"
             @change="onNameChanged" />
         <Switch :object="props.object" property="isVisible" :label="$t('component.common.visible')"
-            @change="setVisible" />
+            @change="(v, i) => changeProperty('isVisible', v, i, 'boolean')" />
     </SectionField>
 </template>
 <script setup lang='ts'>
-import { computed, ref, watch } from "vue"
+import { computed, inject, watch } from "vue"
 import SectionField from '@/component/common/SectionField.vue'
 import StringField from '@/component/base/StringField.vue'
 import Switch from "@/component/base/Switch.vue";
-import { onNodeModifiedObservable } from "@/tools/observables"
 import Field from "@/component/common/Field.vue";
 import { Editor } from "@/3d/Editor";
 const props = defineProps<{ object: any }>()
@@ -24,13 +23,14 @@ const objectType = computed(() => {
     if (!props.object) return 'None';
     return props.object.getClassName?.() || 'Unknown';
 });
-function setVisible(visible: boolean) {
-    props.object.isVisible = visible;
-    onNodeModifiedObservable.notifyObservers(props.object)
+
+const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')
+
+function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
+    propertyChanged?.(property, newValue, oldValue, type);
 }
 
 function onNameChanged(newName: string) {
-
     if (!props.object) return;
     Editor.Instance.dispatch('nameChanged', { newName, id: props.object.id })
 }

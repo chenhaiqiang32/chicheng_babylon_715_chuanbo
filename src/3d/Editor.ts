@@ -27,6 +27,7 @@ import {
   SSAO2RenderingPipeline,
   SSRRenderingPipeline,
   MotionBlurPostProcess,
+  Quaternion,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -41,18 +42,18 @@ import { createDefaultRenderingPipeline } from './rendering/default-pipeline';
 import { createSSAO2RenderingPipeline } from './rendering/ssao';
 import { createSSRRenderingPipeline } from './rendering/ssr';
 import { createMotionBlurPostProcess } from './rendering/motion-blur';
+import { registerKeyDown } from '@/utils/ShortcutKey';
+import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
   numberChanged: { newNumber: number; id: string };
   textureChanged: { newTexture: string; id: string };
-  onPositionChanged: { object: TransformNode };
-  onPositionStartChanged: { object: TransformNode };
-  onRotationChanged: { object: TransformNode };
-  onRotationStartChanged: { object: TransformNode };
-  onScaleStartChanged: { object: TransformNode };
-  onScaleChanged: { object: TransformNode };
+  onPositionChanged: { object: TransformNode; newPosition: number[]; oldPosition: number[] };
+  onRotationChanged: { object: TransformNode; newRotation: number[]; oldRotation: number[] };
+  onScaleChanged: { object: TransformNode; newScale: number[]; oldScale: number[] };
   onSceneChanged: { scene: Scene };
+  onSceneChangeBefore: { scene: Scene };
 }
 
 export class Editor extends Dispatch<EditorEvent> {
@@ -108,7 +109,6 @@ export class Editor extends Dispatch<EditorEvent> {
         }
       });
     }
-
     this._selectNodes = v;
     if (v.length <= 0) {
       this.gizmoManager.attachToMesh(undefined);
@@ -141,8 +141,31 @@ export class Editor extends Dispatch<EditorEvent> {
     if (this.engine instanceof WebGPUEngine) {
       await this.engine.initAsync();
     }
-    this.initFocus();
-
+    registerKeyDown((event) => {
+      const key = event.key.toLowerCase();
+      switch (key) {
+        case 'f': {
+          this.focusTransformNode();
+          break;
+        }
+        case 'q': {
+          useScene().currentControlMode = ControlMode.Select;
+          break;
+        }
+        case 'w': {
+          useScene().currentControlMode = ControlMode.Move;
+          break;
+        }
+        case 'e': {
+          useScene().currentControlMode = ControlMode.Rotate;
+          break;
+        }
+        case 'r': {
+          useScene().currentControlMode = ControlMode.Scale;
+          break;
+        }
+      }
+    });
     this.engine.runRenderLoop(() => {
       this.scene?.render();
     });
@@ -160,6 +183,7 @@ export class Editor extends Dispatch<EditorEvent> {
     if (this.scene) {
       this.scene.onPointerObservable.removeCallback(this.onPointerDonw);
       this.scene.activeCamera.detachControl();
+      Editor.Instance.dispatch('onSceneChangeBefore', { scene: this.scene });
       useScene().saveScene(this.scene);
       this.scene.dispose();
     }
@@ -191,7 +215,6 @@ export class Editor extends Dispatch<EditorEvent> {
       return pickInfo.pickedPoint;
     }
 
-    // 3. 没点到任何物体 → 与地面求交
     const groundPlane = new Plane(0, 1, 0, 0); // 平面方程：y = 0
 
     const distance = ray.intersectsPlane(groundPlane);
@@ -250,7 +273,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const scene = new Scene(this.engine);
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
-    scene.useRightHandedSystem = false;
+    scene.useRightHandedSystem = true;
     return scene;
   }
 
@@ -341,53 +364,94 @@ export class Editor extends Dispatch<EditorEvent> {
     // 非等比例下无法缩放，需要将 update... 设置为 false
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
-    this.gizmoManager.gizmos.rotationGizmo.onDragObservable.add(() => {
-      this.dispatch('onRotationChanged', {
-        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
-      });
-    });
+    const startRotation = new Quaternion();
+    const startPosition = new Vector3();
+    const startScaling = new Vector3();
     this.gizmoManager.gizmos.rotationGizmo.onDragStartObservable.add(() => {
-      this.dispatch('onRotationStartChanged', {
-        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+      const node =
+        this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode);
+      startRotation.copyFrom(node.rotationQuaternion);
+    });
+
+    this.gizmoManager.gizmos.rotationGizmo.onDragObservable.add(() => {
+      //拖拽中
+    });
+    this.gizmoManager.gizmos.rotationGizmo.onDragEndObservable.add(() => {
+      // 拖拽结束
+      const node =
+        this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode);
+      const oldRotation = startRotation.clone();
+      const newRotation = node.rotationQuaternion.clone();
+      registerUndoRedo({
+        undo: () => {
+          node.rotationQuaternion.copyFrom(oldRotation);
+        },
+        redo: () => {
+          node.rotationQuaternion.copyFrom(newRotation);
+        },
+        executeRedo: false,
+      });
+      this.dispatch('onRotationChanged', {
+        object: node,
+        newRotation: node.rotationQuaternion.asArray(),
+        oldRotation: startRotation.asArray(),
       });
     });
-    this.gizmoManager.rotationGizmoEnabled = false;
 
-    this.gizmoManager.gizmos.positionGizmo.onDragObservable.add(() => {
+    this.gizmoManager.rotationGizmoEnabled = false;
+    this.gizmoManager.gizmos.positionGizmo.onDragEndObservable.add(() => {
+      const node =
+        this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode);
+      registerPropertyUndoRedo({
+        object: node,
+        property: 'position',
+        oldValue: startPosition.clone(),
+        newValue: node.position.clone(),
+        executeRedo: false,
+      });
       this.dispatch('onPositionChanged', {
-        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+        object: node,
+        newPosition: node.position.asArray(),
+        oldPosition: startPosition.asArray(),
       });
     });
     this.gizmoManager.gizmos.positionGizmo.onDragStartObservable.add(() => {
-      this.dispatch('onPositionStartChanged', {
-        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
-      });
+      const node =
+        this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode);
+      startPosition.copyFrom(node.position);
     });
     this.gizmoManager.scaleGizmoEnabled = true;
-    this.gizmoManager.gizmos.scaleGizmo.onDragObservable.add(() => {
+    this.gizmoManager.gizmos.scaleGizmo.onDragEndObservable.add(() => {
+      const node =
+        this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode);
+      registerPropertyUndoRedo({
+        object: node,
+        property: 'scaling',
+        oldValue: startScaling.clone(),
+        newValue: node.scaling.clone(),
+        executeRedo: false,
+      });
       this.dispatch('onScaleChanged', {
-        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
+        object: node,
+        newScale: node.scaling.asArray(),
+        oldScale: startScaling.asArray(),
       });
     });
     this.gizmoManager.gizmos.scaleGizmo.onDragStartObservable.add(() => {
-      this.dispatch('onScaleStartChanged', {
-        object: this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode),
-      });
+      const node =
+        this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode);
+      startScaling.copyFrom(node.scaling);
     });
     this.gizmoManager.scaleGizmoEnabled = false;
   }
 
-  initFocus() {
-    window.addEventListener('keydown', (k) => {
-      if (k.key == 'f') {
-        if (this._selectNodes[0] instanceof TransformNode) {
-          this.focusTransformNode(this._selectNodes[0]);
-        }
-      }
-    });
-  }
-
-  focusTransformNode(node: TransformNode) {
+  focusTransformNode(node?: TransformNode) {
+    if (!node) {
+      node = this._selectNodes[0] instanceof TransformNode ? this._selectNodes[0] : null;
+    }
+    if (!node) {
+      return;
+    }
     const { min, max } = node.getHierarchyBoundingVectors(true);
     const center = new Vector3().add(min).add(max).scale(0.5);
 

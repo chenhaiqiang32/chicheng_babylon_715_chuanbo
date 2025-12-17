@@ -1,55 +1,76 @@
 <template>
   <Field :title="label">
-    <el-switch style="margin-left: auto;" :model-value="value" @change="onToggle" @click.stop />
+    <el-switch style="margin-left: auto;" v-model="value" @change="change" />
   </Field>
 </template>
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "vue"
-import { registerSimpleUndoRedo } from "../../tools/undoredo"
-import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
+import { registerPropertyUndoRedo } from "../../tools/undoredo"
+import { getObjectValue } from "../../tools/property"
 import Field from "../common/Field.vue";
-import { Editor } from "@/3d/Editor";
-const props = defineProps<{ object: any; property: string; label?: any; noUndoRedo?: boolean }>()
-const emit = defineEmits<{ (e: "change", value: boolean): void }>()
+import { _EventBus } from "@/utils/dispatch";
+const props = defineProps<{
+  object: any;
+  property: string;
+  label?: any;
+  noUndoRedo?: boolean
+}>()
+const emit = defineEmits<{
+  (e: "change", newV: boolean, oldV: boolean): void
+}>()
 
-const value = ref<boolean>(getInspectorPropertyValue(props.object, props.property) ?? false)
+const value = ref<boolean>()
+let oldValue = false;
 
-// 使用更强大的watch来深度监听对象属性变化
-watch(
-  () => props.object ? getInspectorPropertyValue(props.object, props.property) : false,
-  (newVal) => {
-    value.value = newVal ?? false
-  },
-  { immediate: true, deep: true }
-)
+onMounted(() => {
+  _EventBus.on('onBooleanChanged', onBooleanChangeEvent)
+})
 
-const handleClick = (event: MouseEvent) => {
-  event.stopPropagation();
-  const oldValue = value.value;
-  const newValue = !oldValue;
-  value.value = newValue;
-  setInspectorEffectivePropertyValue(props.object, props.property, newValue);
-  emit("change", newValue);
-  if (!props.noUndoRedo) {
-    registerSimpleUndoRedo({
-      object: props.object,
-      property: props.property,
-      oldValue: oldValue,
-      newValue: newValue,
-      executeRedo: true,
-      action: () => {
-        // Editor.Instance.dispatch('switchChanged', { newSwitch: newValue, id: props.object.id })
-        value.value = getInspectorPropertyValue(props.object, props.property) ?? false
-      }
-    })
+function onBooleanChangeEvent(data: {
+  key: string;
+  object: any;
+}) {
+  if (props.object == data.object && props.property == data.key) {
+    getValue()
   }
 }
 
-const onToggle = () => {
-  // 当switch组件自身状态改变时也触发相同的逻辑
-  handleClick(new MouseEvent('click'));
+onUnmounted(() => {
+  _EventBus.off('onBooleanChanged', onBooleanChangeEvent)
+})
+
+
+watch(
+  () => props.object,
+  (newVal) => {
+    getValue()
+  },
+  { immediate: true, }
+)
+
+function getValue() {
+  value.value = getObjectValue(props.object, props.property) ?? false
+  oldValue = value.value;
 }
+
+const change = () => {
+  const _newValue = value.value;
+  const _oldValue = oldValue;
+
+  registerPropertyUndoRedo({
+    object: props.object,
+    property: props.property,
+    oldValue: _oldValue,
+    newValue: _newValue,
+    executeRedo: true,
+    action: () => {
+      _EventBus.dispatch('onBooleanChanged', { key: props.property, object: props.object })
+    }
+  })
+  emit("change", _newValue, _oldValue);
+}
+
 </script>
 
 <style scoped>

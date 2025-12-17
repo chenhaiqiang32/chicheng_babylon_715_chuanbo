@@ -55,7 +55,7 @@ import { registerUndoRedo } from "@/tools/undoredo"
 import { onSelectedAssetChanged, onTextureAddedObservable } from "@/tools/observables"
 import { isColorGradingTexture, isCubeTexture, isTexture } from "@/tools/guards/texture"
 import { projectConfiguration } from "@/tools/configuration"
-import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "../../tools/property"
+import { getObjectValue, setObjectValue } from "../../tools/property"
 import { useDialog } from "@/view/dialog"
 import { Editor } from "@/3d/Editor"
 import { ElMessageBox } from "element-plus"
@@ -101,7 +101,7 @@ const emit = defineEmits<{ (e: "change", t?: any): void }>()
 const dragOver = ref(false)
 const previewError = ref(false)
 const previewTemporaryUrl = ref<string | null>(null)
-const textureRef = ref<any>(getInspectorPropertyValue(props.object, props.property))
+const textureRef = ref<any>(getObjectValue(props.object, props.property))
 const textureUrl = computed<string | null | false>(() => (isTexture(textureRef.value) || isCubeTexture(textureRef.value) || isColorGradingTexture(textureRef.value)) && textureRef.value?.url)
 const isCube = computed(() => isCubeTexture(textureRef.value))
 const isColorGrading = computed(() => isColorGradingTexture(textureRef.value))
@@ -164,14 +164,14 @@ const clear = () => {
         cancelButtonText: "取消",
         type: "warning",
     }).then(() => {
-        const oldTexture = getInspectorPropertyValue(props.object, props.property)
-        setInspectorEffectivePropertyValue(props.object, props.property, null)
+        const oldTexture = getObjectValue(props.object, props.property)
+        setObjectValue(props.object, props.property, null)
         textureRef.value = null
         emitChange(null)
         if (!props.noUndoRedo) {
             registerUndoRedo({
                 executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = null), action: () => {
-                    textureRef.value = getInspectorPropertyValue(props.object, props.property)
+                    textureRef.value = getObjectValue(props.object, props.property)
                 }
             })
         }
@@ -201,14 +201,14 @@ const handleDrop = (ev: DragEvent) => {
     if (data.type === 'texture') {
         const texture = new Texture(data.url, Editor.Instance.Scene, true, false);
         texture.sourceUUID = data.sourceUUID;
-        const oldTexture = getInspectorPropertyValue(props.object, props.property)
-        setInspectorEffectivePropertyValue(props.object, props.property, null)
+        const oldTexture = getObjectValue(props.object, props.property)
+        setObjectValue(props.object, props.property, null)
         textureRef.value = texture
         emitChange(texture)
         if (!props.noUndoRedo) {
             registerUndoRedo({
                 executeRedo: true, undo: () => (props.object[props.property] = oldTexture), redo: () => (props.object[props.property] = texture), action: () => {
-                    textureRef.value = getInspectorPropertyValue(props.object, props.property)
+                    textureRef.value = getObjectValue(props.object, props.property)
                 }
             })
         }
@@ -217,7 +217,7 @@ const handleDrop = (ev: DragEvent) => {
 }
 
 const computeTemporaryPreview = async () => {
-    const texture: any = getInspectorPropertyValue(props.object, props.property)
+    const texture: any = getObjectValue(props.object, props.property)
     if (!texture?.url || getExtname(texture.url).toLowerCase() === ".exr") return
     previewError.value = false
     previewTemporaryUrl.value = texture.url
@@ -227,7 +227,7 @@ const computeTemporaryPreview = async () => {
 
 
 watch(() => [props.object, props.property], () => {
-    textureRef.value = getInspectorPropertyValue(props.object, props.property)
+    textureRef.value = getObjectValue(props.object, props.property)
 })
 watch(textureRef, () => computeTemporaryPreview())
 onMounted(() => {
@@ -241,7 +241,7 @@ async function changeTexture() {
             if (res) {
                 const texture = new Texture(res.url, Editor.Instance.Scene, true, false);
                 texture.sourceUUID = res.sourceUUID;
-                const oldTexture = getInspectorPropertyValue(props.object, props.property)
+                const oldTexture = getObjectValue(props.object, props.property)
 
                 textureRef.value = texture
                 emitChange(texture)
@@ -249,13 +249,13 @@ async function changeTexture() {
                     registerUndoRedo({
                         executeRedo: true,
                         undo: () => {
-                            setInspectorEffectivePropertyValue(props.object, props.property, oldTexture)
+                            setObjectValue(props.object, props.property, oldTexture)
                         },
                         redo: () => {
-                            setInspectorEffectivePropertyValue(props.object, props.property, texture)
+                            setObjectValue(props.object, props.property, texture)
                         },
                         action: () => {
-                            textureRef.value = getInspectorPropertyValue(props.object, props.property)
+                            textureRef.value = getObjectValue(props.object, props.property)
                         }
                     })
                 }

@@ -1,7 +1,7 @@
 import { Observable } from '@babylonjs/core';
-import { setInspectorEffectivePropertyValue } from './property';
+import { setObjectValue } from './property';
 
-export type SimpleUndoRedoStackItem = {
+export type PropertyUndoRedoStackItem = {
   object: any;
   property: string;
   oldValue: any;
@@ -54,21 +54,13 @@ export function registerUndoRedo(configuration: UndoRedoStackItem) {
   }
 }
 
-export function registerSimpleUndoRedo(configuration: SimpleUndoRedoStackItem) {
+export function registerPropertyUndoRedo(configuration: PropertyUndoRedoStackItem) {
   registerUndoRedo({
     undo: () => {
-      setInspectorEffectivePropertyValue(
-        configuration.object,
-        configuration.property,
-        configuration.oldValue,
-      );
+      setObjectValue(configuration.object, configuration.property, configuration.oldValue);
     },
     redo: () => {
-      setInspectorEffectivePropertyValue(
-        configuration.object,
-        configuration.property,
-        configuration.newValue,
-      );
+      setObjectValue(configuration.object, configuration.property, configuration.newValue);
     },
     action: configuration.action,
     onLost: configuration.onLost,

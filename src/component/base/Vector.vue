@@ -16,10 +16,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted } from "vue"
+import { ref, watch, computed } from "vue"
 import Field from "@/component/common/Field.vue"
-import { registerSimpleUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
-import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
+import { registerPropertyUndoRedo } from "../../tools/undoredo"
+import { getObjectValue, setObjectValue } from "@/tools/property"
 const props = defineProps<{
 	object: any
 	property: string
@@ -63,9 +63,9 @@ const axisMax = (i: number) => (Array.isArray(props.max) ? props.max[i] : props.
 
 const onAxisChange = (axis: "x" | "y" | "z" | "w", val: number) => {
 	const storeVal = toStore(val)
-	const oldVal = getInspectorPropertyValue(props.object, `${props.property}.${axis}`) ?? 0
-	setInspectorEffectivePropertyValue(props.object, `${props.property}.${axis}`, storeVal)
-	registerSimpleUndoRedo({
+	const oldVal = getObjectValue(props.object, `${props.property}.${axis}`) ?? 0
+	setObjectValue(props.object, `${props.property}.${axis}`, storeVal)
+	registerPropertyUndoRedo({
 		object: props.object,
 		property: `${props.property}.${axis}`,
 		oldValue: oldVal,

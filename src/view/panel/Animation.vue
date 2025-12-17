@@ -9,7 +9,7 @@
       </div>
       <div class="clip-list">
         <div v-for="item in currentRuntimeAction?.clips" :key="item.uuid" class="clip-item">
-          <div class="clip-name">{{ item.name.split('_')[0] }}</div>
+          <div class="clip-name">{{ getClipName(item.name) }}</div>
           <div class="clip-key">{{ $t('animation.' + item.property) }}</div>
         </div>
       </div>
@@ -24,8 +24,8 @@
           <SVG name="next" @click="prev" size="22px"></SVG>
         </div>
         <div>
-          <SVG v-if="playing" @click="playing = false" name="play" size="30px"></SVG>
-          <SVG v-else @click="playing = true" name="pause" size="30px"></SVG>
+          <SVG v-if="!playing" @click="playing = true" name="play" size="30px"></SVG>
+          <SVG v-else @click="playing = false" name="pause" size="30px"></SVG>
         </div>
         <div>
           <SVG name="next" style="transform: rotate(180deg);" size="22px" @click="next"></SVG>
@@ -68,6 +68,7 @@ import { Editor } from '@/3d/Editor';
 import { Quaternion } from '@babylonjs/core';
 import { CC } from '@/3d/assets/BaseRes';
 import { Animator } from '@/3d/animation/animator';
+import { _EventBus } from '@/utils/dispatch';
 
 const domRef = ref<HTMLDivElement | null>(null)
 
@@ -78,11 +79,18 @@ const speed = ref(1)
 const time = ref(0)
 
 
+function getClipName(v: string) {
+  const array = v.split("%")
+  array.pop()
+  return array.join('%')
+}
 
 const runtimeAnimations = shallowRef<CC.Animation[]>([])
 let currentRuntimeAction = shallowRef<CC.Animation>(null)
 let animator: Animator
 function onSelectChange(uuid: string) {
+  timeline.seek(0)
+  animator?.restoreDefault()
   currentRuntimeAction.value = runtimeAnimations.value.find(item => item.uuid == uuid) || null
   if (!currentRuntimeAction.value) {
     return
@@ -90,9 +98,8 @@ function onSelectChange(uuid: string) {
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
   animator = new Animator(currentRuntimeAction.value)
   animator.updateClip()
+  animator.collectInfo()
 }
-
-
 
 watch(speed, (val) => {
   timeline.speed = val
@@ -135,14 +142,69 @@ onMounted(() => {
     resizeObserver.observe(domRef.value)
   }
   Editor.Instance.on('onPositionChanged', onPositionChanged)
-  Editor.Instance.on('onPositionStartChanged', onPositionStartChanged)
-  Editor.Instance.on('onRotationStartChanged', onRotationStartChanged)
-  Editor.Instance.on('onScaleStartChanged', onScaleStartChanged)
   Editor.Instance.on('onRotationChanged', onRotationChanged)
   Editor.Instance.on('onScaleChanged', onScaleChanged)
+  Editor.Instance.on('onSceneChangeBefore', onSceneChangeBefore)
   Editor.Instance.on('onSceneChanged', onSceneChange)
+  _EventBus.on('onPropertyChanged', onPropertyChanged)
   onSceneChange()
 });
+function onSceneChangeBefore() {
+  timeline?.seek(0);
+  animator?.restoreDefault()
+}
+function onPropertyChanged(e: {
+  object: any;
+  property: string
+  type: any
+  newValue: any
+  oldValue: any
+}) {
+  if (!e.object.uuid) {
+    e.object.uuid = ID.generateUUID()
+  }
+  if (!currentRuntimeAction.value) {
+    return
+  }
+  const clip = currentRuntimeAction.value.clips.find(x => x.objectUuid == e.object.uuid && x.property == e.property);
+  if (clip) {
+    const key = clip.key.find(x => x.time == time.value)
+    if (key) {
+      key.value = e.newValue
+    } else {
+      clip.key.push({
+        time: time.value,
+        value: e.newValue
+      })
+      clip.key.sort((a, b) => a.time - b.time)
+    }
+  } else {
+    const clip: CC.Clip = {
+      name: e.object.name + '%' + e.property,
+      uuid: ID.generateUUID(),
+      objectUuid: e.object.uuid,
+      property: e.property,
+      type: e.type,
+      key: [],
+    }
+    animator.addCollectInfo(e.object, e.property, e.oldValue, e.type)
+    if (time.value != 0) {
+      clip.key.push({
+        time: 0,
+        value: e.oldValue
+      })
+    }
+    clip.key.push({
+      time: time.value,
+      value: e.newValue
+    })
+    currentRuntimeAction.value.clips.push(clip)
+    refreshClipList()
+  }
+  timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+  animator?.updateClip()
+
+}
 
 
 onBeforeUnmount(() => {
@@ -150,14 +212,17 @@ onBeforeUnmount(() => {
     resizeObserver.unobserve(domRef.value)
     resizeObserver.disconnect()
   }
+  timeline.seek(0)
   timeline.dispose()
+  timeline = null;
+  animator?.dispose()
+  animator = null
   Editor.Instance.off('onPositionChanged', onPositionChanged)
-  Editor.Instance.off('onPositionStartChanged', onPositionStartChanged)
   Editor.Instance.off('onRotationChanged', onRotationChanged)
-  Editor.Instance.off('onRotationStartChanged', onRotationStartChanged)
   Editor.Instance.off('onScaleChanged', onScaleChanged)
-  Editor.Instance.off('onScaleStartChanged', onScaleStartChanged)
   Editor.Instance.off('onSceneChanged', onSceneChange)
+  Editor.Instance.off('onSceneChangeBefore', onSceneChangeBefore)
+  _EventBus.off('onPropertyChanged', onPropertyChanged)
 })
 
 function onSceneChange() {
@@ -168,154 +233,147 @@ function onSceneChange() {
     Editor.Instance.Scene.runtimeAnimation = []
   }
   runtimeAnimations.value = Editor.Instance.Scene.runtimeAnimation;
-}
-let lastPosition: Vector3;
-let lastRotationQuaternion: Quaternion;
-let lastScale: Vector3;
-
-
-
-function onPositionStartChanged(e: { object: TransformNode }) {
-  lastPosition = e.object.position.clone()
+  timeline.setKeyframes([])
+  currentRuntimeAction.value = null
+  currentSelect.value = ''
 }
 
-
-function onRotationStartChanged(e: { object: TransformNode }) {
-  lastRotationQuaternion = e.object.rotationQuaternion.clone()
-}
-
-function onScaleStartChanged(e: { object: TransformNode }) {
-  lastScale = e.object.scaling.clone()
-}
-
-function onPositionChanged(e: { object: TransformNode }) {
+function onPositionChanged(e: { object: TransformNode, newPosition: number[], oldPosition: number[] }) {
   if (!e.object.uuid) {
     e.object.uuid = ID.generateUUID()
   }
-  if (currentRuntimeAction.value) {
-    const clip = currentRuntimeAction.value.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'position');
-    if (clip) {
-      const key = clip.key.find(x => x.time == time.value)
-      if (key) {
-        key.value = e.object.position.asArray()
-      } else {
-        clip.key.push({
-          time: time.value,
-          value: e.object.position.asArray()
-        })
-        clip.key.sort((a, b) => a.time - b.time)
-      }
+  if (!currentRuntimeAction.value) {
+    return
+  }
+  const clip = currentRuntimeAction.value.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'position');
+  if (clip) {
+    const key = clip.key.find(x => x.time == time.value)
+    if (key) {
+      key.value = e.object.position.asArray()
     } else {
-      const clip: CC.Clip = {
-        name: e.object.name + '_position',
-        uuid: ID.generateUUID(),
-        objectUuid: e.object.uuid,
-        property: 'position',
-        type: 'v3',
-        key: [],
-      }
-      if (time.value != 0) {
-        clip.key.push({
-          time: 0,
-          value: lastPosition.asArray()
-        })
-      }
       clip.key.push({
         time: time.value,
         value: e.object.position.asArray()
       })
-      currentRuntimeAction.value.clips.push(clip)
-      refreshClipList()
-
+      clip.key.sort((a, b) => a.time - b.time)
     }
+  } else {
+    const clip: CC.Clip = {
+      name: e.object.name + '%position',
+      uuid: ID.generateUUID(),
+      objectUuid: e.object.uuid,
+      property: 'position',
+      type: 'v3',
+      key: [],
+    }
+    animator.addCollectInfo(e.object, 'position', e.oldPosition, 'v3')
+    if (time.value != 0) {
+      clip.key.push({
+        time: 0,
+        value: e.oldPosition
+      })
+    }
+    clip.key.push({
+      time: time.value,
+      value: e.newPosition
+    })
+    currentRuntimeAction.value.clips.push(clip)
+    refreshClipList()
+
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+  animator?.updateClip()
 
 }
-function onRotationChanged(e: { object: TransformNode }) {
+function onRotationChanged(e: { object: TransformNode, newRotation: number[], oldRotation: number[] }) {
   if (!e.object.uuid) {
     e.object.uuid = ID.generateUUID()
   }
-  if (currentRuntimeAction) {
-    const clip = currentRuntimeAction.value.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'rotationQuaternion');
-    if (clip) {
-      const key = clip.key.find(x => x.time == time.value)
-      if (key) {
-        key.value = e.object.rotationQuaternion.asArray()
-      } else {
-        clip.key.push({
-          time: time.value,
-          value: e.object.rotationQuaternion.asArray()
-        })
-        clip.key.sort((a, b) => a.time - b.time)
-      }
+  if (!currentRuntimeAction.value) {
+    return
+  }
+  const clip = currentRuntimeAction.value.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'rotationQuaternion');
+  if (clip) {
+    const key = clip.key.find(x => x.time == time.value)
+    if (key) {
+      key.value = e.object.rotationQuaternion.asArray()
     } else {
-      const clip: CC.Clip = {
-        name: e.object.name + '_rotationQuaternion',
-        uuid: ID.generateUUID(),
-        objectUuid: e.object.uuid,
-        property: 'rotationQuaternion',
-        type: 'quaternion',
-        key: [],
-      }
-      if (time.value != 0) {
-        clip.key.push({
-          time: 0,
-          value: lastRotationQuaternion.asArray()
-        })
-      }
       clip.key.push({
         time: time.value,
         value: e.object.rotationQuaternion.asArray()
       })
-      currentRuntimeAction.value.clips.push(clip)
-      refreshClipList()
+      clip.key.sort((a, b) => a.time - b.time)
     }
+  } else {
+    const clip: CC.Clip = {
+      name: e.object.name + '%rotationQuaternion',
+      uuid: ID.generateUUID(),
+      objectUuid: e.object.uuid,
+      property: 'rotationQuaternion',
+      type: 'quaternion',
+      key: [],
+    }
+    animator.addCollectInfo(e.object, 'rotationQuaternion', e.oldRotation, 'quaternion')
+    if (time.value != 0) {
+      clip.key.push({
+        time: 0,
+        value: e.oldRotation
+      })
+    }
+    clip.key.push({
+      time: time.value,
+      value: e.newRotation
+    })
+    currentRuntimeAction.value.clips.push(clip)
+    refreshClipList()
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
-
+  animator?.updateClip()
 }
-function onScaleChanged(e: { object: TransformNode }) {
+function onScaleChanged(e: { object: TransformNode, newScale: number[], oldScale: number[] }) {
   if (!e.object.uuid) {
     e.object.uuid = ID.generateUUID()
   }
-  if (currentRuntimeAction) {
-    const clip = currentRuntimeAction.value.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'scaling');
-    if (clip) {
-      const key = clip.key.find(x => x.time == time.value)
-      if (key) {
-        key.value = e.object.scaling.asArray()
-      } else {
-        clip.key.push({
-          time: time.value,
-          value: e.object.scaling.asArray()
-        })
-        clip.key.sort((a, b) => a.time - b.time)
-      }
+  if (!currentRuntimeAction.value) {
+    return
+  }
+  const clip = currentRuntimeAction.value.clips.find(x => x.objectUuid == e.object.uuid && x.property == 'scaling');
+  if (clip) {
+    const key = clip.key.find(x => x.time == time.value)
+    if (key) {
+      key.value = e.newScale
     } else {
-      const clip: CC.Clip = {
-        name: e.object.name + '_scale',
-        uuid: ID.generateUUID(),
-        objectUuid: e.object.uuid,
-        property: 'scaling',
-        type: 'v3',
-        key: [],
-      }
-      if (time.value != 0) {
-        clip.key.push({
-          time: 0,
-          value: lastPosition.asArray()
-        })
-      }
       clip.key.push({
         time: time.value,
-        value: e.object.scaling.asArray()
+        value: e.newScale
       })
-      currentRuntimeAction.value.clips.push(clip)
-      refreshClipList()
+      clip.key.sort((a, b) => a.time - b.time)
     }
-    timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+  } else {
+    const clip: CC.Clip = {
+      name: e.object.name + '%scale',
+      uuid: ID.generateUUID(),
+      objectUuid: e.object.uuid,
+      property: 'scaling',
+      type: 'v3',
+      key: [],
+    }
+    animator.addCollectInfo(e.object, 'scaling', e.oldScale, 'v3')
+    if (time.value != 0) {
+      clip.key.push({
+        time: 0,
+        value: e.oldScale
+      })
+    }
+    clip.key.push({
+      time: time.value,
+      value: e.newScale
+    })
+    currentRuntimeAction.value.clips.push(clip)
+    refreshClipList()
   }
+  timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+  animator?.updateClip()
 }
 
 
@@ -338,9 +396,8 @@ const toEnd = () => {
 const onTimeInput = (v: string) => {
   time.value = isNaN(Number(v)) ? 0 : Number(v)
 }
-const onSpeedChange = (e: Event) => {
-  const v = Number((e.target as HTMLSelectElement).value)
-  speed.value = isNaN(v) ? 1 : v
+const onSpeedChange = (a: number) => {
+  speed.value = isNaN(a) ? 1 : a
 }
 const onScaleInput = (e: any) => {
   const v = Number(e)

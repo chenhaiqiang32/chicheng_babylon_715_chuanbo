@@ -19,8 +19,8 @@
 <script setup lang="ts">
 import { Constants } from "@babylonjs/core";
 import { ref, watch } from "vue";
-import { getInspectorPropertyValue, setInspectorEffectivePropertyValue } from "@/tools/property"
-import { registerUndoRedo, registerSimpleUndoRedo } from "@/tools/undoredo";
+import { getObjectValue, setObjectValue } from "@/tools/property"
+import { registerUndoRedo, registerPropertyUndoRedo } from "@/tools/undoredo";
 import Field from "../common/Field.vue";
 const props = defineProps<{
   object: any;
@@ -41,17 +41,17 @@ watch(() => props.object, (newValue) => {
 
 
 function syncFromObject() {
-  const v = getInspectorPropertyValue(props.object, props.property) ?? 0
+  const v = getObjectValue(props.object, props.property) ?? 0
   value.value = v
   oldValue.value = v
 }
 const ChangeTransparencyMode = (changedValue: number) => {
-  oldValue.value = getInspectorPropertyValue(props.object, props.property)
+  oldValue.value = getObjectValue(props.object, props.property)
   value.value = changedValue
   const newValue = value.value
-  setInspectorEffectivePropertyValue(props.object, props.property, value.value)
+  setObjectValue(props.object, props.property, value.value)
   if (newValue !== oldValue.value && !props.noUndoRedo) {
-    registerSimpleUndoRedo({
+    registerPropertyUndoRedo({
       object: props.object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
         syncFromObject()
       }

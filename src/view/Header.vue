@@ -7,7 +7,6 @@
 </template>
 <script setup lang='ts'>
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
-import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
 import { useScene } from '@/store/useScene';
