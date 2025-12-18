@@ -284,7 +284,7 @@ export class Editor extends Dispatch<EditorEvent> {
     return scene;
   }
 
-  createLight(type: 'directional' | 'point' | 'spot', scene: Scene) {
+  createLight(type: 'directional' | 'point' | 'spot', scene: Scene): Light {
     let light: Light;
     switch (type) {
       case 'directional':
@@ -311,7 +311,10 @@ export class Editor extends Dispatch<EditorEvent> {
       const lightGizmo = new LightGizmo();
       lightGizmo.light = light;
       lightGizmo.scaleRatio = 2;
+      if(this.gizmoManager)
+        this.gizmoManager.attachToMesh(lightGizmo.attachedMesh);
     }
+    return light;
   }
 
   resize = () => {
@@ -542,7 +545,7 @@ export class Editor extends Dispatch<EditorEvent> {
     }
   };
 
-  addUniversalCamera(name:string = null){
+  addUniversalCamera(name:string = null) :Camera{
     const camera = new UniversalCamera(name ? name : '1stCamera', new Vector3(0,1,-5), this.scene);
     camera.speed = 0.5;
     camera.inertia = 0;
@@ -552,17 +555,17 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.applyGravity = true;
     // 摄像机碰撞体范围
     camera.ellipsoid = new Vector3(1,1,1);
-    useScene().setHierarchy(this.scene.rootNodes);
     nextTick(() => {
       this.activeCamera(camera);
     })
+    return camera;
   }
 
   /**
    * 添加相机，会将相机设置为场景的activeCamera
    * @param name 相机名
    */
-  addCamera(name:string = null){
+  addCamera(name:string = null) :Camera{
     const camera = new ArcRotateCamera(name ? name : 'camera', 0, 0, 0, new Vector3(0, 0, 0), this.scene);
     camera.minZ = 0.001;
     camera.maxZ = 5000;
@@ -570,11 +573,11 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.upperRadiusLimit = 5000;
     camera.inertia = 0.4;
     camera.panningInertia = 0.5;
-    useScene().setHierarchy(this.scene.rootNodes);
     // 等 tree 更新完成后在更新视图
     nextTick(() => {
       this.activeCamera(camera);
     })
+    return camera;
   }
 
   activeCamera(camera:Camera){
