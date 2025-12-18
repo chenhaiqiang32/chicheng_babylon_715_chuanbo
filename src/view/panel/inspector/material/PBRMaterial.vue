@@ -20,8 +20,8 @@
       <AlphaModeField v-if="transparencyMode != 0" :object="material" property="alphaMode" />
       <Slider v-if="transparencyMode != 0" :label="$t('component.material.alpha')" :object="material" property="alpha"
         :min="0" :max="1" @change="(newC, oldC) => changeProperty('alpha', newC, oldC, 'float')" />
-      <Slider v-if="transparencyMode === 1" :label="$t('component.material.alphaCutOff')" :object="material"
-        property="alphaCutOff" :min="0" :max="1"
+      <Slider v-if="transparencyMode === 1 || transparencyMode === 3" :label="$t('component.material.alphaCutOff')"
+        :object="material" property="alphaCutOff" :min="0" :max="1"
         @change="(newC, oldC) => changeProperty('alphaCutOff', newC, oldC, 'float')" />
     </SectionField>
 
@@ -111,18 +111,37 @@
         :min="0" :max="5" />
       <Slider :label="$t('component.material.specularIntensity')" :object="material" property="specularIntensity"
         :min="0" :max="5" />
+      <Slider :label="$t('component.material.emissiveIntensity')" :object="material" property="emissiveIntensity"
+        :min="0" :max="5" />
+
+
     </SectionField>
     <SectionField :title="$t('component.material.clearCoat')">
       <Switch :label="$t('component.material.enable')" :object="material" property="clearCoat.isEnabled" />
-      <Switch :label="$t('component.material.enable')" :object="material" property="clearCoat.isTintEnabled" />
+      <Switch :label="$t('component.material.isTintEnabled')" :object="material" property="clearCoat.isTintEnabled" />
+      <Slider :label="$t('component.material.intensity')" :object="material" property="clearCoat.intensity" :min="0"
+        :max="1" />
       <Texture :object="material" :title="$t('component.material.clearCoatTexture')" property="clearCoat.texture" />
       <!-- <Texture :object="material" :title="$t('component.material.clearCoatTextureRoughness')"
         property="clearCoat.textureRoughness" /> -->
       <Color :object="material" :title="$t('component.material.clearCoatTintColor')" property="clearCoat.tintColor" />
       <Texture :object="material" :title="$t('component.material.clearCoatTintTexture')"
         property="clearCoat.tintTexture" />
+      <Texture :object="material" :title="$t('component.material.bumpTexture')" property="clearCoat.bumpTexture" />
       <Slider :label="$t('component.material.clearCoatTintThickness')" :object="material"
-        property="clearCoat.tintThickness" :min="0" :max="1" />
+        property="clearCoat.tintThickness" :min="0" :max="2" />
+      <Slider :label="$t('component.material.indexOfRefraction')" :object="material"
+        property="clearCoat.indexOfRefraction" :min="0" :max="3" />
+    </SectionField>
+
+    <SectionField :title="$t('component.material.refraction')">
+      <Switch :label="$t('component.material.enable')" :object="material" property="subSurface.isRefractionEnabled" />
+      <Slider :label="$t('component.material.refractionIntensity')" :object="material"
+        property="subSurface.refractionIntensity" :min="0" :max="1" />
+      <Slider :label="$t('component.material.indexOfRefraction')" :object="material" property="indexOfRefraction"
+        :min="1" :max="2.5" />
+
+
     </SectionField>
     <SectionField title="其他">
       <Switch :label="$t('component.material.backFaceCulling')" :object="material" property="backFaceCulling" />
@@ -146,9 +165,7 @@ import { PBRMaterial } from "@babylonjs/core"
 
 const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
 const force = () => { }
-
 const transparencyMode = ref(0)
-
 
 watch(() => props.material, () => {
   transparencyMode.value = props.material.transparencyMode;
@@ -156,9 +173,9 @@ watch(() => props.material, () => {
   immediate: true
 })
 
-
 function changeTransparencyMode() {
   transparencyMode.value = props.material.transparencyMode;
+  console.log(props.material.transparencyMode);
 }
 
 const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')

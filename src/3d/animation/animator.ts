@@ -79,7 +79,6 @@ export class Animator {
         });
       }
     }
-    console.log(this.objectInfos);
   }
   addCollectInfo(object: any, property: string, value: any, type: string) {
     let infos = this.objectInfos.find((x) => x.target == object);
@@ -130,7 +129,7 @@ function lerpValue(start: any, end: any, percent: number, type: string) {
   } else if (type == 'quaternion') {
     q1.fromArray(start);
     q2.fromArray(end);
-    Quaternion.SlerpToRef(q2, q1, percent, q3);
+    Quaternion.SlerpToRef(q1, q2, percent, q3);
     return [q3.x, q3.y, q3.z, q3.w];
   } else if (type == 'boolean') {
     return percent < 1 ? start : end;

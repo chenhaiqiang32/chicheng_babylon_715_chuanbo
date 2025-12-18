@@ -34,6 +34,9 @@
                     </template>
                 </Grid>
             </el-tab-pane>
+            <el-tab-pane label="脚本">
+
+            </el-tab-pane>
         </el-tabs>
     </div>
 
@@ -50,6 +53,7 @@ const rowHeight = 70
 const objectList = ref<any[]>([]);
 const materialList = ref<any[]>([]);
 const textureList = ref<any[]>([]);
+const scriptList = ref<any[]>([]);
 
 function handleDragStart(ev: DragEvent, data: any) {
     ev.dataTransfer?.setData('assets', JSON.stringify(data))
@@ -99,8 +103,6 @@ function onchange() {
             })
         }
     }
-
-
 
 
 

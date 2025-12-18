@@ -109,8 +109,9 @@ function confirm() {
 
 async function add() {
     const fileList = await Utils.chooseFile('image/*', true);
-    const array = [...fileList].filter(x => x.type == 'image/png' || x.type == 'image/jpeg' || x.type == 'image/webp')
-
+    console.log(fileList)
+    const array = [...fileList].filter(x => (x.type == 'image/png' || x.type == 'image/jpeg' || x.type == 'image/webp') || x.name.endsWith('.hdr'))
+    console.log(array);
     for (let index = 0; index < array.length; index++) {
         const element = array[index];
         await RuntimeLibrary.Instance.importTexture(element)

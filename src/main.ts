@@ -21,11 +21,12 @@ app.use(router);
 app.mount('#app');
 
 registerKeyDown((event) => {
-  if (event.ctrlKey && event.key === 'z') {
+  const key = event.key.toLowerCase();
+  if (event.ctrlKey && key === 'z') {
     undo();
-  } else if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
+  } else if ((event.ctrlKey || event.metaKey) && key === 'y') {
     redo();
-  } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z') {
+  } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === 'z') {
     redo();
   }
 });

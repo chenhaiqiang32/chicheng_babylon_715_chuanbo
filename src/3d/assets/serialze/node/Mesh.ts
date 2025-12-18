@@ -9,7 +9,6 @@ export function serializeMeshNode(
   serializeAssets: boolean = true,
 ) {
   meshData.type = 'mesh';
-  meshData.sideOrientation = mesh.sideOrientation || 0;
   meshData.material = mesh.material?.uuid || '';
   if (mesh.geometry) {
     if (serializeAssets) {
@@ -37,7 +36,7 @@ export async function deserializeMeshNode(
     geometryPromise.then((g) => {
       g.applyToMesh(mesh);
       mesh.geometry.uuid = data.geometry;
-      mesh.sideOrientation = data.sideOrientation || 0;
+      mesh.sideOrientation = 0;
     });
   } else {
   }

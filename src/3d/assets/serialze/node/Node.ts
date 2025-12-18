@@ -74,6 +74,9 @@ export async function deserializeNode(
   }
   currentNode.inheritVisibility = true;
   currentNode.isVisible = node.visible;
+  if (node.type === 'light') {
+    currentNode.isVisible = false;
+  }
   for (let index = 0; index < node.children.length; index++) {
     const element = node.children[index];
     await deserializeNode(element, scene, assets, currentNode, clone, padding);

@@ -67,6 +67,19 @@ export namespace CC {
     type: 'env';
   }
 
+  export interface Arg {
+    name: string;
+    type: string;
+    defaultValue: any;
+  }
+
+  export interface ScriptData {
+    name: string;
+    uuid: string;
+    code: string;
+    args: Arg[];
+  }
+
   export interface Scene extends BaseRes {
     type: 'scene';
     uuid: string;

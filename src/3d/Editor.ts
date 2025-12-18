@@ -28,6 +28,8 @@ import {
   SSRRenderingPipeline,
   MotionBlurPostProcess,
   Quaternion,
+  GizmoAnchorPoint,
+  MeshBuilder,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -273,7 +275,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const scene = new Scene(this.engine);
     const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
-    scene.useRightHandedSystem = true;
+    scene.useRightHandedSystem = false;
     return scene;
   }
 
@@ -281,7 +283,6 @@ export class Editor extends Dispatch<EditorEvent> {
     const scene = new Scene(this.engine);
     scene.useRightHandedSystem = false;
     const camera = new ArcRotateCamera('camera', 0, 0, 0, new Vector3(0, 0, 0), scene);
-    // camera.allowUpsideDown = true;
     camera.minZ = 0.001;
     camera.maxZ = 5000;
     camera.attachControl();
@@ -290,10 +291,10 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.inertia = 0.4;
     camera.panningInertia = 0.5;
 
-    const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
+    const env = CubeTexture.CreateFromPrefilteredData('./environment.dds', scene);
     scene.environmentTexture = env;
-    scene.iblIntensity = 0.5;
     this.createLight('directional', scene);
+    // scene.createDefaultSkybox(scene.environmentTexture);
 
     return scene;
   }
@@ -357,11 +358,9 @@ export class Editor extends Dispatch<EditorEvent> {
     // 添加灯光 gizmo
 
     this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {});
-
     this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {});
     this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {});
 
-    // 非等比例下无法缩放，需要将 update... 设置为 false
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
     const startRotation = new Quaternion();

@@ -4,6 +4,7 @@ import { BACKGROUND_COLOR, UNIT } from './Const';
 import { KeyframeContent } from './KeyframeContent';
 import { TimeControls } from './TimeControls';
 import { debounce } from '@/utils/Function';
+import { registerKeyDown, unregisterKeyDown } from '@/utils/ShortcutKey';
 
 export interface TimelineConfig {
   maxTime: number;
@@ -137,7 +138,12 @@ export class Timeline {
     this.selectBox = new Graphics();
     this.app.stage.addChild(this.selectBox);
     this.update();
+    registerKeyDown(this.onKeydown);
   }
+
+  onKeydown = (e: KeyboardEvent) => {
+    const key = e.key.toLowerCase();
+  };
 
   setTimeChanged(callback: (time: number) => void) {
     this.timeControls.setTimeChanged(callback);
@@ -155,6 +161,7 @@ export class Timeline {
   }
 
   dispose() {
+    unregisterKeyDown(this.onKeydown);
     cancelAnimationFrame(this.requestId);
     this.resizeObserver.disconnect();
     this.timeControls.dispose();

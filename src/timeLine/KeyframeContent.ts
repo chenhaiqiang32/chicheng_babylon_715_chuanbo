@@ -98,6 +98,12 @@ export class KeyframeContent<T extends KeyframeData> {
     }
   };
 
+  deleteKeyframe() {
+    this.selectKeyframes.forEach((x) => {
+      console.log(x);
+    });
+  }
+
   clearSelectKeyframe() {
     this.selectKeyframes.forEach((f) => {
       f.select(false);

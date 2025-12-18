@@ -77,6 +77,10 @@
       "speed": "速率",
       "scaling": "缩放"
     },
+    "scripts": {
+      "title": "脚本",
+      "drop": "将脚本拖放到此处"
+    },
     "camera": {
       "title": "相机",
       "fov": "视野",
@@ -100,6 +104,8 @@
       "title": "材质",
       "enable": "启用",
       "texture": "纹理",
+      "intensity": "强度",
+      "isTintEnabled": "启用颜色",
       "name": "材质名称",
       "backFaceCulling": "背面裁剪",
       "alpha": "透明度",
@@ -165,7 +171,12 @@
       "clearCoatTextureRoughness": "清漆粗糙度贴图",
       "clearCoatTintColor": "清漆颜色",
       "clearCoatTintTexture": "清漆颜色贴图",
-      "clearCoatTintThickness": "清漆厚度"
+      "clearCoatTintThickness": "清漆厚度",
+      "clearCoatTintColorAtDistance": "清漆颜色距离",
+      "indexOfRefraction": "折射率",
+      "refractionIntensity": "折射强度",
+      "refraction": "折射",
+      "default": "默认"
     },
     "sceneSetting": {
       "iblIntensity": "环境光强度",

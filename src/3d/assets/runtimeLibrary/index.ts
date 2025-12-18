@@ -10,6 +10,7 @@ import {
   Tools,
   SceneLoader,
   StandardMaterial,
+  HDRCubeTexture,
 } from '@babylonjs/core';
 import { Editor } from '../../Editor';
 import { Dispatch } from '@/utils/dispatch';
@@ -25,7 +26,6 @@ import { bufferToVertex, vertexToBuffer } from '../utils/GeometryUtils';
 import { deserializeScene } from '../serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import JSZip from 'jszip';
-import { Mesh } from 'pixi.js';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -100,7 +100,12 @@ export class RuntimeLibrary
 
   async importTexture(element: File) {
     const url = URL.createObjectURL(element);
-    const texture = new Texture(url, this.resScene);
+    let texture: BaseTexture;
+    if (element.name.endsWith('.hdr')) {
+      texture = new HDRCubeTexture(url, this.resScene, 1024);
+    } else {
+      texture = new Texture(url, this.resScene);
+    }
     texture.name = element.name;
     texture.sourceUUID = ID.generateUUID();
     const buffer = await element.arrayBuffer();
@@ -197,8 +202,6 @@ export class RuntimeLibrary
 
   texture: any[] = [];
   material: any[] = [];
-  // geometry: any[] = [];
-
   rootNodes: CC.ObjectNode[] = [];
   sceneGeometry: Map<string, Geometry> = new Map();
   sceneMaterial: Map<string, Material> = new Map();
@@ -210,6 +213,17 @@ export class RuntimeLibrary
 
   tempGeometryFile: Map<string, ArrayBuffer> = new Map();
   tempTextureFile: Map<string, ArrayBuffer> = new Map();
+
+  private scriptMap: Map<string, CC.ScriptData> = new Map();
+
+  private needUpdateScript: Map<string, CC.ScriptData> = new Map();
+
+  addScript(script: CC.ScriptData): void {
+    if (!script.uuid) {
+      script.uuid = ID.generateUUID();
+    }
+    this.needUpdateScript.set(script.uuid, script);
+  }
 
   async addTexture(texture: BaseTexture, force: boolean = true): Promise<any> {
     if (!texture.uuid) {

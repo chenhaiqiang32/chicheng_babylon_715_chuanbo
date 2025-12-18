@@ -99,5 +99,6 @@ const onBlur = () => {
 	top: 50%;
 	transform: translateY(-50%);
 	font-size: 12px;
+	pointer-events: none;
 }
 </style>
