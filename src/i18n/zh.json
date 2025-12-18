@@ -87,6 +87,17 @@
       "collision": "碰撞检测",
       "gravity": "重力"
     },
+    "light": {
+      "title": "灯光",
+      "intensity": "强度",
+      "diffuse": "漫反射颜色",
+      "specular": "镜面反射颜色",
+      "direction": "方向",
+      "position": "位置",
+      "radius": "半径",
+      "angle": "角度",
+      "range": "范围"
+    },
     "common": {
       "title": "常规",
       "type": "类型",

@@ -19,7 +19,7 @@
                 </div>
             </ElSplitterPanel>
             <ElSplitterPanel>
-                <div class="hierarchy-panel" @contextmenu="contextMenu">
+                <div class="hierarchy-panel" @contextmenu="contextMenu" @click="handlePanelClick">
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <ElInput size="small" placeholder="搜索" v-model="searchText">
                             <template #prefix>
@@ -37,7 +37,8 @@
                                 :default-expanded="true" :default-active="true" @node-click="handleNodeClick">
                                 <!-- 节点类型图标 + 节点名 -->
                                 <template #default="{ node, data }">
-                                    <div class="tree-node">
+                                    <!-- 节点上也可以右键新增 -->
+                                    <div class="tree-node" @contextmenu.stop="(e) => contextMenu(e, data)">
                                         <SVG size="14" :color="data.isActive ? '#ffffff' : '#7d7d7d' " :name="iconMap[data.type]"></SVG>
                                         {{ data.name }}
                                     </div>
@@ -69,7 +70,8 @@ import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
-import { Camera, TransformNode } from '@babylonjs/core';
+import { getHierarchyContextMenuCommands } from '@/3d/core/utils/nodeContextMenuItem';
+import { Node } from '@babylonjs/core';
 
 const searchText = ref('');
 const treeProps = {
@@ -85,6 +87,8 @@ const iconMap: Record<string, string> = {
     ArcRotateCamera: "cameraIcon",
     UniversalCamera: "cameraIcon",
     DirectionalLight: "lightIcon",
+    SpotLight: "lightIcon",
+    PointLight: "lightIcon",
     Mesh: "meshIcon",
     TransformNode: "transformNodeIcon"
 }
@@ -95,44 +99,25 @@ onMounted(() => {
     Editor.Instance.on('onNodeActiveChanged', onNodeActiveChanged)
 })
 
-function contextMenu(e: MouseEvent) {
+function contextMenu(e: MouseEvent, nodeData?:HierarchyNode) {
     e.stopPropagation();
-    e.preventDefault()
+    e.preventDefault();
+
+    // parent 优先为选中的节点；如果没有，则获取鼠标当前选中的节点
+    let parentNode: Node | null = null;
+    if(currentSelected.value.length > 0) 
+        parentNode = Editor.Instance.getNodeById(currentSelected.value[0]);
+    else
+        parentNode = nodeData ? Editor.Instance.getNodeById(nodeData.id) : null;
+    //const    parentNode = nodeData ? Editor.Instance.getNodeById(nodeData.id) : null;
+
     openContextMenu({
         position: {
             x: e.clientX,
             y: e.clientY
         },
-        commands: [
-            {
-                name: '添加场景',
-                callback: () => {
-                    console.log('添加场景');
-                },
-            },
-            {
-                name: '添加节点',
-                callback: () => {
-                    addEmptyHierarchy();
-                }
-            },
-            {
-                name: '添加相机',
-                subCommand: [{
-                    name: '添加第一人称相机',
-                    callback: () => {
-                        addUniCamera();
-                    }
-                }, {
-                    name: '添加第三人称相机',
-                    callback: () => {
-                        addArcCamera();
-                    }
-                }]
-            },
-        ]
+        commands: getHierarchyContextMenuCommands(parentNode)
     })
-
 }
 
 async function addScene() {
@@ -187,6 +172,13 @@ const handleNodeClick = (node: HierarchyNode) => {
     }
 }
 
+function handlePanelClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if(!target.closest('.el-tree-node')){
+        handleNodeClick(null);
+    }
+}
+
 watch(currentSelected, (val) => {
     if (val[0] != undefined) {
         treeRef.value.setCurrentKey(val[0], true);
@@ -221,28 +213,6 @@ const toggleSceneSetting = async () => {
     useDialog(SceneSettingDialog)
 }
 
-/**
- * 添加空节点
- */
-function addEmptyHierarchy()
-{
-    var node = new TransformNode("empty", Editor.Instance.Scene);
-    useScene().addHierarchy(node);
-}
-
-/**
- * 添加第一人称Universal摄像机
- */
-function addUniCamera(){
-    Editor.Instance.addUniversalCamera();
-}
-
-/**
- * 添加ArcRotate摄像机
- */
-function addArcCamera(){
-    Editor.Instance.addCamera();
-}
 
 onUnmounted(() => {
 

@@ -45,6 +45,19 @@ export const useScene = defineStore('scene', () => {
   const currentScene = ref<string>();
   const sceneInfoList = shallowRef<Partial<CC.Scene>[]>([]);
 
+  // uuid -> HeirarchyNode 映射
+  const hierarychyMap = ref<Map<string, HierarchyNode>>(new Map());
+
+  // 递归构建映射
+  function buildMap(nodes: HierarchyNode[], map: Map<string, HierarchyNode>) {
+    for(const node of nodes){
+      map.set(node.id, node);
+      if(node.children){
+        buildMap(node.children, map);
+      }
+    }
+  }
+
   function setSceneList(scenes: CC.Scene[]) {
     sceneInfoList.value = scenes;
   }
@@ -61,10 +74,28 @@ export const useScene = defineStore('scene', () => {
 
   function setHierarchy(rootNodes: Node[]) {
     hierarchy.value = rootNodes.map(buildHierarchy);
+    hierarychyMap.value.clear();
+    buildMap(hierarchy.value, hierarychyMap.value);
   }
 
-  function addHierarchy(node: Node){
-    hierarchy.value.push(buildHierarchy(node));
+  function addHierarchy(node: Node, parent:Node | null){
+    const newNode = buildHierarchy(node);
+    // 由于 Node 没有 parent 属性，所以只能通过找 parent 然后设置 childrent lai实现层级关系
+    if (parent) {
+      const parentNode = hierarychyMap.value.get(parent.uuid);
+      //const parentNode = hierarchy.value.find((n) => n.id == parent.uuid);
+      if(parentNode) {
+        // 需要双向绑定
+        node.parent = parent;
+        parentNode.children?.push(newNode);
+      } else {
+        hierarchy.value.push(newNode);
+      }
+    } 
+    else {
+      hierarchy.value.push(newNode);
+    }
+    hierarychyMap.value.set(newNode.id, newNode);
   }
 
   function setCurrentSelect(objectIds?: string[]) {

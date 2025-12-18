@@ -284,7 +284,7 @@ export class Editor extends Dispatch<EditorEvent> {
     return scene;
   }
 
-  private createLight(type: 'directional' | 'point' | 'spot', scene: Scene) {
+  createLight(type: 'directional' | 'point' | 'spot', scene: Scene) {
     let light: Light;
     switch (type) {
       case 'directional':
@@ -307,7 +307,7 @@ export class Editor extends Dispatch<EditorEvent> {
         light = new DirectionalLight('dirLight', new Vector3(0, -1, -1), scene);
         break;
     }
-    if (!light) {
+    if (light) {
       const lightGizmo = new LightGizmo();
       lightGizmo.light = light;
       lightGizmo.scaleRatio = 2;
