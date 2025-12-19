@@ -60,7 +60,7 @@ onMounted(() => {
 
 function onPositionChanged(e: { object: TransformNode }) {
 	if (e.object == props.object) {
-		positionRef.value.syncFromObject()
+		positionRef.value?.syncFromObject()
 	}
 }
 function onRotationChanged(e: { object: TransformNode }) {
@@ -68,13 +68,13 @@ function onRotationChanged(e: { object: TransformNode }) {
 		if (hasQuaternion.value) {
 			rotationProxy.value = getEulerAnglesFromQuaternion()
 		} else {
-			rotationRef.value.syncFromObject()
+			rotationRef.value?.syncFromObject()
 		}
 	}
 }
 function onScaleChanged(e: { object: TransformNode }) {
 	if (e.object == props.object) {
-		scaleRef.value.syncFromObject()
+		scaleRef.value?.syncFromObject()
 	}
 }
 const applyRotationProxy = () => {
