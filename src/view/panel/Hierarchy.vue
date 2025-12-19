@@ -62,7 +62,7 @@ import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
-
+import { addGPUParticleSystem, addParticleSystem } from '@/tools/particles/particles';
 const searchText = ref('');
 const treeProps = {
     label: 'name',
@@ -105,6 +105,52 @@ function contextMenu(e: MouseEvent) {
                         console.log('添加空节点2');
                     }
                 }]
+            },
+            {
+                name: '添加粒子',
+                subCommand: [{
+                    name: '添加默认粒子',
+                    callback: () => {
+
+                        addParticleSystem("default");
+                    }
+                },
+                // {
+                //     name: '添加太阳',
+                //     callback: () => {
+
+                //         addParticleSystem("sun");
+                //     }
+                // },
+                {
+                    name: '添加烟雾',
+                    callback: () => {
+
+                        addParticleSystem("smoke");
+                    }
+                },
+                {
+                    name: '添加雨',
+                    callback: () => {
+
+                        addParticleSystem("rain");
+                    }
+                },
+                {
+                    name: '添加火',
+                    callback: () => {
+
+                        addParticleSystem("fire");
+                    }
+                },
+                {
+                    name: '添加爆炸',
+                    callback: () => {
+
+                        addParticleSystem("explosion");
+                    }
+                },
+                ]
             }
         ]
     })

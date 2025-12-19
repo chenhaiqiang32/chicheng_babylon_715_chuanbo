@@ -357,9 +357,9 @@ export class Editor extends Dispatch<EditorEvent> {
 
     // 添加灯光 gizmo
 
-    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {});
-    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {});
-    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => { });
+    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => { });
+    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => { });
 
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
@@ -632,6 +632,9 @@ export class Editor extends Dispatch<EditorEvent> {
       this.scene.postProcesses.push(motionBlurPostProcess);
     }
     return motionBlurPostProcess;
+  }
+  UpdateHierarchy() {
+    useScene().setHierarchy(this.scene.rootNodes);
   }
 }
 

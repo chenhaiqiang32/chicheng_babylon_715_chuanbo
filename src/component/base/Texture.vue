@@ -13,14 +13,18 @@
                 <div class="popover-content">
                     <Switch :label="$t('texture.gammaSpace')" :object="textureRef" property="gammaSpace"
                         @change="emitChange(textureRef)" />
-                    <Number :label="$t('texture.vScale')" :object="textureRef" property="vScale"
+                    <!-- <Number :label="$t('texture.vScale')" :object="textureRef" property="vScale"
                         @change="emitChange(textureRef)" />
                     <Number :label="$t('texture.uScale')" :object="textureRef" property="uScale"
-                        @change="emitChange(textureRef)" />
+                        @change="emitChange(textureRef)" /> -->
+                    <Number :label="$t('texture.vScale')" :object="textureRef" property="vScale"
+                        @change="(newC, oldC) => changeProperty('vScale', newC, oldC, 'float')" />
+                    <Number :label="$t('texture.uScale')" :object="textureRef" property="uScale"
+                        @change="(newC, oldC) => changeProperty('uScale', newC, oldC, 'float')" />
                     <Number :label="$t('texture.uOffset')" :object="textureRef" property="uOffset"
-                        @change="emitChange(textureRef)" />
+                        @change="(newC, oldC) => changeProperty('uOffset', newC, oldC, 'float')" />
                     <Number :label="$t('texture.vOffset')" :object="textureRef" property="vOffset"
-                        @change="emitChange(textureRef)" />
+                        @change="(newC, oldC) => changeProperty('vOffset', newC, oldC, 'float')" />
                     <Switch :label="$t('texture.hasAlpha')" :object="textureRef" property="hasAlpha"
                         @change="emitChange(textureRef)" />
                     <slot />
@@ -44,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, } from "vue"
+import { ref, computed, watch, onMounted, inject, } from "vue"
 
 //mport sharp from "sharp"
 import { Texture, CubeTexture } from "@babylonjs/core"
@@ -60,6 +64,13 @@ import { useDialog } from "@/view/dialog"
 import { Editor } from "@/3d/Editor"
 import { ElMessageBox } from "element-plus"
 
+const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')
+
+function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
+    console.log('changeProperty', property, newValue, oldValue, type);
+
+    propertyChanged?.('material.' + props.property + "." + property, newValue, oldValue, type);
+}
 function updataTexture() {
 
 }

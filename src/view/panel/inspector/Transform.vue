@@ -31,8 +31,8 @@ const scaleRef = ref<InstanceType<typeof Vector>>()
 
 const props = defineProps<{ object: TransformNode }>();
 const getEulerAnglesFromQuaternion = () => {
-	if (!hasQuaternion.value) return
-	const euler = props.object.rotationQuaternion.toEulerAngles()
+	if (!hasQuaternion.value && !props.object.rotationQuaternion) return
+	const euler = props.object.rotationQuaternion?.toEulerAngles()
 	return {
 		x: euler.x,
 		y: euler.y,

@@ -279,7 +279,87 @@
       "albedoColor": "颜色",
       "alpha": "透明度",
       "roughness": "粗糙度",
-      "metallic": "金属度"
+      "metallic": "金属度",
+      "albedoTexture": {
+        "vScale": "基础纹理v缩放",
+        "uScale": "基础纹理u缩放",
+        "vOffset": "基础纹理v偏移",
+        "uOffset": "基础纹理u偏移"
+      },
+      "bumpTexture": {
+        "vScale": "法线纹理v缩放",
+        "uScale": "法线纹理u缩放",
+        "vOffset": "法线纹理v偏移",
+        "uOffset": "法线纹理u偏移"
+      },
+      "emissiveTexture": {
+        "vScale": "自发光纹理v缩放",
+        "uScale": "自发光纹理u缩放",
+        "vOffset": "自发光纹理v偏移",
+        "uOffset": "自发光纹理u偏移"
+      },
+      "metallicTexture": {
+        "vScale": "金属度纹理v缩放",
+        "uScale": "金属度纹理u缩放",
+        "vOffset": "金属度纹理v偏移",
+        "uOffset": "金属度纹理u偏移"
+      },
+      "ambientTexture": {
+        "vScale": "环境光纹理v缩放",
+        "uScale": "环境光纹理u缩放",
+        "vOffset": "环境光纹理v偏移",
+        "uOffset": "环境光纹理u偏移"
+      },
+      "reflectionTexture": {
+        "vScale": "反射纹理v缩放",
+        "uScale": "反射纹理u缩放",
+        "vOffset": "反射纹理v偏移",
+        "uOffset": "反射纹理u偏移"
+      },
+      "lightmapTexture": {
+        "vScale": "光照贴图纹理v缩放",
+        "uScale": "光照贴图纹理u缩放",
+        "vOffset": "光照贴图纹理v偏移",
+        "uOffset": "光照贴图纹理u偏移"
+      },
+      "opacityTexture": {
+        "vScale": "透明度纹理v缩放",
+        "uScale": "透明度纹理u缩放",
+        "vOffset": "透明度纹理v偏移",
+        "uOffset": "透明度纹理u偏移"
+      },
+      "reflectivityTexture": {
+        "vScale": "反射度纹理v缩放",
+        "uScale": "反射度纹理u缩放",
+        "vOffset": "反射度纹理v偏移",
+        "uOffset": "反射度纹理u偏移"
+      },
+      "microSurfaceTexture": {
+        "vScale": "微表面纹理v缩放",
+        "uScale": "微表面纹理u缩放",
+        "vOffset": "微表面纹理v偏移",
+        "uOffset": "微表面纹理u偏移"
+      },
+      "clearCoat": {
+        "clearCoatTexture": {
+          "vScale": "清漆纹理v缩放",
+          "uScale": "清漆纹理u缩放",
+          "vOffset": "清漆纹理v偏移",
+          "uOffset": "清漆纹理u偏移"
+        },
+        "tintTexture": {
+          "vScale": "清漆颜色纹理v缩放",
+          "uScale": "清漆颜色纹理u缩放",
+          "vOffset": "清漆颜色纹理v偏移",
+          "uOffset": "清漆颜色纹理u偏移"
+        },
+        "bumpTexture": {
+          "vScale": "清漆法线纹理v缩放",
+          "uScale": "清漆法线纹理u缩放",
+          "vOffset": "清漆法线纹理v偏移",
+          "uOffset": "清漆法线纹理u偏移"
+        }
+      }
     }
   },
   "dialog": {
