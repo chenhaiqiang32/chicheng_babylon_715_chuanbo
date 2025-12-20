@@ -318,7 +318,8 @@ export class Editor extends Dispatch<EditorEvent> {
         break;
     }
     if (light) {
-      const lightGizmo = new LightGizmo();
+      const layer = new UtilityLayerRenderer(scene);
+      const lightGizmo = new LightGizmo(layer);
       lightGizmo.light = light;
       lightGizmo.scaleRatio = 2;
       light.gizmo = lightGizmo;
@@ -344,7 +345,11 @@ export class Editor extends Dispatch<EditorEvent> {
    * 初始化 gizmo
    */
   initGizmos(scene: Scene) {
-    this.gizmoManager = new GizmoManager(scene);
+    if(this.gizmoManager) this.gizmoManager.dispose();
+
+    // 有可能创建多个场景导致 gizmoManager的layer不是当前场景，需要重新创建
+    const layer = new UtilityLayerRenderer(scene);
+    this.gizmoManager = new GizmoManager(scene, 1, this.gizmoLayer);
     this.gizmoManager.enableAutoPicking = false;
     this.gizmoManager.positionGizmoEnabled = true;
 
