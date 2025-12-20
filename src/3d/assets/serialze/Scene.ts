@@ -49,7 +49,6 @@ export function serializeScene(
       physicsEngine: physicEngine?.getPhysicsPluginName(),
     };
   }
-
   result.metadata = scene.metadata;
   result.activeCamera = scene.activeCamera?.uuid;
   result.reflectionProbes = scene.reflectionProbes?.map((item) => item.serialize());
@@ -107,6 +106,7 @@ export async function deserializeScene(
   scene.fogEnd = sceneData.fog?.fogEnd;
   scene.fogDensity = sceneData.fog?.fogDensity;
   scene.iblIntensity = sceneData.iblIntensity;
+  // await import('@babylonjs/inspector');
   // scene.debugLayer.show();
   if (sceneData.physic) {
     scene.physicsEnabled = sceneData.physic.enabled;

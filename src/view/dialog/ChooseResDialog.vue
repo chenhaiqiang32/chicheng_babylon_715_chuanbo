@@ -32,7 +32,7 @@
     </ElDialog>
 </template>
 <script setup lang='ts'>
-import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import Grid from '@/component/common/Grid.vue';
 import { Utils } from '@/utils';
 import SVG from '@/component/common/SVG.vue';

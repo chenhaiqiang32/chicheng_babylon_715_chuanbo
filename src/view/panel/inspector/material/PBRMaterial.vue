@@ -23,6 +23,10 @@
       <Slider v-if="transparencyMode === 1 || transparencyMode === 3" :label="$t('component.material.alphaCutOff')"
         :object="material" property="alphaCutOff" :min="0" :max="1"
         @change="(newC, oldC) => changeProperty('alphaCutOff', newC, oldC, 'float')" />
+      <Switch :label="$t('component.material.disableLighting')" :object="material" property="disableLighting" />
+      <Switch :label="$t('component.material.pointsCloud')" :object="material" property="pointsCloud" />
+      <Slider :label="$t('component.material.pointSize')" :object="material" property="pointSize" :min="0" :max="10" />
+
     </SectionField>
 
     <SectionField :title="$t('component.material.texture')">
@@ -130,6 +134,8 @@
       <Texture :object="material" :title="$t('component.material.bumpTexture')" property="clearCoat.bumpTexture" />
       <Slider :label="$t('component.material.clearCoatTintThickness')" :object="material"
         property="clearCoat.tintThickness" :min="0" :max="2" />
+      <Slider :label="$t('component.material.clearCoatRoughness')" :object="material" property="clearCoat.roughness"
+        :min="0" :max="1" />
       <Slider :label="$t('component.material.indexOfRefraction')" :object="material"
         property="clearCoat.indexOfRefraction" :min="0" :max="3" />
     </SectionField>
@@ -140,9 +146,33 @@
         property="subSurface.refractionIntensity" :min="0" :max="1" />
       <Slider :label="$t('component.material.indexOfRefraction')" :object="material" property="indexOfRefraction"
         :min="1" :max="2.5" />
-
-
+      <Color :label="$t('component.material.subSurface.tintColor')" :object="material" property="subSurface.tintColor"
+        @change="(newC, oldC) => changeProperty('subSurface.tintColor', newC, oldC, 'color3')" />
     </SectionField>
+
+    <SectionField :title="$t('component.material.translucency')">
+      <Switch :label="$t('component.material.enable')" :object="material" property="subSurface.isTranslucencyEnabled" />
+      <Slider :label="$t('component.material.subSurface.translucencyIntensity')" :object="material"
+        property="subSurface.translucencyIntensity" :min="0" :max="1" />
+    </SectionField>
+
+    <SectionField :title="$t('component.material.anisotropy')">
+      <Switch :label="$t('component.material.enable')" :object="material" property="anisotropy.isEnabled" />
+      <Slider :label="$t('component.material.anisotropyIntensity')" :object="material" property="anisotropy.intensity"
+        :min="0" :max="1" />
+      <Slider :label="$t('component.material.directionX')" :object="material" property="anisotropy.direction.x" :min="0"
+        :max="1" />
+      <Slider :label="$t('component.material.directionY')" :object="material" property="anisotropy.direction.y" :min="0"
+        :max="1" />
+    </SectionField>
+
+    <SectionField :title="$t('component.material.sheen')">
+      <Switch :label="$t('component.material.enable')" :object="material" property="sheen.isEnabled" />
+      <Slider :label="$t('component.material.sheenIntensity')" :object="material" property="sheen.intensity" :min="0"
+        :max="10" />
+      <Color :label="$t('component.material.sheenColor')" :object="material" property="sheen.color" />
+    </SectionField>
+
     <SectionField title="其他">
       <Switch :label="$t('component.material.backFaceCulling')" :object="material" property="backFaceCulling" />
     </SectionField>
@@ -160,7 +190,7 @@ import Slider from "@/component/base/Slider.vue"
 import TransparencyModeField from "@/component/base/TransparencyModeField.vue"
 import AlphaModeField from "@/component/base/AlphaModeField.vue"
 import { useDialog } from "@/view/dialog"
-import { RuntimeLibrary } from "@/3d/assets/runtimeLibrary"
+import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary"
 import { PBRMaterial } from "@babylonjs/core"
 
 const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
@@ -175,7 +205,6 @@ watch(() => props.material, () => {
 
 function changeTransparencyMode() {
   transparencyMode.value = props.material.transparencyMode;
-  console.log(props.material.transparencyMode);
 }
 
 const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')

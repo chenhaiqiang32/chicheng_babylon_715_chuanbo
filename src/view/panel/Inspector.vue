@@ -17,6 +17,7 @@ import { Editor } from '@/3d/Editor';
 import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
 import CameraComp from './inspector/Camera.vue'
+import Event from './inspector/Event.vue'
 import Animation from './inspector/Animation.vue'
 import { Camera, Mesh, TransformNode } from '@babylonjs/core';
 import { _EventBus } from '@/utils/dispatch';
@@ -62,6 +63,7 @@ const comps = computed(() => {
     if (selectedObject.value instanceof Camera) {
         arr.push(CameraComp)
     }
+    arr.push(Event)
     arr.push(Scripts)
     return arr
 })

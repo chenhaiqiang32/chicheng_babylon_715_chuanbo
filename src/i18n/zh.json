@@ -35,6 +35,7 @@
     "overlay": "模型选中后遮罩效果"
   },
   "menu": {
+    "publish": "发布",
     "file": {
       "open": "打开...",
       "title": "文件",
@@ -100,11 +101,15 @@
       "rotation": "旋转",
       "scaling": "缩放"
     },
+
     "material": {
       "title": "材质",
       "enable": "启用",
       "texture": "纹理",
       "intensity": "强度",
+      "disableLighting": "禁用光照",
+      "pointsCloud": "点云",
+      "pointSize": "点大小",
       "isTintEnabled": "启用颜色",
       "name": "材质名称",
       "backFaceCulling": "背面裁剪",
@@ -176,7 +181,20 @@
       "indexOfRefraction": "折射率",
       "refractionIntensity": "折射强度",
       "refraction": "折射",
-      "default": "默认"
+      "default": "默认",
+      "clearCoatRoughness": "清漆粗糙度",
+      "subSurface": {
+        "tintColor": "颜色",
+        "translucencyIntensity": "透明强度"
+      },
+      "translucency": "透明",
+      "sheen": "光泽",
+      "anisotropyIntensity": "各异向性强度",
+      "sheenIntensity": "光泽强度",
+      "sheenColor": "光泽颜色",
+      "anisotropy": "各异向性",
+      "directionX": "X",
+      "directionY": "Y"
     },
     "sceneSetting": {
       "iblIntensity": "环境光强度",
@@ -263,6 +281,29 @@
       "base": "基础",
       "step": "步长",
       "blurDispersionStrength": "模糊色散强度"
+    },
+    "event": {
+      "title": "事件",
+      "onClick": "点击",
+      "onMouseEnter": "鼠标进入",
+      "onMouseLeave": "鼠标离开",
+      "onKeyDown": "按键按下",
+      "onKeyUp": "按键松开",
+      "none": "无",
+      "triggerType": "触发类型",
+      "eventType": "事件类型",
+      "animation": "动画",
+      "changeScene": "切换场景",
+      "showInfo": "显示信息",
+      "playSound": "播放音效",
+      "stopSound": "停止音效",
+      "chooseScene": "选择场景",
+      "info": "信息",
+      "chooseSound": "选择音效",
+      "removeEventMessage": "确认删除事件吗？",
+      "removeTitle": "提示",
+      "confirmButtonText": "确定",
+      "cancelButtonText": "取消"
     }
   },
   "animation": {
@@ -287,6 +328,17 @@
       "title": "选择保存模式",
       "local": "保存到本地",
       "indexDB": "保存到浏览器"
+    },
+    "publish": {
+      "title": "发布",
+      "selectScene": "选择场景",
+      "meshCompress": "网格压缩",
+      "noCompress": "不压缩",
+      "lowCompress": "低压缩",
+      "midCompress": "中压缩",
+      "highCompress": "高压缩",
+      "textureCompress": "纹理压缩",
+      "offline": "离线支持"
     }
   }
 }

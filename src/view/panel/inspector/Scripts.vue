@@ -6,17 +6,33 @@
     </SectionField>
 </template>
 <script setup lang='ts'>
-import { onMounted, onUnmounted, } from 'vue';
+import { onMounted, onUnmounted, ref, } from 'vue';
 import { Node } from '@babylonjs/core';
 import SectionField from '@/component/common/SectionField.vue';
+interface UserEvent {
+    triggerType: string;
+    type: string;
+    uuid: string;
+    name: string;
+    args?: string[];
+}
 
 const props = defineProps<{
     object: Node
 }>();
 
+const events = ref<UserEvent[]>([])
 
 onMounted(() => {
-    props.object.animations
+    if (!props.object.metadata) {
+        props.object.metadata = {
+            events: []
+        }
+    }
+    if (!props.object.metadata.events) {
+        props.object.metadata.events = []
+    }
+    events.value = props.object.metadata.events
 });
 onUnmounted(() => {
 

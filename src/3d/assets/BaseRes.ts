@@ -17,6 +17,7 @@ export namespace CC {
     type: string;
     children: ObjectNode[];
     visible?: boolean;
+    metadata?: any;
   }
 
   export interface TransformNode extends ObjectNode {

@@ -12,18 +12,18 @@ import {
   StandardMaterial,
   HDRCubeTexture,
 } from '@babylonjs/core';
-import { Editor } from '../../Editor';
+import { Editor } from '../Editor';
 import { Dispatch } from '@/utils/dispatch';
-import { deserializeNode, serializeNode } from '../serialze/node/Node';
-import { CC } from '../BaseRes';
+import { deserializeNode, serializeNode } from './serialze/node/Node';
+import { CC } from './BaseRes';
 import { ZipFile, zipFiles } from '@/utils/Zip';
-import { IFile } from '../file/IFile';
-import { ICollectAssets, ILoaderAssets } from '../AssetsManager';
+import { IFile } from './file/IFile';
+import { ICollectAssets, ILoaderAssets } from './AssetsManager';
 import { Geometry, TransformNode } from '@babylonjs/core/Meshes';
 import { ID } from '@/utils/id';
 import { ArrayUtils } from '@/utils/Array';
-import { bufferToVertex, vertexToBuffer } from '../utils/GeometryUtils';
-import { deserializeScene } from '../serialze/Scene';
+import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
+import { deserializeScene } from './serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import JSZip from 'jszip';
 
@@ -34,9 +34,16 @@ interface RuntimeAssetsEventBus {
   onChanged: void;
 }
 
+export interface IGetBuffer {
+  getGeoBuffer(uuid: string): Promise<ArrayBuffer>;
+  getTextureBuffer(uuid: string): Promise<ArrayBuffer>;
+  getMaterialData(uuid: string): any;
+  getTexturelData(uuid: string): any;
+}
+
 export class RuntimeLibrary
   extends Dispatch<RuntimeAssetsEventBus>
-  implements ICollectAssets, ILoaderAssets
+  implements ICollectAssets, ILoaderAssets, IGetBuffer
 {
   async getTextureURL(sourceUUID: string) {
     if (!sourceUUID) {
@@ -73,6 +80,33 @@ export class RuntimeLibrary
     Texture.SerializeBuffers = false;
     Texture.ForceSerializeBuffers = false;
     SceneLoader.RegisterPlugin(new FBXLoader());
+  }
+  getTexturelData(uuid: string) {
+    const texture = this.texture.find((x) => x.uuid == uuid);
+    return texture;
+  }
+  getMaterialData(uuid: string) {
+    const material = this.material.find((x) => x.uuid == uuid);
+    return material;
+  }
+
+  getGeoBuffer(uuid: string): Promise<ArrayBuffer> {
+    if (this.tempGeometryFile.has(uuid)) {
+      return Promise.resolve(this.tempGeometryFile.get(uuid));
+    }
+    if (this.geomertyFile.has(uuid)) {
+      return Promise.resolve(this.geomertyFile.get(uuid));
+    }
+    return this.fileSystem.getFileArrayBuffer(uuid, GEOMETRY);
+  }
+  getTextureBuffer(uuid: string): Promise<ArrayBuffer> {
+    if (this.tempTextureFile.has(uuid)) {
+      return Promise.resolve(this.tempTextureFile.get(uuid));
+    }
+    if (this.textureMap.has(uuid)) {
+      return Promise.resolve(this.textureMap.get(uuid));
+    }
+    return this.fileSystem.getFileArrayBuffer(uuid, TEXTURE);
   }
 
   async importMesh(file: File) {

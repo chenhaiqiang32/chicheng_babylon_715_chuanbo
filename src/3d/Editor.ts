@@ -30,6 +30,7 @@ import {
   Quaternion,
   GizmoAnchorPoint,
   MeshBuilder,
+  Engine,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -56,6 +57,7 @@ interface EditorEvent {
   onScaleChanged: { object: TransformNode; newScale: number[]; oldScale: number[] };
   onSceneChanged: { scene: Scene };
   onSceneChangeBefore: { scene: Scene };
+  animationChange: void;
 }
 
 export class Editor extends Dispatch<EditorEvent> {
@@ -98,8 +100,8 @@ export class Editor extends Dispatch<EditorEvent> {
   private enableGizmo: boolean = true;
 
   private enableMask: boolean = true;
-  private weakMap = new Map<string, Node>();
 
+  private weakMap = new Map<string, Node>();
   get selectNodes() {
     return this.selectNodes;
   }
@@ -135,13 +137,20 @@ export class Editor extends Dispatch<EditorEvent> {
     }
   }
 
-  async init(canvas: HTMLCanvasElement) {
-    this.engine = new WebGPUEngine(canvas, {
-      adaptToDeviceRatio: true,
-      limitDeviceRatio: 2,
-    });
-    if (this.engine instanceof WebGPUEngine) {
-      await this.engine.initAsync();
+  async init(canvas: HTMLCanvasElement, gpu: boolean = false) {
+    if (gpu) {
+      this.engine = new WebGPUEngine(canvas, {
+        adaptToDeviceRatio: true,
+        limitDeviceRatio: 2,
+      });
+      if (this.engine instanceof WebGPUEngine) {
+        await this.engine.initAsync();
+      }
+    } else {
+      this.engine = new Engine(canvas, true, {
+        adaptToDeviceRatio: true,
+        limitDeviceRatio: 2,
+      });
     }
     registerKeyDown((event) => {
       const key = event.key.toLowerCase();

@@ -60,7 +60,6 @@ function get() {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   width: 100%;
   border-radius: 8px;
   padding: 4px;

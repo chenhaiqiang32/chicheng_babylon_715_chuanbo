@@ -421,6 +421,7 @@ const createAnimation = async () => {
   })
   runtimeAnimations.value = [...runtimeAnimations.value]
   Editor.Instance.Scene.runtimeAnimation = toRaw(runtimeAnimations.value)
+  Editor.Instance.dispatch('animationChange')
 }
 
 

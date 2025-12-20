@@ -9,7 +9,7 @@
             <Texture :acceptCubeTexture="true" :title="$t('component.sceneSetting.environmentTexture')" :object="scene"
                 property="environmentTexture" @change="force" />
             <Slider :label="$t('component.sceneSetting.iblIntensity')" :object="scene" property="iblIntensity"
-                @change="force" />
+                @change="force" :min="0" :max="5" />
         </SectionField>
         <SectionField :title="$t('component.sceneSetting.fog')">
             <Switch :label="$t('component.sceneSetting.enabled')" :object="scene" property="fogEnabled"

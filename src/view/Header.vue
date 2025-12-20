@@ -3,10 +3,13 @@
         <div style="margin-left: 20px;">
         </div>
         <Menu :data="menuItems"></Menu>
+        <div style="margin-left:auto; margin-right: 20px;">
+            <ElButton type="primary" size="small" @click="publish">{{ $t('dialog.publish.title') }}</ElButton>
+        </div>
     </div>
 </template>
 <script setup lang='ts'>
-import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
 import Menu from '@/component/menu/Menu.vue';
 import { useScene } from '@/store/useScene';
@@ -16,6 +19,7 @@ import { ElMessage } from 'element-plus';
 import { ref } from 'vue'
 import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
 import { useIndexDBProject } from '@/store/useIndexDBProject';
+import { useDialog } from './dialog';
 
 const isDark = useDark({
     valueDark: 'dark',
@@ -34,7 +38,7 @@ const menuItems: MenuItem[] = [
                 callback: importModel
             }, {
                 name: 'menu.file.save',
-                callback: exportFile
+                callback: saveProject
             }
         ]
     },
@@ -104,7 +108,7 @@ const menuItems: MenuItem[] = [
     },
 ]
 
-async function exportFile() {
+async function saveProject() {
     try {
         await EditorFileSystem.Instance.check();
         useScene().saveScene(Editor.Instance.Scene)
@@ -146,12 +150,10 @@ function importModel() {
         }
     })
 }
-function importAssets() {
-
+async function publish() {
+    const dialog = (await import('./dialog/PublishDialog.vue')).default;
+    useDialog(dialog)
 }
-
-
-
 </script>
 <style scoped lang='scss'>
 .editor-header {

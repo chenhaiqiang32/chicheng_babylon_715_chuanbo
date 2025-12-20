@@ -36,6 +36,9 @@ export function serializeNode(
     if (node instanceof TransformNode) {
       serializeTransformNode(node, reuslt as CC.TransformNode);
     }
+    if (node.metadata) {
+      reuslt.metadata = node.metadata;
+    }
     return reuslt as CC.ObjectNode;
   } catch (error) {
     console.error('序列化节点时出错:', error);
@@ -74,8 +77,8 @@ export async function deserializeNode(
   }
   currentNode.inheritVisibility = true;
   currentNode.isVisible = node.visible;
-  if (node.type === 'light') {
-    currentNode.isVisible = false;
+  if (node.metadata) {
+    currentNode.metadata = node.metadata;
   }
   for (let index = 0; index < node.children.length; index++) {
     const element = node.children[index];

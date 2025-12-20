@@ -8,13 +8,13 @@
 import { Editor } from '@/3d/Editor';
 import { onMounted, ref } from 'vue';
 import ToolBar from './scene/ToolBar.vue'
-import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { useScene } from '@/store/useScene';
 import { TransformNode } from '@babylonjs/core';
 
 const canvasRef = ref<HTMLCanvasElement>()
 onMounted(async () => {
-    Editor.Instance.init(canvasRef.value)
+    Editor.Instance.init(canvasRef.value, true)
 })
 
 async function handleDrop(ev: DragEvent) {

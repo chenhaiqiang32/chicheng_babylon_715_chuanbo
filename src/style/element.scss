@@ -32,6 +32,15 @@
   box-shadow: none !important;
 }
 
+.rename-text {
+  border: 1px dashed var(--border-color2);
+  --el-input-inner-height: 16px !important;
+
+  .el-input__wrapper {
+    background-color: transparent !important;
+  }
+}
+
 .el-message-box {
   .el-input__wrapper {
     background-color: var(--bg-color-2) !important;

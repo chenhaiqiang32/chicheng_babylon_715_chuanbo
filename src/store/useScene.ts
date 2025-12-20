@@ -4,7 +4,7 @@ import { Node, Scene } from '@babylonjs/core';
 import { ViewFlagsMode } from '@/3d/core/utils/viewFlagsMode';
 import { CC } from '@/3d/assets/BaseRes';
 import { Editor } from '@/3d/Editor';
-import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { ID } from '@/utils/id';
 
