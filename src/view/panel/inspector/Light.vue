@@ -30,6 +30,7 @@ import { Editor } from '@/3d/Editor';
 const lightClass = ref<string>(null);
 
 const positionRef = ref<InstanceType<typeof Vector>>();
+const rotationRef = ref<InstanceType<typeof Vector>>()
 
 const props = defineProps<{
     object: Light
@@ -41,6 +42,7 @@ watch(() => props.object, (newVal) => {
 
 onMounted(() => {
     Editor.Instance.on('onPositionChanged', onPositionChanged);
+	Editor.Instance.on('onRotationChanged', onRotationChanged);
 });
 onUnmounted(() => {
 });
@@ -48,9 +50,16 @@ onUnmounted(() => {
 // ==================== 事件 ====================
 
 function onPositionChanged(e: {object: TransformNode}) {
-    if(e.object == props.object){
+    if(e.object === props.object.gizmo.attachedMesh)
+    {
         positionRef.value.syncFromObject();
     }
+}
+
+function onRotationChanged(e: { object: TransformNode }) {
+    if(e.object === props.object.gizmo.attachedMesh){
+		rotationRef.value.syncFromObject()
+	}
 }
 
 </script>

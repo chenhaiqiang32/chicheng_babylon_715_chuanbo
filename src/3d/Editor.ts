@@ -29,6 +29,8 @@ import {
   MotionBlurPostProcess,
   Camera,
   UniversalCamera,
+  UtilityLayerRenderer,
+  PositionGizmo,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -122,6 +124,9 @@ export class Editor extends Dispatch<EditorEvent> {
     }
     if (v[0] instanceof AbstractMesh) {
       this.gizmoManager.attachToMesh(v[0]);
+    }  else if(v[0] instanceof Light){
+      // 灯光作用于其父节点 transformNode
+      this.gizmoManager.attachToMesh(v[0].gizmo.attachedMesh);
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
       if (v[0].getChildMeshes().length > 0) this.gizmoManager.attachToNode(v[0]);
@@ -174,6 +179,12 @@ export class Editor extends Dispatch<EditorEvent> {
       scene.activeCamera.attachControl();
       scene.onPointerObservable.add(this.onPointerDonw);
       useScene().currentScene = uuid;
+      scene.lights.forEach(light => {
+      const lightGizmo = new LightGizmo();
+      lightGizmo.light = light;
+      lightGizmo.scaleRatio = 2;
+      light.gizmo = lightGizmo;
+      })
     }
     this.scene = scene;
     this.scene.collisionsEnabled = true;
@@ -280,7 +291,6 @@ export class Editor extends Dispatch<EditorEvent> {
     scene.environmentTexture = env;
     scene.iblIntensity = 0.5;
     this.createLight('directional', scene);
-
     return scene;
   }
 
@@ -311,8 +321,7 @@ export class Editor extends Dispatch<EditorEvent> {
       const lightGizmo = new LightGizmo();
       lightGizmo.light = light;
       lightGizmo.scaleRatio = 2;
-      if(this.gizmoManager)
-        this.gizmoManager.attachToMesh(lightGizmo.attachedMesh);
+      light.gizmo = lightGizmo;
     }
     return light;
   }
