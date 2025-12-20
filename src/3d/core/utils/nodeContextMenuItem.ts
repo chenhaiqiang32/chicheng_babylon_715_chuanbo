@@ -2,6 +2,7 @@ import { Editor } from "@/3d/Editor";
 import { useScene } from "@/store/useScene";
 import { MeshBuilder, Node, Quaternion, TransformNode } from "@babylonjs/core";
 import { nextTick } from "vue";
+import { EnvFileHelper } from "./EnvFileHelper";
 
 /**
  * 获取层级面板的右键菜单配置
@@ -89,9 +90,18 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
                     mesh.rotationQuaternion = new Quaternion(0,0,0);
                     useScene().addHierarchy(mesh, parentNode);
                 }
-            },
+            }
         ]
     },
+    // todo:将添加贴图的功能移到资产面板
+    {
+      name:'添加贴图',
+      callback: () => {
+        var helper = new EnvFileHelper();
+        //helper.loadSkyBox();
+        helper.importSkyboxTexture();
+      }
+    }
   ];
 }
 
