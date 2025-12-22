@@ -18,9 +18,13 @@ import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
 import CameraComp from './inspector/Camera.vue'
 import Animation from './inspector/Animation.vue'
-import { Camera, Mesh, TransformNode } from '@babylonjs/core';
+import { Camera, GPUParticleSystem, Mesh, ParticleSystem, TransformNode } from '@babylonjs/core';
 import { _EventBus } from '@/utils/dispatch';
 import Scripts from './inspector/Scripts.vue'
+import particleSystem from '@/view/panel/inspector/particle/ParticleSystem.vue'
+import ParticleComponents from './inspector/particle/ParticleComponents.vue';
+
+
 
 const { currentSelected } = storeToRefs(useScene());
 const selectedObject = shallowRef<any>(null);
@@ -55,9 +59,16 @@ const comps = computed(() => {
     const arr = []
     if (selectedObject.value instanceof TransformNode) {
         arr.push(Common, Transform)
+        console.log(selectedObject.value);
+
+        if (selectedObject.value.particleSystem != null) {
+            arr.push(ParticleComponents)
+        }
+
     }
     if (selectedObject.value instanceof Mesh) {
         arr.push(MaterialInspectorRouter)
+
     }
     if (selectedObject.value instanceof Camera) {
         arr.push(CameraComp)
