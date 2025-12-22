@@ -29,27 +29,27 @@ export function vertexToBuffer(g: GeoData) {
   const headerPad = (4 - (headerBytes.byteLength % 4)) % 4;
 
   const totalSize = 4 + headerBytes.byteLength + headerPad + dataSectionOffset;
-  const output = new ArrayBuffer(totalSize);
-  const dv = new DataView(output);
+  const output = new Uint8Array(totalSize);
+  const dv = new DataView(output.buffer);
   dv.setUint32(0, headerBytes.byteLength, true);
-  new Uint8Array(output, 4, headerBytes.byteLength).set(headerBytes);
+  output.set(headerBytes, 4);
   if (headerPad) {
-    new Uint8Array(output, 4 + headerBytes.byteLength, headerPad).fill(0);
+    output.fill(0, 4 + headerBytes.byteLength, 4 + headerBytes.byteLength + headerPad);
   }
 
   let writeOffset = 4 + headerBytes.byteLength + headerPad;
   for (const t of typedBuffers) {
-    new Uint8Array(output, writeOffset, t.buffer.byteLength).set(new Uint8Array(t.buffer));
+    output.set(new Uint8Array(t.buffer), writeOffset);
     writeOffset += t.buffer.byteLength;
   }
-
   return output;
 }
 
-export function bufferToVertex(buffer: ArrayBuffer): GeoData {
-  const dv = new DataView(buffer);
+export function bufferToVertex(buffer: Uint8Array): GeoData {
+  const arrayBuffer = buffer.buffer;
+  const dv = new DataView(arrayBuffer);
   const headerLen = dv.getUint32(0, true);
-  const headerBytes = new Uint8Array(buffer, 4, headerLen);
+  const headerBytes = new Uint8Array(arrayBuffer, 4, headerLen);
   const headerStr = new TextDecoder().decode(headerBytes);
   const info = JSON.parse(headerStr) as GeoInfo;
   const headerPad = (4 - (headerLen % 4)) % 4;
@@ -59,10 +59,10 @@ export function bufferToVertex(buffer: ArrayBuffer): GeoData {
     const start = dataStart + attr.start;
     const count = attr.byteLength >>> 2;
     if (attr.key.toLowerCase().includes('indices')) {
-      const ta = new Uint32Array(buffer, start, count);
+      const ta = new Uint32Array(arrayBuffer, start, count);
       out[attr.key] = Array.from(ta);
     } else {
-      const ta = new Float32Array(buffer, start, count);
+      const ta = new Float32Array(arrayBuffer, start, count);
       out[attr.key] = Array.from(ta);
     }
   }

@@ -1,4 +1,12 @@
-import type { Scene, Node, Geometry, Material, BaseTexture } from '@babylonjs/core';
+import type {
+  Scene,
+  Node,
+  Geometry,
+  Material,
+  BaseTexture,
+  Light,
+  LightGizmo,
+} from '@babylonjs/core';
 
 declare module '@babylonjs/core' {
   interface Scene {
@@ -21,5 +29,8 @@ declare module '@babylonjs/core' {
   }
   interface InternalTexture {
     uuid: string;
+  }
+  interface Light {
+    gizmo: LightGizmo;
   }
 }

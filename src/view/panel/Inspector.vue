@@ -19,10 +19,11 @@ import Transform from './inspector/Transform.vue'
 import CameraComp from './inspector/Camera.vue'
 import Event from './inspector/Event.vue'
 import Animation from './inspector/Animation.vue'
-import { Camera, Mesh, TransformNode } from '@babylonjs/core';
 import { _EventBus } from '@/utils/dispatch';
 import Scripts from './inspector/Scripts.vue'
 
+import LightComp from './inspector/Light.vue';
+import { Camera, Light, Mesh, TransformNode } from '@babylonjs/core';
 const { currentSelected } = storeToRefs(useScene());
 const selectedObject = shallowRef<any>(null);
 
@@ -63,8 +64,10 @@ const comps = computed(() => {
     if (selectedObject.value instanceof Camera) {
         arr.push(CameraComp)
     }
+    if (selectedObject.value instanceof Light) {
+        arr.push(LightComp)
+    }
     arr.push(Event)
-    arr.push(Scripts)
     return arr
 })
 

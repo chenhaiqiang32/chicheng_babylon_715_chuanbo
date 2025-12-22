@@ -16,7 +16,7 @@ import { Editor } from '../Editor';
 import { Dispatch } from '@/utils/dispatch';
 import { deserializeNode, serializeNode } from './serialze/node/Node';
 import { CC } from './BaseRes';
-import { ZipFile, zipFiles } from '@/utils/Zip';
+import { readZip, readZipAsync, ZipFile, zipFiles } from '@/utils/Zip';
 import { IFile } from './file/IFile';
 import { ICollectAssets, ILoaderAssets } from './AssetsManager';
 import { Geometry, TransformNode } from '@babylonjs/core/Meshes';
@@ -35,8 +35,8 @@ interface RuntimeAssetsEventBus {
 }
 
 export interface IGetBuffer {
-  getGeoBuffer(uuid: string): Promise<ArrayBuffer>;
-  getTextureBuffer(uuid: string): Promise<ArrayBuffer>;
+  getGeoBuffer(uuid: string): Promise<Uint8Array>;
+  getTextureBuffer(uuid: string): Promise<Uint8Array>;
   getMaterialData(uuid: string): any;
   getTexturelData(uuid: string): any;
 }
@@ -57,6 +57,7 @@ export class RuntimeLibrary
     if (!buffer) {
       buffer = await this.fileSystem.getFileArrayBuffer(sourceUUID, TEXTURE);
     }
+    //@ts-ignore
     const url = URL.createObjectURL(new Blob([buffer]));
     return url;
   }
@@ -90,7 +91,7 @@ export class RuntimeLibrary
     return material;
   }
 
-  getGeoBuffer(uuid: string): Promise<ArrayBuffer> {
+  getGeoBuffer(uuid: string): Promise<Uint8Array> {
     if (this.tempGeometryFile.has(uuid)) {
       return Promise.resolve(this.tempGeometryFile.get(uuid));
     }
@@ -99,7 +100,7 @@ export class RuntimeLibrary
     }
     return this.fileSystem.getFileArrayBuffer(uuid, GEOMETRY);
   }
-  getTextureBuffer(uuid: string): Promise<ArrayBuffer> {
+  getTextureBuffer(uuid: string): Promise<Uint8Array> {
     if (this.tempTextureFile.has(uuid)) {
       return Promise.resolve(this.tempTextureFile.get(uuid));
     }
@@ -143,19 +144,20 @@ export class RuntimeLibrary
     texture.name = element.name;
     texture.sourceUUID = ID.generateUUID();
     const buffer = await element.arrayBuffer();
-    this.tempTextureFile.set(texture.sourceUUID, buffer);
+    this.tempTextureFile.set(texture.sourceUUID, new Uint8Array(buffer));
     const data = await this.addTexture(texture);
     data.url = url;
     return texture;
   }
 
   async loadAssets(fileSystem: IFile, loading?: (v: number) => void) {
+    let progress = 0.1;
     this.fileSystem = fileSystem;
-
     const assetsText = await fileSystem.getFileText('assets.json');
-    loading?.(0.1);
+    loading?.(progress);
     if (!assetsText) {
-      loading?.(1);
+      progress = 1;
+      loading?.(progress);
       return [];
     }
     const assets = JSON.parse(assetsText) as any;
@@ -174,34 +176,35 @@ export class RuntimeLibrary
         this.textureMap.set(element.sourceUUID, file);
       });
       padding.add(loadFile);
+      loading?.(progress + (0.4 * (index + 1)) / this.texture.length);
     }
+    progress += 0.5;
     await Promise.all(padding);
     padding.clear();
     ids.clear();
     this.material = assets.material;
     this.geomertyZips = assets.geomertyZips;
     this.rootNodes = assets.rootNode;
-    let index = 0;
+    let zipIndex = 0;
     for (const zip of this.geomertyZips) {
+      zipIndex++;
       const blob = await fileSystem.getFileArrayBuffer(zip);
-      const zipFile = new JSZip();
-      await zipFile.loadAsync(blob);
-      const files = zipFile.files;
-      for (const element in files) {
-        const buffer = files[element].async('arraybuffer');
-        buffer.then((buffer) => {
-          this.geomertyFile.set(element, buffer);
-        });
-        padding.add(buffer);
+      const zipFile = await readZipAsync(blob);
+      const keys = Object.keys(zipFile);
+      for (let index = 0; index < keys.length; index++) {
+        const buffer = zipFile[keys[index]];
+        this.geomertyFile.set(keys[index], buffer);
+        let v = ((((index + 1) / keys.length) * zipIndex) / this.geomertyZips.length) * 0.4;
+        loading?.(progress + v);
       }
-      index++;
-      loading?.(0.1 + (index / this.geomertyZips.length) * 0.9);
     }
     await Promise.all(padding);
+    progress = 1;
+
     const sceneText = await fileSystem.getFileText('scene.json');
     const scene = JSON.parse(sceneText) as CC.Scene[];
     this.dispatch('onChanged');
-    loading?.(1);
+    loading?.(progress);
     return scene.filter((x) => x);
   }
 
@@ -242,11 +245,11 @@ export class RuntimeLibrary
   sceneTexture: Map<string, BaseTexture> = new Map();
   currentScene: Scene;
 
-  textureMap: Map<string, ArrayBuffer> = new Map();
-  geomertyFile: Map<string, ArrayBuffer> = new Map();
+  textureMap: Map<string, Uint8Array> = new Map();
+  geomertyFile: Map<string, Uint8Array> = new Map();
 
-  tempGeometryFile: Map<string, ArrayBuffer> = new Map();
-  tempTextureFile: Map<string, ArrayBuffer> = new Map();
+  tempGeometryFile: Map<string, Uint8Array> = new Map();
+  tempTextureFile: Map<string, Uint8Array> = new Map();
 
   private scriptMap: Map<string, CC.ScriptData> = new Map();
 
@@ -279,7 +282,7 @@ export class RuntimeLibrary
       if (!this.tempTextureFile.has(data.sourceUUID) && !this.textureMap.has(data.sourceUUID)) {
         const t = texture.getInternalTexture();
         if (t._buffer) {
-          const buffer = (await serializeTextureBuffer(t._buffer)) as ArrayBuffer;
+          const buffer = await serializeTextureBuffer(t._buffer);
           this.tempTextureFile.set(data.sourceUUID, buffer);
         }
       }
@@ -436,22 +439,26 @@ export class RuntimeLibrary
   }
 }
 
-export async function serializeTextureBuffer(buffer: InternalTexture['_buffer']) {
+export async function serializeTextureBuffer(
+  buffer: InternalTexture['_buffer'],
+): Promise<Uint8Array> {
   if (buffer instanceof ArrayBuffer) {
-    return buffer;
+    return new Uint8Array(buffer);
   } else if (typeof buffer === 'string') {
     return new TextEncoder().encode(buffer);
   } else if (buffer instanceof Blob) {
-    return buffer;
+    return new Uint8Array(await buffer.arrayBuffer());
   } else if (buffer instanceof ImageBitmap || buffer instanceof HTMLImageElement) {
-    return await imgToBlob(buffer);
-  } else {
+    return new Uint8Array(await (await imgToBlob(buffer)).arrayBuffer());
+  } else if (buffer instanceof Uint8Array) {
     return buffer;
+  } else {
+    return null;
   }
 }
 
 function imgToBlob(img: HTMLImageElement | ImageBitmap) {
-  return new Promise((resolve, reject) => {
+  return new Promise<Blob>((resolve, reject) => {
     const canvas = document.createElement('canvas');
     canvas.width = img.width;
     canvas.height = img.height;

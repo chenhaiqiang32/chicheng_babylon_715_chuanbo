@@ -38,7 +38,7 @@
                 <Inspector />
             </ElSplitterPanel>
         </ElSplitter>
-        <!-- <Loading :progress="loading"> </Loading> -->
+        <Loading :progress="loading" v-if="loading > 0 && loading < 1"> </Loading>
     </div>
 </template>
 <script setup lang='ts'>
@@ -51,9 +51,9 @@ import Hierarchy from './panel/Hierarchy.vue'
 import { storeToRefs } from 'pinia';
 import { useEditor } from '@/store/useEditor';
 import { useDialog } from './dialog/index';
+import Loading from '@/component/common/Loading.vue'
 import SetupDialog from './dialog/SetupDialog.vue'
 import { onMounted, ref } from 'vue'
-import BasePanel from '@/component/common/BasePanel.vue'
 onMounted(() => {
     useDialog(SetupDialog)
 })

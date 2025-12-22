@@ -38,7 +38,7 @@
 
         <SectionField :title="$t('component.sceneSetting.renderingPipeline')">
             <Switch :label="$t('component.sceneSetting.enabled')" :object="pipelineConfig" property="enabled"
-                :noUndoRedo="true" @change="toggleDefaultPipeline" />
+                @change="toggleDefaultPipeline" />
             <template v-if="renderingPipeline">
                 <Switch label="FXAA Enabled" :object="renderingPipeline" property="fxaaEnabled" />
             </template>
@@ -291,7 +291,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef } from "vue";
+import { reactive, ref, shallowRef } from "vue";
 import { Scene, DepthOfFieldEffectBlurLevel, TonemappingOperator, DefaultRenderingPipeline, SSAO2RenderingPipeline, SSRRenderingPipeline } from "@babylonjs/core";
 import { registerUndoRedo } from "@/tools/undoredo";
 import { parseDefaultRenderingPipeline, serializeDefaultRenderingPipeline } from "@/3d/rendering/default-pipeline";

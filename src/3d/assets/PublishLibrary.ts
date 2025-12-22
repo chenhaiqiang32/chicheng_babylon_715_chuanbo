@@ -6,10 +6,8 @@ import {
   Scene,
   PBRMaterial,
   Texture,
-  Tools,
 } from '@babylonjs/core';
 import { Dispatch } from '@/utils/dispatch';
-import { deserializeNode } from './serialze/node/Node';
 import { CC } from './BaseRes';
 import { ZipFile, zipFiles } from '@/utils/Zip';
 import { IFile } from './file/IFile';
@@ -20,8 +18,6 @@ import { ArrayUtils } from '@/utils/Array';
 import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import { deserializeScene } from './serialze/Scene';
 import { IGetBuffer } from './RuntimeLibrary';
-import { forEach } from 'jszip';
-import { json } from 'stream/consumers';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -30,15 +26,13 @@ interface RuntimeAssetsEventBus {
   onChanged: void;
 }
 
-export class PublishLibrary
-  extends Dispatch<RuntimeAssetsEventBus>
-  implements ICollectAssets, ILoaderAssets
-{
-  textureMap: Map<string, ArrayBuffer> = new Map();
-  geomertyFile: Map<string, ArrayBuffer> = new Map();
+export class PublishAssets {
+  textureMap: Map<string, Uint8Array> = new Map();
+  geomertyFile: Map<string, Uint8Array> = new Map();
   texture: any[] = [];
   material: any[] = [];
-  async addScene(publishScenes: Partial<CC.Scene>[]) {
+  constructor(private getBufferSystem: IGetBuffer) {}
+  async addScene(publishScenes: Partial<CC.Scene>[], onProgress?: (v: number) => void) {
     const geometryList: string[] = [];
     const materialList: string[] = [];
     for (const item of publishScenes) {
@@ -93,110 +87,36 @@ export class PublishLibrary
     files.push(['scene.json', sceneJson]);
     files.push(['material.json', materialJson]);
     files.push(['texture.json', textureJson]);
-    const zipBuffer = await zipFiles(files);
-    Tools.DownloadBlob(zipBuffer, 'publish.zip');
+    return await zipFiles(files, (v) => {
+      onProgress?.(v);
+    });
   }
+}
 
-  constructor(private getBufferSystem: IGetBuffer) {
-    super();
-  }
-  async loadAssets(fileSystem: IFile, loading?: (v: number) => void) {}
+export class AppAssets {
+  constructor() {}
 
   async saveAll() {}
 
   sceneGeometry: Map<string, Geometry> = new Map();
   sceneMaterial: Map<string, Material> = new Map();
   sceneTexture: Map<string, BaseTexture> = new Map();
+  textureMap: Map<string, Uint8Array> = new Map();
+  geomertyFile: Map<string, Uint8Array> = new Map();
   currentScene: Scene;
+  texture: any[] = [];
+  material: any[] = [];
 
-  async addTexture(texture: BaseTexture, force: boolean = true): Promise<any> {
-    if (!texture.uuid) {
-      texture.uuid = ID.generateUUID();
-    }
-    if (!texture.sourceUUID) {
-      texture.sourceUUID = ID.generateUUID();
-    }
-    const old = this.texture.find((item) => item.uuid === texture.uuid);
-    if (!old || force) {
-      const data = texture.serialize();
-      data.uuid = texture.uuid;
-      delete data.url;
-      if (old) {
-        ArrayUtils.remove(old, this.texture);
-      }
-      data.sourceUUID = texture.sourceUUID;
-      this.texture.push(data);
-      const buffer = await this.getBufferSystem.getTextureBuffer(texture.sourceUUID);
-      this.textureMap.set(texture.sourceUUID, buffer);
-      return data;
-    }
-  }
   async getTextureURL(sourceUUID: string) {
     if (!sourceUUID) {
       return '';
     }
     let buffer = this.textureMap.get(sourceUUID);
     if (buffer) {
+      //@ts-ignore
       const url = URL.createObjectURL(new Blob([buffer]));
       return url;
     }
-  }
-
-  addMaterial(material: Material, force: boolean = true): void {
-    if (!material.uuid) {
-      material.uuid = ID.generateUUID();
-    }
-    const oldMat = this.material.find((item) => item.uuid === material.uuid);
-    if (!oldMat || force) {
-      const data = material.serialize();
-      for (const key in material) {
-        //@ts-ignore
-        const value = material[key];
-        //@ts-ignore
-        if (material[key] instanceof Texture) {
-          if (!key.startsWith('_') && key.indexOf('environment') == -1) {
-            this.addTexture(value);
-            data[key + '_MAP'] = value.uuid;
-            delete data[key];
-          }
-        }
-      }
-      //@ts-ignore
-      const clearCoat = material['clearCoat'];
-      if (clearCoat) {
-        for (const key in clearCoat) {
-          //@ts-ignore
-          const value = clearCoat[key];
-          const clearCoatData = data['plugins']['PBRClearCoatConfiguration'];
-          //@ts-ignore
-          if (clearCoat[key] instanceof Texture) {
-            if (!key.startsWith('_') && key.indexOf('environment') == -1) {
-              this.addTexture(value);
-              data['clearCoat.' + key + '_MAP'] = value.uuid;
-              delete clearCoatData[key];
-            }
-          } else {
-          }
-        }
-      }
-
-      data.uuid = material.uuid;
-      if (oldMat) {
-        ArrayUtils.remove(oldMat, this.material);
-      }
-      this.material.push(data);
-    }
-  }
-  addGeometry(geometry: Geometry): void {
-    if (!geometry.uuid) {
-      geometry.uuid = ID.generateUUID();
-    }
-    if (this.geomertyFile.has(geometry.uuid)) {
-      return;
-    }
-    const data = geometry.serializeVerticeData();
-    const buffer = vertexToBuffer(data);
-    this.geomertyFile.set(geometry.uuid, buffer);
   }
 
   async getGeometry(uuid: string): Promise<Geometry> {

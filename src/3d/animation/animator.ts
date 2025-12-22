@@ -24,6 +24,7 @@ export class Animator {
     }
   }
   execute(time: number) {
+    console.log(time);
     for (let index = 0; index < this.clips.length; index++) {
       const clip = this.clips[index];
       const { percent, start, end } = getPercent(time, clip.clip.key);
@@ -177,6 +178,7 @@ function setV3Value(object: any, property: string, value: any) {
   ObjectUtils.setObjectValue(object, property + '.x', value[0]);
   ObjectUtils.setObjectValue(object, property + '.y', value[1]);
   ObjectUtils.setObjectValue(object, property + '.z', value[2]);
+  console.log(object);
 }
 
 function setQuaternionValue(object: any, property: string, value: any) {

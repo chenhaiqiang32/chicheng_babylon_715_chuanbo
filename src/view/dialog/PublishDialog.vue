@@ -36,13 +36,15 @@
 
 <script lang="ts" setup>
 import { CC } from '@/3d/assets/BaseRes';
-import { PublishLibrary } from '@/3d/assets/PublishLibrary';
+import { PublishAssets } from '@/3d/assets/PublishLibrary';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
 import Field from '@/component/common/Field.vue';
 import Grid from '@/component/common/Grid.vue';
+import { useEditor } from '@/store/useEditor';
 import { useScene } from '@/store/useScene';
+import { Tools } from '@babylonjs/core';
 import { ElDialog } from 'element-plus';
 import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
@@ -51,7 +53,7 @@ const { sceneInfoList } = storeToRefs(useScene())
 const meshCompress = ref('none');
 const textureCompress = ref(false);
 const offline = ref(false);
-
+const { loading } = storeToRefs(useEditor());
 
 
 const excludeScene = ref<string[]>([])
@@ -68,17 +70,16 @@ function onSelectScene(item: { uuid?: string }) {
 }
 
 
-function onPublish() {
-
-    const sceneList: CC.Scene[] = [];
+async function onPublish() {
     useScene().saveScene(Editor.Instance.Scene);
-
     let publishScenes = sceneInfoList.value.filter(x => !excludeScene.value?.includes(x.uuid))
-    const publish = new PublishLibrary(RuntimeLibrary.Instance);
-    publish.addScene(publishScenes)
-
-
-
+    const publish = new PublishAssets(RuntimeLibrary.Instance);
+    const buffer = await publish.addScene(publishScenes, (v) => {
+        loading.value = v;
+        console.log(v);
+    });
+    //@ts-ignore
+    Tools.Download(new Blob([buffer], { type: 'application/zip' }), 'publish.zip');
 }
 </script>
 <style scoped lang="scss">

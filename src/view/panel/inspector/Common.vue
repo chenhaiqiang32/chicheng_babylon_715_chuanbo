@@ -6,16 +6,19 @@
         <StringField :object="props.object" property="name" :label="$t('component.common.name')"
             @change="onNameChanged" />
         <Switch :object="props.object" property="isVisible" :label="$t('component.common.visible')"
-            @change="(v, i) => changeProperty('isVisible', v, i, 'boolean')" />
+            @change="setVisible" />
+        <Switch v-if="props.object instanceof AbstractMesh" :object="props.object" property="checkCollisions"
+            :label="$t('component.common.physics')" />
     </SectionField>
 </template>
 <script setup lang='ts'>
-import { computed, inject, watch } from "vue"
+import { computed, inject, onMounted, ref, watch } from "vue"
 import SectionField from '@/component/common/SectionField.vue'
 import StringField from '@/component/base/StringField.vue'
 import Switch from "@/component/base/Switch.vue";
 import Field from "@/component/common/Field.vue";
 import { Editor } from "@/3d/Editor";
+import { AbstractMesh, PhysicsImpostor } from "@babylonjs/core";
 const props = defineProps<{ object: any }>()
 //const objectType = ref<string>("");
 // 计算属性：获取物体类型信息
@@ -28,6 +31,10 @@ const propertyChanged = inject<(property: string, newValue: any, oldValue: any, 
 
 function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
     propertyChanged?.(property, newValue, oldValue, type);
+}
+function setVisible(visible: boolean) {
+    props.object.isVisible = visible;
+    Editor.Instance.switchNodeActive(props.object.uuid, props.object.isVisible);
 }
 
 function onNameChanged(newName: string) {

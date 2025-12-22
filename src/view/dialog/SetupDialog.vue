@@ -36,7 +36,7 @@ import SVG from '@/component/common/SVG.vue';
 import { onMounted, ref } from 'vue';
 import { useScene } from '@/store/useScene';
 import { Editor } from '@/3d/Editor';
-import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
 import { useIndexDBProject } from '@/store/useIndexDBProject';
 import { storeToRefs } from 'pinia';
@@ -46,35 +46,31 @@ const { projects } = storeToRefs(useIndexDBProject());
 
 const model = ref(true);
 const creating = ref(false);
-const opening = ref(false);
 const recentProjects = ref<Array<{ name: string; time: number }>>(JSON.parse(localStorage.getItem('recentProjects') || '[]'));
 
 const props = defineProps<{ close: () => void }>();
 
-
+const { loading } = storeToRefs(useEditor());
 onMounted(() => {
     // openIndexDBProject('789')
 });
 
 async function createProject() {
-    if (creating.value) return;
-    creating.value = true;
     try {
         const scene = await Editor.Instance.createNewScene('默认场景');
         useScene().addScene(scene);
         Editor.Instance.setCurrentScene(scene.uuid);
         props.close();
     } finally {
-        creating.value = false;
     }
 }
 
 async function openLocalProject() {
-    if (opening.value) return;
-    opening.value = true;
     try {
         await EditorFileSystem.Instance.init(FileMode.LOCAL);
-        const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file);
+        const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file, (v) => {
+            console.log(v);
+        });
         if (sceneList.length > 0) {
             useScene().setSceneList(sceneList);
             Editor.Instance.setCurrentScene(sceneList[0].uuid);
@@ -87,16 +83,13 @@ async function openLocalProject() {
     } catch (error) {
         console.error(error);
     } finally {
-        opening.value = false;
     }
 }
 async function openIndexDBProject(name: string) {
-    if (opening.value) return;
-    opening.value = true;
     try {
         await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, name);
         const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file, (v) => {
-            useEditor().setLoading(v * 0.5);
+            loading.value = v;
         });
 
         if (sceneList.length > 0) {
@@ -111,7 +104,6 @@ async function openIndexDBProject(name: string) {
     } catch (error) {
         console.error(error);
     } finally {
-        opening.value = false;
     }
 }
 

@@ -19,7 +19,7 @@
                 </div>
             </ElSplitterPanel>
             <ElSplitterPanel>
-                <div class="hierarchy-panel" @contextmenu="contextMenu">
+                <div class="hierarchy-panel" @contextmenu="contextMenu" @click="handlePanelClick">
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <ElInput size="small" placeholder="搜索" v-model="searchText">
                             <template #prefix>
@@ -35,6 +35,15 @@
                             <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                                 :data="hierarchy" highlight-current :props="treeProps" node-key="id"
                                 :default-expanded="true" :default-active="true" @node-click="handleNodeClick">
+                                <!-- 节点类型图标 + 节点名 -->
+                                <template #default="{ node, data }">
+                                    <!-- 节点上也可以右键新增 -->
+                                    <div class="tree-node" @contextmenu.stop="(e) => contextMenu(e, data)">
+                                        <SVG size="14" :color="data.isActive ? '#ffffff' : '#7d7d7d'"
+                                            :name="iconMap[data.type]"></SVG>
+                                        {{ data.name }}
+                                    </div>
+                                </template>
                             </ElTree>
                         </ElScrollbar>
                     </div>
@@ -57,11 +66,13 @@ import { Search } from '@element-plus/icons-vue'
 
 
 import { storeToRefs } from 'pinia';
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
+import { getHierarchyContextMenuCommands } from '@/3d/core/utils/nodeContextMenuItem';
+import { Node } from '@babylonjs/core';
 
 const searchText = ref('');
 const treeProps = {
@@ -72,43 +83,42 @@ const { hierarchy, currentSelected, sceneInfoList, currentScene } = storeToRefs(
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const sceneSettingVisible = ref(false);
+
+const iconMap: Record<string, string> = {
+    ArcRotateCamera: "cameraIcon",
+    UniversalCamera: "cameraIcon",
+    DirectionalLight: "lightIcon",
+    SpotLight: "lightIcon",
+    PointLight: "lightIcon",
+    Mesh: "meshIcon",
+    TransformNode: "transformNodeIcon"
+}
+
 onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
-
+    Editor.Instance.on('onActiveCameraChanged', onActiveCameraChanged);
+    Editor.Instance.on('onNodeActiveChanged', onNodeActiveChanged)
 })
 
-function contextMenu(e: MouseEvent) {
+function contextMenu(e: MouseEvent, nodeData?: HierarchyNode) {
     e.stopPropagation();
-    e.preventDefault()
+    e.preventDefault();
+
+    // parent 优先为选中的节点；如果没有，则获取鼠标当前选中的节点
+    let parentNode: Node | null = null;
+    if (currentSelected.value.length > 0)
+        parentNode = Editor.Instance.getNodeById(currentSelected.value[0]);
+    else
+        parentNode = nodeData ? Editor.Instance.getNodeById(nodeData.id) : null;
+    //const    parentNode = nodeData ? Editor.Instance.getNodeById(nodeData.id) : null;
+
     openContextMenu({
         position: {
             x: e.clientX,
             y: e.clientY
         },
-        commands: [
-            {
-                name: '添加场景',
-                callback: () => {
-                    console.log('添加场景');
-                },
-            },
-            {
-                name: '添加节点',
-                subCommand: [{
-                    name: '添加空节点',
-                    callback: () => {
-                        console.log('添加空节点');
-                    }
-                }, {
-                    name: '添加空节点2',
-                    callback: () => {
-                        console.log('添加空节点2');
-                    }
-                }]
-            }
-        ]
+        commands: getHierarchyContextMenuCommands(parentNode)
     })
-
 }
 
 async function addScene() {
@@ -138,6 +148,24 @@ function onNameChanged(node: { id: string, newName: string }) {
     }
 }
 
+/**
+ * 切换当前激活的摄像机的节点isActive属性
+ */
+function onActiveCameraChanged(data: { newUuid: string, oldUuid: string }) {
+    treeRef.value.getNode(data.oldUuid).data.isActive = false;
+    const node = treeRef.value.getNode(data.newUuid);
+    if (node) {
+        node.data.isActive = true;
+    }
+}
+
+/**
+ * 切换节点的 isActive 字段
+ */
+function onNodeActiveChanged(data: { nodeUuid: string, isVisiable: boolean }) {
+    treeRef.value.getNode(data.nodeUuid).data.isActive = data.isVisiable;
+}
+
 const handleNodeClick = (node: HierarchyNode) => {
     currentSelected.value = node ? [node.id] : [];
     if (node) {
@@ -145,6 +173,13 @@ const handleNodeClick = (node: HierarchyNode) => {
         sceneSettingVisible.value = false;
     } else {
         treeRef.value?.setCurrentKey(null);
+    }
+}
+
+function handlePanelClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (!target.closest('.el-tree-node')) {
+        handleNodeClick(null);
     }
 }
 
@@ -181,6 +216,7 @@ const toggleSceneSetting = async () => {
     const SceneSettingDialog = (await import('../dialog/SceneSettingDialog.vue')).default
     useDialog(SceneSettingDialog)
 }
+
 
 onUnmounted(() => {
 
@@ -260,5 +296,10 @@ onUnmounted(() => {
 .sceneSetting.selected {
     color: var(--select--color);
 
+}
+
+.tree-node {
+    display: flex;
+    gap: 10px;
 }
 </style>

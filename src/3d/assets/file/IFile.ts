@@ -8,9 +8,9 @@ import { useIndexDBProject } from '@/store/useIndexDBProject';
 export interface IFile {
   name: string;
   init(arg?: string): Promise<void>;
-  getFileArrayBuffer(name: string, dir?: string): Promise<ArrayBuffer>;
+  getFileArrayBuffer(name: string, dir?: string): Promise<Uint8Array>;
   getFileText(name: string, dir?: string): Promise<string>;
-  saveFile(name: string, data: ArrayBuffer | string | Blob, dir?: string): Promise<void>;
+  saveFile(name: string, data: FileSystemWriteChunkType, dir?: string): Promise<void>;
 }
 
 export enum FileMode {

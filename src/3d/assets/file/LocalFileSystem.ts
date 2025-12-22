@@ -48,13 +48,16 @@ export class LocalFileSystem implements IFile {
       }
     }
   }
-  getFileArrayBuffer(name: string, dir?: string): Promise<ArrayBuffer> {
+  async getFileArrayBuffer(name: string, dir?: string) {
     const item = this.items.find((item) => item.name === name);
     if (!item) {
       console.warn(`File ${name} not found`);
       return Promise.resolve(null);
     }
-    return FileSystem.Instance.readFileAsArrayBuffer(item.handle as FileSystemFileHandle);
+    const buffer = await FileSystem.Instance.readFileAsArrayBuffer(
+      item.handle as FileSystemFileHandle,
+    );
+    return new Uint8Array(buffer);
   }
   getFileText(name: string, dir?: string): Promise<string> {
     const item = this.items.find((item) => item.name === name);

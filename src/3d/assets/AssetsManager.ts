@@ -31,263 +31,263 @@ export interface ILoaderAssets {
   getTexture(uuid: string): Promise<BaseTexture>;
 }
 
-export class AssetsManager implements ICollectAssets, ILoaderAssets {
-  private static instance: AssetsManager;
-  cubeTexture: CubeTexture[] = [];
-  texture: BaseTexture[] = [];
-  material: Material[] = [];
-  geometry: Geometry[] = [];
-  scene: CC.Scene[] = [];
-  private zipFiles: JSZip;
-  static get Instance() {
-    if (AssetsManager.instance == null) {
-      AssetsManager.instance = new AssetsManager();
-    }
-    return AssetsManager.instance;
-  }
+// export class AssetsManager implements ICollectAssets, ILoaderAssets {
+//   private static instance: AssetsManager;
+//   cubeTexture: CubeTexture[] = [];
+//   texture: BaseTexture[] = [];
+//   material: Material[] = [];
+//   geometry: Geometry[] = [];
+//   scene: CC.Scene[] = [];
+//   private zipFiles: JSZip;
+//   static get Instance() {
+//     if (AssetsManager.instance == null) {
+//       AssetsManager.instance = new AssetsManager();
+//     }
+//     return AssetsManager.instance;
+//   }
 
-  addGeometry(geometry: Geometry) {
-    if (!geometry.uuid) {
-      geometry.uuid = ID.generateUUID();
-    }
+//   addGeometry(geometry: Geometry) {
+//     if (!geometry.uuid) {
+//       geometry.uuid = ID.generateUUID();
+//     }
 
-    if (this.geometry.find((g) => g.uuid === geometry.uuid)) {
-      return;
-    }
+//     if (this.geometry.find((g) => g.uuid === geometry.uuid)) {
+//       return;
+//     }
 
-    this.geometry.push(geometry);
-  }
-  addMaterial(material: Material) {
-    if (!material.uuid) {
-      material.uuid = ID.generateUUID();
-    }
-    if (this.material.find((m) => m.uuid === material.uuid)) {
-      return;
-    }
+//     this.geometry.push(geometry);
+//   }
+//   addMaterial(material: Material) {
+//     if (!material.uuid) {
+//       material.uuid = ID.generateUUID();
+//     }
+//     if (this.material.find((m) => m.uuid === material.uuid)) {
+//       return;
+//     }
 
-    this.material.push(material);
-  }
+//     this.material.push(material);
+//   }
 
-  addTexture(texture: BaseTexture) {
-    if (!texture.uuid) {
-      texture.uuid = ID.generateUUID();
-    }
-    if (this.texture.find((t) => t.uuid === texture.uuid)) {
-      return;
-    }
+//   addTexture(texture: BaseTexture) {
+//     if (!texture.uuid) {
+//       texture.uuid = ID.generateUUID();
+//     }
+//     if (this.texture.find((t) => t.uuid === texture.uuid)) {
+//       return;
+//     }
 
-    this.texture.push(texture);
-  }
-  addCubeTexture(cubeTexture: CubeTexture) {
-    if (!cubeTexture.uuid) {
-      cubeTexture.uuid = ID.generateUUID();
-    }
-    if (this.cubeTexture.find((t) => t.uuid === cubeTexture.uuid)) {
-      return;
-    }
-    this.cubeTexture.push(cubeTexture);
-  }
+//     this.texture.push(texture);
+//   }
+//   addCubeTexture(cubeTexture: CubeTexture) {
+//     if (!cubeTexture.uuid) {
+//       cubeTexture.uuid = ID.generateUUID();
+//     }
+//     if (this.cubeTexture.find((t) => t.uuid === cubeTexture.uuid)) {
+//       return;
+//     }
+//     this.cubeTexture.push(cubeTexture);
+//   }
 
-  async getGeometry(uuid: string): Promise<Geometry> {
-    const geo = this.geometry.find((g) => g.uuid === uuid);
-    if (geo) {
-      return geo;
-    }
-  }
-  async getMaterial(uuid: string): Promise<Material> {
-    const mat = this.material.find((m) => m.uuid === uuid);
-    if (mat) {
-      return mat;
-    }
-  }
-  async getTexture(uuid: string): Promise<BaseTexture> {
-    return this.texture.find((t) => t.uuid === uuid);
-  }
-  async getCubeTexture(uuid: string): Promise<CubeTexture> {
-    return this.cubeTexture.find((t) => t.uuid === uuid);
-  }
+//   async getGeometry(uuid: string): Promise<Geometry> {
+//     const geo = this.geometry.find((g) => g.uuid === uuid);
+//     if (geo) {
+//       return geo;
+//     }
+//   }
+//   async getMaterial(uuid: string): Promise<Material> {
+//     const mat = this.material.find((m) => m.uuid === uuid);
+//     if (mat) {
+//       return mat;
+//     }
+//   }
+//   async getTexture(uuid: string): Promise<BaseTexture> {
+//     return this.texture.find((t) => t.uuid === uuid);
+//   }
+//   async getCubeTexture(uuid: string): Promise<CubeTexture> {
+//     return this.cubeTexture.find((t) => t.uuid === uuid);
+//   }
 
-  async exportScene(scene: BabylonScene) {
-    const files: [string, ArrayBuffer | string][] = [];
-    const sceneData = serializeScene(scene, this);
-    this.scene.push(sceneData);
-    this.geometry.forEach((geo) => {
-      const buffer = serializeGeometry(geo);
-      files.push([`geomertry/${geo.uuid}`, buffer]);
-    });
-    const materials = this.material.map((mat) => {
-      const data = mat.serialize();
-      for (const key in mat) {
-        //@ts-ignore
-        const value = mat[key];
-        if (
-          //@ts-ignore
-          mat[key] instanceof Texture
-        ) {
-          if (!key.startsWith('_') && key.indexOf('environment') == -1) {
-            this.addTexture(value);
-            data[key + '_MAP'] = value.uuid;
-            delete data[key];
-          }
-        }
-      }
-      data.uuid = mat.uuid;
-      return data;
-    });
-    Texture.SerializeBuffers = false;
-    const textureArray = new Array<any>();
-    for (const tex of this.texture) {
-      const texture = tex.getInternalTexture();
-      const data = tex.serialize();
-      if (texture._buffer) {
-        const buffer = (await serializeTextureBuffer(texture._buffer)) as ArrayBuffer;
-        files.push([`texture/${tex.uuid}`, buffer]);
-      } else {
-        const buffer = await (await fetch(texture.url)).arrayBuffer();
-        files.push([`texture/${tex.uuid}`, buffer]);
-      }
+//   async exportScene(scene: BabylonScene) {
+//     const files: [string, ArrayBuffer | string][] = [];
+//     const sceneData = serializeScene(scene, this);
+//     this.scene.push(sceneData);
+//     this.geometry.forEach((geo) => {
+//       const buffer = serializeGeometry(geo);
+//       files.push([`geomertry/${geo.uuid}`, buffer]);
+//     });
+//     const materials = this.material.map((mat) => {
+//       const data = mat.serialize();
+//       for (const key in mat) {
+//         //@ts-ignore
+//         const value = mat[key];
+//         if (
+//           //@ts-ignore
+//           mat[key] instanceof Texture
+//         ) {
+//           if (!key.startsWith('_') && key.indexOf('environment') == -1) {
+//             this.addTexture(value);
+//             data[key + '_MAP'] = value.uuid;
+//             delete data[key];
+//           }
+//         }
+//       }
+//       data.uuid = mat.uuid;
+//       return data;
+//     });
+//     Texture.SerializeBuffers = false;
+//     const textureArray = new Array<any>();
+//     for (const tex of this.texture) {
+//       const texture = tex.getInternalTexture();
+//       const data = tex.serialize();
+//       if (texture._buffer) {
+//         const buffer = (await serializeTextureBuffer(texture._buffer)) as ArrayBuffer;
+//         files.push([`texture/${tex.uuid}`, buffer]);
+//       } else {
+//         const buffer = await (await fetch(texture.url)).arrayBuffer();
+//         files.push([`texture/${tex.uuid}`, buffer]);
+//       }
 
-      textureArray.push({
-        uuid: tex.uuid,
-        data,
-      });
-    }
-    files.push(['scene.json', JSON.stringify(this.scene)]);
-    files.push(['geomerty.json', JSON.stringify(this.geometry.map((g) => g.uuid))]);
-    files.push(['material.json', JSON.stringify(materials)]);
-    files.push(['texture.json', JSON.stringify(textureArray)]);
-    const zipFile = await zipFiles(files);
+//       textureArray.push({
+//         uuid: tex.uuid,
+//         data,
+//       });
+//     }
+//     files.push(['scene.json', JSON.stringify(this.scene)]);
+//     files.push(['geomerty.json', JSON.stringify(this.geometry.map((g) => g.uuid))]);
+//     files.push(['material.json', JSON.stringify(materials)]);
+//     files.push(['texture.json', JSON.stringify(textureArray)]);
+//     const zipFile = await zipFiles(files);
+//     const blob= new Blob([zipFile], { type: 'application/zip' });
+//     Tools.Download(blob, ID.generateUUID().replace(/-/g, '') + '.zip');
+//   }
 
-    Tools.Download(zipFile, ID.generateUUID().replace(/-/g, '') + '.zip');
-  }
+//   async loadFile(url: string, engine: Engine) {
+//     const rootScene = new Scene(engine);
+//     const env = CubeTexture.CreateFromPrefilteredData(
+//       './abandoned_factory_canteen_01.env',
+//       rootScene,
+//     );
+//     rootScene.environmentTexture = env;
+//     rootScene.iblIntensity = 0.5;
+//     const res = await fetch(url);
+//     const arrayBuffer = await res.arrayBuffer();
+//     const zip = await readZip(new Blob([arrayBuffer]));
+//     this.zipFiles = zip;
+//     const sceneJson = await zip.file('scene.json').async('text');
+//     this.scene = JSON.parse(sceneJson);
+//     const scene = this.scene[0];
+//     const materialJson = await zip.file('material.json').async('text');
+//     const materials = JSON.parse(materialJson);
 
-  async loadFile(url: string, engine: Engine) {
-    const rootScene = new Scene(engine);
-    const env = CubeTexture.CreateFromPrefilteredData(
-      './abandoned_factory_canteen_01.env',
-      rootScene,
-    );
-    rootScene.environmentTexture = env;
-    rootScene.iblIntensity = 0.5;
-    const res = await fetch(url);
-    const arrayBuffer = await res.arrayBuffer();
-    const zip = await readZip(new Blob([arrayBuffer]));
-    this.zipFiles = zip;
-    const sceneJson = await zip.file('scene.json').async('text');
-    this.scene = JSON.parse(sceneJson);
-    const scene = this.scene[0];
-    const materialJson = await zip.file('material.json').async('text');
-    const materials = JSON.parse(materialJson);
+//     const textureJson = await zip.file('texture.json').async('text');
+//     const textures = JSON.parse(textureJson);
+//     Texture.UseSerializedUrlIfAny = true;
+//     for (let index = 0; index < textures.length; index++) {
+//       const element = textures[index];
+//       const file = await zip.file(`texture/${element.uuid}`).async('arraybuffer');
+//       const url = URL.createObjectURL(new Blob([file]));
+//       element.data.url = url;
+//       const texture = Texture.Parse(element.data, rootScene, '');
+//       texture.gammaSpace = element.data.gammaSpace;
+//       texture.uuid = element.uuid;
+//       this.addTexture(texture);
+//     }
+//     this.material = materials.map((mat: any) => {
+//       const material = Material.Parse(mat, rootScene, '');
+//       material.uuid = mat.uuid;
+//       for (const key in mat) {
+//         if (key.endsWith('_MAP')) {
+//           const uuid = mat[key];
+//           this.getTexture(uuid).then((t) => {
+//             //@ts-ignore
+//             material[key.replace('_MAP', '')] = t;
+//           });
+//         }
+//       }
+//       // if (material) {
+//       //   material.albedoTexture = new Texture('05.jpg', rootScene);
+//       // }
+//       return material;
+//     });
 
-    const textureJson = await zip.file('texture.json').async('text');
-    const textures = JSON.parse(textureJson);
-    Texture.UseSerializedUrlIfAny = true;
-    for (let index = 0; index < textures.length; index++) {
-      const element = textures[index];
-      const file = await zip.file(`texture/${element.uuid}`).async('arraybuffer');
-      const url = URL.createObjectURL(new Blob([file]));
-      element.data.url = url;
-      const texture = Texture.Parse(element.data, rootScene, '');
-      texture.gammaSpace = element.data.gammaSpace;
-      texture.uuid = element.uuid;
-      this.addTexture(texture);
-    }
-    this.material = materials.map((mat: any) => {
-      const material = Material.Parse(mat, rootScene, '');
-      material.uuid = mat.uuid;
-      for (const key in mat) {
-        if (key.endsWith('_MAP')) {
-          const uuid = mat[key];
-          this.getTexture(uuid).then((t) => {
-            //@ts-ignore
-            material[key.replace('_MAP', '')] = t;
-          });
-        }
-      }
-      // if (material) {
-      //   material.albedoTexture = new Texture('05.jpg', rootScene);
-      // }
-      return material;
-    });
+//     const geometryJson = await zip.file('geomerty.json').async('text');
+//     const geometrys = JSON.parse(geometryJson);
+//     for (let index = 0; index < geometrys.length; index++) {
+//       const element = geometrys[index];
+//       const file = await zip.file(`geomertry/${element}`).async('arraybuffer');
+//       const vertexData = bufferToVertex(file);
+//       const geometry = Geometry.Parse(vertexData, rootScene, '');
+//       geometry.uuid = element;
+//       this.addGeometry(geometry);
+//     }
 
-    const geometryJson = await zip.file('geomerty.json').async('text');
-    const geometrys = JSON.parse(geometryJson);
-    for (let index = 0; index < geometrys.length; index++) {
-      const element = geometrys[index];
-      const file = await zip.file(`geomertry/${element}`).async('arraybuffer');
-      const vertexData = bufferToVertex(file);
-      const geometry = Geometry.Parse(vertexData, rootScene, '');
-      geometry.uuid = element;
-      this.addGeometry(geometry);
-    }
+//     const sceneObj = await deserializeScene(scene, engine, this, rootScene);
+//     return sceneObj;
+//   }
 
-    const sceneObj = await deserializeScene(scene, engine, this, rootScene);
-    return sceneObj;
-  }
+//   importTexture(file: File, scene: Scene) {
+//     const texture = new Texture(
+//       file.name,
+//       scene,
+//       false,
+//       true,
+//       null,
+//       () => {},
+//       () => {},
+//       file,
+//     );
 
-  importTexture(file: File, scene: Scene) {
-    const texture = new Texture(
-      file.name,
-      scene,
-      false,
-      true,
-      null,
-      () => {},
-      () => {},
-      file,
-    );
+//     this.addTexture(texture);
+//   }
+//   importGeomertry(file: File, scene: Scene) {
+//     ImportMeshAsync(file, scene);
+//   }
+// }
 
-    this.addTexture(texture);
-  }
-  importGeomertry(file: File, scene: Scene) {
-    ImportMeshAsync(file, scene);
-  }
-}
+// function serializeGeometry(geometry: Geometry) {
+//   const geo = geometry.serializeVerticeData();
+//   const buffer = vertexToBuffer(geo);
+//   return buffer;
+// }
 
-function serializeGeometry(geometry: Geometry) {
-  const geo = geometry.serializeVerticeData();
-  const buffer = vertexToBuffer(geo);
-  return buffer;
-}
+// function convertKey(key: string) {
+//   switch (key) {
+//     case 'positions':
+//       return 'position';
+//     case 'normals':
+//       return 'normal';
+//     case 'tangents':
+//       return 'tangent';
+//     case 'uvs':
+//       return 'uv';
+//     default:
+//       return key;
+//   }
+// }
 
-function convertKey(key: string) {
-  switch (key) {
-    case 'positions':
-      return 'position';
-    case 'normals':
-      return 'normal';
-    case 'tangents':
-      return 'tangent';
-    case 'uvs':
-      return 'uv';
-    default:
-      return key;
-  }
-}
+// async function serializeTextureBuffer(buffer: InternalTexture['_buffer']) {
+//   if (buffer instanceof ArrayBuffer) {
+//     return buffer;
+//   } else if (typeof buffer === 'string') {
+//     return new TextEncoder().encode(buffer);
+//   } else if (buffer instanceof Blob) {
+//     return buffer;
+//   } else if (buffer instanceof ImageBitmap || buffer instanceof HTMLImageElement) {
+//     return await imgToBlob(buffer);
+//   } else {
+//     return buffer;
+//   }
+// }
 
-async function serializeTextureBuffer(buffer: InternalTexture['_buffer']) {
-  if (buffer instanceof ArrayBuffer) {
-    return buffer;
-  } else if (typeof buffer === 'string') {
-    return new TextEncoder().encode(buffer);
-  } else if (buffer instanceof Blob) {
-    return buffer;
-  } else if (buffer instanceof ImageBitmap || buffer instanceof HTMLImageElement) {
-    return await imgToBlob(buffer);
-  } else {
-    return buffer;
-  }
-}
-
-function imgToBlob(img: HTMLImageElement | ImageBitmap) {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx?.drawImage(img, 0, 0);
-    canvas.toBlob((blob) => {
-      resolve(blob);
-    });
-  });
-}
+// function imgToBlob(img: HTMLImageElement | ImageBitmap) {
+//   return new Promise((resolve, reject) => {
+//     const canvas = document.createElement('canvas');
+//     canvas.width = img.width;
+//     canvas.height = img.height;
+//     const ctx = canvas.getContext('2d');
+//     ctx?.drawImage(img, 0, 0);
+//     canvas.toBlob((blob) => {
+//       resolve(blob);
+//     });
+//   });
+// }

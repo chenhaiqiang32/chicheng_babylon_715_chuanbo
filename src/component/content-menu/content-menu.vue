@@ -47,6 +47,7 @@ const transform = computed(() => {
 	z-index: 9999;
 	font-weight: bold;
 	overflow: hidden;
+	background: transparent !important;
 
 	.command {
 		border-radius: 2px;

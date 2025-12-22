@@ -117,6 +117,7 @@ async function saveProject() {
         files.push(['scene.json', JSON.stringify(sceneList)]);
         let count = 0;
         const saveFiles = await Promise.all(files.map(x => {
+            //@ts-ignore
             const message = EditorFileSystem.Instance.saveFile(x[0], x[1])
             message.then(() => {
                 count++;

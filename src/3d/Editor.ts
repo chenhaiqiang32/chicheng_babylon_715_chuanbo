@@ -12,7 +12,6 @@ import {
   Mesh,
   DirectionalLight,
   LightGizmo,
-  Matrix,
   Light,
   PointLight,
   SpotLight,
@@ -20,22 +19,23 @@ import {
   PointerEventTypes,
   TransformNode,
   WebGPUEngine,
-  RenderTargetTexture,
   AbstractEngine,
   Plane,
   DefaultRenderingPipeline,
   SSAO2RenderingPipeline,
   SSRRenderingPipeline,
   MotionBlurPostProcess,
-  Quaternion,
-  GizmoAnchorPoint,
-  MeshBuilder,
+  Camera,
+  UniversalCamera,
+  UtilityLayerRenderer,
   Engine,
+  Quaternion,
+  ParticleHelper,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
 import '@babylonjs/materials';
-import { watch, type WatchHandle } from 'vue';
+import { nextTick, watch, type WatchHandle } from 'vue';
 // import '@babylonjs/inspector';
 import { hasViewFlag } from '@/3d/core/utils/viewFlagsMode';
 import { Dispatch } from '@/utils/dispatch';
@@ -58,9 +58,18 @@ interface EditorEvent {
   onSceneChanged: { scene: Scene };
   onSceneChangeBefore: { scene: Scene };
   animationChange: void;
+  onActiveCameraChanged: { newUuid: string; oldUuid: string };
+  onNodeActiveChanged: { nodeUuid: string; isVisiable: boolean };
 }
 
 export class Editor extends Dispatch<EditorEvent> {
+  async createParticleSystem(arg0: string) {
+    const particleSystem = await ParticleHelper.CreateAsync(arg0, this.scene);
+    const transformNode = new TransformNode(arg0 + '-particle', this.scene);
+    particleSystem.emitterNode = transformNode.position;
+    particleSystem.start();
+    useScene().setHierarchy(this.scene.rootNodes);
+  }
   private scene: Scene;
   private engine: AbstractEngine;
   private gizmoManager: GizmoManager;
@@ -120,6 +129,9 @@ export class Editor extends Dispatch<EditorEvent> {
       return;
     }
     if (v[0] instanceof AbstractMesh) {
+      this.gizmoManager.attachToMesh(v[0]);
+    } else if (v[0] instanceof Light) {
+      //@ts-ignore 灯光作用于其父节点 transformNode
       this.gizmoManager.attachToMesh(v[0]);
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
@@ -204,8 +216,18 @@ export class Editor extends Dispatch<EditorEvent> {
       scene.activeCamera.attachControl();
       scene.onPointerObservable.add(this.onPointerDonw);
       useScene().currentScene = uuid;
+      scene.lights.forEach((light) => {
+        const lightGizmo = new LightGizmo();
+        lightGizmo.light = light;
+        lightGizmo.scaleRatio = 2;
+        light.gizmo = lightGizmo;
+      });
     }
     this.scene = scene;
+    this.scene.collisionsEnabled = true;
+    //this.scene.gravity = new Vector3(0, -0.9, 0);
+    // 开启物理引擎
+    //this.scene.enablePhysics(new Vector3(0, -0.9, 0), new CannonJSPlugin(true, 10, CANNON));
     useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });
@@ -282,7 +304,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
   newResScene() {
     const scene = new Scene(this.engine);
-    const env = CubeTexture.CreateFromPrefilteredData('./abandoned_factory_canteen_01.env', scene);
+    const env = new CubeTexture('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
     scene.useRightHandedSystem = false;
     return scene;
@@ -296,19 +318,20 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.maxZ = 5000;
     camera.attachControl();
     camera.lowerRadiusLimit = 0.01;
+    camera.wheelPrecision = 0;
+    camera.pinchDeltaPercentage = 0.1;
+    camera.wheelDeltaPercentage = 0.1;
     camera.upperRadiusLimit = 5000;
     camera.inertia = 0.4;
     camera.panningInertia = 0.5;
 
-    const env = CubeTexture.CreateFromPrefilteredData('./environment.dds', scene);
+    const env = new CubeTexture('./abandoned_factory_canteen_01.env', scene);
     scene.environmentTexture = env;
     this.createLight('directional', scene);
-    // scene.createDefaultSkybox(scene.environmentTexture);
-
     return scene;
   }
 
-  private createLight(type: 'directional' | 'point' | 'spot', scene: Scene) {
+  createLight(type: 'directional' | 'point' | 'spot', scene: Scene): Light {
     let light: Light;
     switch (type) {
       case 'directional':
@@ -331,11 +354,14 @@ export class Editor extends Dispatch<EditorEvent> {
         light = new DirectionalLight('dirLight', new Vector3(0, -1, -1), scene);
         break;
     }
-    if (!light) {
-      const lightGizmo = new LightGizmo();
+    if (light) {
+      const layer = new UtilityLayerRenderer(scene);
+      const lightGizmo = new LightGizmo(layer);
       lightGizmo.light = light;
       lightGizmo.scaleRatio = 2;
+      light.gizmo = lightGizmo;
     }
+    return light;
   }
 
   resize = () => {
@@ -352,11 +378,17 @@ export class Editor extends Dispatch<EditorEvent> {
     return node;
   }
 
+  gizmoLayer: UtilityLayerRenderer;
+
   /**
    * 初始化 gizmo
    */
   initGizmos(scene: Scene) {
-    this.gizmoManager = new GizmoManager(scene);
+    if (this.gizmoManager) this.gizmoManager.dispose();
+    if (this.gizmoLayer) this.gizmoLayer.dispose();
+
+    this.gizmoLayer = new UtilityLayerRenderer(scene);
+    this.gizmoManager = new GizmoManager(scene, 1, this.gizmoLayer);
     this.gizmoManager.enableAutoPicking = false;
     this.gizmoManager.positionGizmoEnabled = true;
 
@@ -604,6 +636,67 @@ export class Editor extends Dispatch<EditorEvent> {
         break;
     }
   };
+
+  addUniversalCamera(name: string = null): Camera {
+    const camera = new UniversalCamera(
+      name ? name : '1stCamera',
+      new Vector3(0, 1, -5),
+      this.scene,
+    );
+    camera.speed = 0.5;
+    camera.inertia = 0;
+
+    // 开启场景和摄像机碰撞
+    camera.checkCollisions = true;
+    camera.applyGravity = true;
+    // 摄像机碰撞体范围
+    camera.ellipsoid = new Vector3(1, 1, 1);
+    nextTick(() => {
+      this.activeCamera(camera);
+    });
+    return camera;
+  }
+
+  /**
+   * 添加相机，会将相机设置为场景的activeCamera
+   * @param name 相机名
+   */
+  addCamera(name: string = null): Camera {
+    const camera = new ArcRotateCamera(
+      name ? name : 'camera',
+      0,
+      0,
+      0,
+      new Vector3(0, 0, 0),
+      this.scene,
+    );
+    camera.minZ = 0.001;
+    camera.maxZ = 5000;
+    camera.lowerRadiusLimit = 0.01;
+    camera.upperRadiusLimit = 5000;
+    camera.inertia = 0.4;
+    camera.panningInertia = 0.5;
+    // 等 tree 更新完成后在更新视图
+    nextTick(() => {
+      this.activeCamera(camera);
+    });
+    return camera;
+  }
+
+  activeCamera(camera: Camera) {
+    const oldUuid = this.scene.activeCamera.uuid;
+    this.scene.activeCamera.detachControl();
+    this.scene.activeCamera = camera;
+    this.scene.activeCamera.attachControl();
+    this.dispatch('onActiveCameraChanged', { oldUuid: oldUuid, newUuid: camera.uuid });
+  }
+
+  /**
+   * 切换节点的 isActive 属性，会通知给 hierarchy 切换对应图标状态
+   */
+  switchNodeActive(nodeUuid: string, isVisiable: boolean) {
+    this.dispatch('onNodeActiveChanged', { nodeUuid: nodeUuid, isVisiable: isVisiable });
+  }
 
   getRenderingPipeline(createNew = true) {
     let renderingPipeline = this.scene.postProcessRenderPipelineManager.supportedPipelines.find(
