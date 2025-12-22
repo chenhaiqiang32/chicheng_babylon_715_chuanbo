@@ -265,6 +265,7 @@
       "blurDispersionStrength": "模糊色散强度"
     },
     "particleSystem": {
+      "particleSystems": "粒子系统集合",
       "base": "基础",
       "transforms": "变换",
       "offset": "偏移",

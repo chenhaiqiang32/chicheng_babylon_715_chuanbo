@@ -8,6 +8,7 @@ declare module '@babylonjs/core' {
   }
   interface Node {
     uuid: string;
+    isIgnore: boolean;
   }
   interface Geometry {
     uuid: string;

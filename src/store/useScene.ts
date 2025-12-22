@@ -51,7 +51,14 @@ export const useScene = defineStore('scene', () => {
   }
 
   function setHierarchy(rootNodes: Node[]) {
-    hierarchy.value = rootNodes.map(buildHierarchy);
+    rootNodes.forEach((x) => {
+      if (x.name == "SubemitterSystemEmitter") {
+        x.isIgnore = true;
+      }
+    });
+    hierarchy.value = rootNodes
+      .filter(node => !node.isIgnore)
+      .map(buildHierarchy);
   }
 
   function setCurrentSelect(objectIds?: string[]) {

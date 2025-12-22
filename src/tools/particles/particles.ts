@@ -22,6 +22,7 @@ export function addParticleSystem(type: string) {
 			pos.particleSystem = set;
 			set.emitterNode = pos.position;
 			Editor.Instance.UpdateHierarchy();
+
 		});
 	}
 	function CreateDefault(emitter: Nullable<AbstractMesh | Vector3>, capacity: number = 500, scene?: Scene, useGPU?: boolean): IParticleSystem {
