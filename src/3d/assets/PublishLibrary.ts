@@ -7,17 +7,13 @@ import {
   PBRMaterial,
   Texture,
 } from '@babylonjs/core';
-import { Dispatch } from '@/utils/dispatch';
 import { CC } from './BaseRes';
-import { ZipFile, zipFiles } from '@/utils/Zip';
-import { IFile } from './file/IFile';
-import { ICollectAssets, ILoaderAssets } from './AssetsManager';
+import { readZip, ZipFile, zipFiles } from '@/utils/Zip';
 import { Geometry } from '@babylonjs/core/Meshes';
-import { ID } from '@/utils/id';
-import { ArrayUtils } from '@/utils/Array';
-import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
+import { bufferToVertex } from './utils/GeometryUtils';
 import { deserializeScene } from './serialze/Scene';
 import { IGetBuffer } from './RuntimeLibrary';
+import { strFromU8 } from 'fflate';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -94,9 +90,11 @@ export class PublishAssets {
 }
 
 export class AppAssets {
-  constructor() {}
-
-  async saveAll() {}
+  constructor() {
+    Texture.UseSerializedUrlIfAny = true;
+    Texture.SerializeBuffers = false;
+    Texture.ForceSerializeBuffers = false;
+  }
 
   sceneGeometry: Map<string, Geometry> = new Map();
   sceneMaterial: Map<string, Material> = new Map();
@@ -104,8 +102,30 @@ export class AppAssets {
   textureMap: Map<string, Uint8Array> = new Map();
   geomertyFile: Map<string, Uint8Array> = new Map();
   currentScene: Scene;
-  texture: any[] = [];
-  material: any[] = [];
+  private texture: any[] = [];
+  private material: any[] = [];
+  scene: CC.Scene[] = [];
+
+  async loadFromUrl(url: string) {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
+    const files = await readZip(buffer);
+    const textureJson = strFromU8(files['texture.json']);
+    const materialJson = strFromU8(files['material.json']);
+    const sceneJson = strFromU8(files['scene.json']);
+    this.scene = JSON.parse(sceneJson);
+    this.texture = JSON.parse(textureJson);
+    this.material = JSON.parse(materialJson);
+    for (const item in files) {
+      if (item.endsWith('.geo')) {
+        this.geomertyFile.set(item.replace('.geo', ''), files[item]);
+      }
+      if (item.endsWith('.tex')) {
+        this.textureMap.set(item.replace('.tex', ''), files[item]);
+      }
+    }
+  }
 
   async getTextureURL(sourceUUID: string) {
     if (!sourceUUID) {

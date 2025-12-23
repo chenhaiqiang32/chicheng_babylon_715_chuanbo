@@ -1,20 +1,23 @@
 <template>
     <div class="app-container">
-        <canvas id="canvas"></canvas>
+        <canvas id="canvas" ref="canvas"></canvas>
     </div>
 </template>
-<script lang="ts">
+<script lang="ts" setup>
 import { App } from '@/3d/app';
 import { onMounted, ref } from 'vue';
-import { PublishAssets } from '@/3d/assets/PublishLibrary';
+import { AppAssets } from '@/3d/assets/PublishLibrary';
 
 const canvas = ref<HTMLCanvasElement>(null);
 
-onMounted(() => {
+onMounted(async () => {
     if (canvas.value) {
-        App.Instance.init(canvas.value, true);
+        await App.Instance.init(canvas.value, true);
     }
-
+    const assets = new AppAssets();
+    await assets.loadFromUrl('publish (10).zip')
+    App.Instance.setAssetsLibrary(assets);
+    await App.Instance.setScene();
 
 });
 

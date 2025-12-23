@@ -25,7 +25,7 @@ import { ArrayUtils } from '@/utils/Array';
 import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import { deserializeScene } from './serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
-import JSZip from 'jszip';
+import '@babylonjs/loaders/SPLAT/splatFileLoader';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';

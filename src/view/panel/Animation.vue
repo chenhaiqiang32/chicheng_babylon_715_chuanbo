@@ -65,7 +65,6 @@ import { TransformNode, Vector3 } from '@babylonjs/core';
 import { ID } from '@/utils/id';
 import { ElMessageBox } from 'element-plus';
 import { Editor } from '@/3d/Editor';
-import { Quaternion } from '@babylonjs/core';
 import { CC } from '@/3d/assets/BaseRes';
 import { Animator } from '@/3d/animation/animator';
 import { _EventBus } from '@/utils/dispatch';
@@ -98,7 +97,7 @@ function onSelectChange(uuid: string) {
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
   animator = new Animator(currentRuntimeAction.value)
-  animator.updateClip()
+  animator.updateClip(Editor.Instance.getNodeById)
   animator.collectInfo()
 }
 
@@ -204,7 +203,7 @@ function onPropertyChanged(e: {
     refreshClipList()
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
-  animator?.updateClip()
+  animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
 
 }
 
@@ -284,7 +283,7 @@ function onPositionChanged(e: { object: TransformNode, newPosition: number[], ol
 
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
-  animator?.updateClip()
+  animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
 
 }
 function onRotationChanged(e: { object: TransformNode, newRotation: number[], oldRotation: number[] }) {
@@ -330,7 +329,7 @@ function onRotationChanged(e: { object: TransformNode, newRotation: number[], ol
     refreshClipList()
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
-  animator?.updateClip()
+  animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
 }
 function onScaleChanged(e: { object: TransformNode, newScale: number[], oldScale: number[] }) {
   if (!e.object.uuid) {
@@ -375,7 +374,7 @@ function onScaleChanged(e: { object: TransformNode, newScale: number[], oldScale
     refreshClipList()
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
-  animator?.updateClip()
+  animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
 }
 
 

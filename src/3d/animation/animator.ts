@@ -1,6 +1,5 @@
-import { Quaternion } from '@babylonjs/core';
+import { Quaternion, Node } from '@babylonjs/core';
 import { CC } from '../assets/BaseRes';
-import { Editor } from '../Editor';
 import * as ObjectUtils from '@/tools/property';
 interface RuntimeClip {
   object: any;
@@ -10,11 +9,12 @@ export class Animator {
   constructor(private animation: CC.Animation) {}
 
   private clips: RuntimeClip[];
-  updateClip() {
+
+  updateClip(getNode: (id: string) => Node) {
     this.clips = [];
     for (let index = 0; index < this.animation.clips.length; index++) {
       const clip = this.animation.clips[index];
-      const obj = Editor.Instance.getNodeById(clip.objectUuid);
+      const obj = getNode?.(clip.objectUuid);
       if (obj) {
         this.clips.push({
           object: obj,
@@ -24,7 +24,6 @@ export class Animator {
     }
   }
   execute(time: number) {
-    console.log(time);
     for (let index = 0; index < this.clips.length; index++) {
       const clip = this.clips[index];
       const { percent, start, end } = getPercent(time, clip.clip.key);

@@ -38,7 +38,6 @@
 import { CC } from '@/3d/assets/BaseRes';
 import { PublishAssets } from '@/3d/assets/PublishLibrary';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
-import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Editor } from '@/3d/Editor';
 import Field from '@/component/common/Field.vue';
 import Grid from '@/component/common/Grid.vue';

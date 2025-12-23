@@ -81,8 +81,7 @@ const triggerTypes = [
     'onClick',
     'onMouseEnter',
     'onMouseLeave',
-    'onKeyDown',
-    'onKeyUp',
+    "onDoubleClick",
 ]
 
 const eventTypes = [

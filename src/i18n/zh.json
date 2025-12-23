@@ -318,7 +318,8 @@
       "removeEventMessage": "确认删除事件吗？",
       "removeTitle": "提示",
       "confirmButtonText": "确定",
-      "cancelButtonText": "取消"
+      "cancelButtonText": "取消",
+      "onDoubleClick": "双击"
     }
   },
   "animation": {

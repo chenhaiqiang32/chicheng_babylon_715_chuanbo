@@ -14,7 +14,7 @@ import { TransformNode } from '@babylonjs/core';
 
 const canvasRef = ref<HTMLCanvasElement>()
 onMounted(async () => {
-    Editor.Instance.init(canvasRef.value, true)
+    Editor.Instance.init(canvasRef.value, false)
 })
 
 async function handleDrop(ev: DragEvent) {

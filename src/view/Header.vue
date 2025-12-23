@@ -20,6 +20,7 @@ import { ref } from 'vue'
 import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
 import { useIndexDBProject } from '@/store/useIndexDBProject';
 import { useDialog } from './dialog';
+import { GaussianSplattingMesh, SceneSerializer, SerializationHelper } from '@babylonjs/core';
 
 const isDark = useDark({
     valueDark: 'dark',
@@ -150,10 +151,20 @@ function importModel() {
             }, 1000);
         }
     })
+    // Utils.chooseFile('.ply').then(async (fileList) => {
+    //     if (fileList[0]) {
+    //         const mesh = new GaussianSplattingMesh('a');
+    //         const url = URL.createObjectURL(fileList[0]);
+    //         mesh.loadFileAsync(url)
+    //     }
+    // })
 }
 async function publish() {
     const dialog = (await import('./dialog/PublishDialog.vue')).default;
     useDialog(dialog)
+    // const data = SceneSerializer.Serialize(Editor.Instance.Scene);
+    // console.log(data);
+
 }
 </script>
 <style scoped lang='scss'>

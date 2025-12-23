@@ -1,4 +1,4 @@
-import { Mesh, Scene, SceneSerializer } from '@babylonjs/core';
+import { GaussianSplattingMesh, Mesh, Scene, SceneSerializer } from '@babylonjs/core';
 import type { CC } from '../../BaseRes';
 import { ILoaderAssets, ICollectAssets } from '../../AssetsManager';
 
@@ -8,6 +8,10 @@ export function serializeMeshNode(
   assetsManager: ICollectAssets,
   serializeAssets: boolean = true,
 ) {
+  if (mesh instanceof GaussianSplattingMesh) {
+    return;
+  }
+
   meshData.type = 'mesh';
   meshData.checkCollisions = mesh.checkCollisions;
   meshData.material = mesh.material?.uuid || '';
