@@ -1,3 +1,5 @@
+import { ParticleSystemSet } from "@babylonjs/core";
+
 export namespace CC {
   export interface BaseRes {
     uuid: string;
@@ -24,6 +26,7 @@ export namespace CC {
     position: number[];
     rotation: number[];
     scale: number[];
+    particleSet: any;
   }
 
   export interface MeshNode extends ObjectNode {
@@ -113,6 +116,7 @@ export namespace CC {
     defaultRenderingPipeline: any;
     ssao2RenderingPipeline: any;
     ssrPostProcess: any;
+    particleSystemSet: any;
   }
   export type KeyType = 'float' | 'v3' | 'quaternion' | 'v2' | 'color3' | 'boolean';
   export interface Clip {

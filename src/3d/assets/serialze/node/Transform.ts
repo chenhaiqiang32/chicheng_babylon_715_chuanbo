@@ -1,4 +1,4 @@
-import { Quaternion, type TransformNode } from '@babylonjs/core';
+import { ParticleSystemSet, Quaternion, type TransformNode } from '@babylonjs/core';
 import type { CC } from '../../BaseRes';
 
 export function serializeTransformNode(
@@ -9,6 +9,9 @@ export function serializeTransformNode(
     node.position = trans.position.asArray();
     node.rotation = trans.rotationQuaternion?.asArray() || trans.rotation?.asArray() || [];
     node.scale = trans.scaling?.asArray();
+    if (trans.particleSystem) {
+      node.particleSet = trans.particleSystem.serialize();
+    }
     return node;
   } catch (error) {
     console.error('序列化变换节点时出错:', node);
@@ -24,4 +27,7 @@ export function deserializeTransformNode(node: CC.TransformNode, trans: Transfor
     node.rotation[3],
   );
   trans.scaling.set(node.scale[0], node.scale[1], node.scale[2]);
+  if (node.particleSet) {
+    trans.particleSystem = ParticleSystemSet.Parse(node.particleSet, trans.getScene());
+  }
 }
