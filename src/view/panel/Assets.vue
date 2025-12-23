@@ -1,7 +1,7 @@
 <template>
     <div class="assets-container">
         <el-tabs type="border-card" tab-position="left" class="demo-tabs" @tab-click="onchange">
-            <el-tab-pane label="模型">
+            <el-tab-pane label="模型" @contextmenu="modelContextMenu">
                 <Grid :data="objectList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
                     <template #default="{ item, index }">
                         <div class="grid-item" draggable="true" :title="item.name"
@@ -12,19 +12,30 @@
                     </template>
                 </Grid>
             </el-tab-pane>
-            <el-tab-pane label="材质">
-                <Grid :data="materialList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
+            <el-tab-pane label="材质" @contextmenu="materialContextMenu">
+                <Grid :data="materialList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;" >
                     <template #default="{ item, index }">
                         <div class="grid-item" :title="item.name" draggable="true"
                             @dragstart="e => handleDragStart(e, item)">
-                            <SVG name="material" size="42px" :title="item.name"></SVG>
+                            <img v-if="item.previewUrl" :src="item.previewUrl" style="width: 42px; height: 42px;"/>
                             <span class="itme-name">{{ item.name }}</span>
                         </div>
                     </template>
                 </Grid>
             </el-tab-pane>
-            <el-tab-pane label="贴图">
+            <el-tab-pane label="贴图" @contextmenu="textureContextMenu">
                 <Grid :data="textureList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
+                    <template #default="{ item, index }">
+                        <div class="grid-item" :title="item.name" draggable="true"
+                            @dragstart="e => handleDragStart(e, item)">
+                            <img v-if="item.url" :src="item.url" alt="" style="width: 80%; height: 80%;">
+                            <span class="itme-name">{{ item.name }}</span>
+                        </div>
+                    </template>
+                </Grid>
+            </el-tab-pane>
+          <el-tab-pane label="环境贴图" @contextmenu="hdrContextMenu">
+                <Grid :data="hdrTextureList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
                     <template #default="{ item, index }">
                         <div class="grid-item" :title="item.name" draggable="true"
                             @dragstart="e => handleDragStart(e, item)">
@@ -43,6 +54,11 @@ import Grid from '@/component/common/Grid.vue'
 import { onMounted, onUnmounted, ref } from 'vue';
 import SVG from '@/component/common/SVG.vue';
 import { RuntimeLibrary } from '@/3d/assets/runtimeLibrary';
+import { Editor } from '@/3d/Editor';
+import { materialPreviewGenerator } from '@/tools/preview/materialPreviewGenerator';
+import { Engine } from '@babylonjs/core';
+import { openContextMenu } from '@/component/content-menu';
+import { getAssetsHdrContextMenuCommands, getAssetsMaterialContextMenuCommands, getAssetsModelContextMenuCommands, getAssetsTextureContextMenuCommands } from '@/3d/core/utils/ContextMenuCommands';
 
 const minWidth = 70
 const rowHeight = 70
@@ -50,6 +66,9 @@ const rowHeight = 70
 const objectList = ref<any[]>([]);
 const materialList = ref<any[]>([]);
 const textureList = ref<any[]>([]);
+const hdrTextureList = ref<any[]>([]);
+
+let generator:materialPreviewGenerator;
 
 function handleDragStart(ev: DragEvent, data: any) {
     ev.dataTransfer?.setData('assets', JSON.stringify(data))
@@ -60,7 +79,9 @@ onMounted(() => {
     RuntimeLibrary.Instance.on('onChanged', onchange)
 })
 
-function onchange() {
+
+async function onchange() {
+    console.log("onchange");
     objectList.value = RuntimeLibrary.Instance.rootNodes.map(x => {
         return {
             type: 'object',
@@ -82,6 +103,7 @@ function onchange() {
             sourceUUID: x.sourceUUID,
         }
     });
+    //hdrTextureList.value = 
 
     const set = new Set<string>()
     textureList.value = texstureArray.filter(x => {
@@ -100,11 +122,67 @@ function onchange() {
         }
     }
 
+    if(!generator)
+        generator = new materialPreviewGenerator(Editor.Instance.Engine as Engine, 64);
 
+    for(var i =0; i<materialList.value.length; i++){
+        const material = materialList.value[i];
+        const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
+        const prevUrl = await generator.render(mat);
+        material.previewUrl = prevUrl;
+    }
+}
 
+function modelContextMenu(e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
 
+    openContextMenu({
+        position: {
+            x: e.clientX,
+            y: e.clientY
+        },
+        commands: getAssetsModelContextMenuCommands()
+    })
+}
 
+function materialContextMenu(e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
 
+    openContextMenu({
+        position: {
+            x: e.clientX,
+            y: e.clientY
+        },
+        commands: getAssetsMaterialContextMenuCommands()
+    })
+}
+
+function textureContextMenu(e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    openContextMenu({
+        position: {
+            x: e.clientX,
+            y: e.clientY
+        },
+        commands: getAssetsTextureContextMenuCommands()
+    })
+}
+
+function hdrContextMenu(e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    openContextMenu({
+        position: {
+            x: e.clientX,
+            y: e.clientY
+        },
+        commands: getAssetsHdrContextMenuCommands()
+    })
 }
 
 onUnmounted(() => {

@@ -1,8 +1,10 @@
 import { Editor } from "@/3d/Editor";
 import { useScene } from "@/store/useScene";
-import { MeshBuilder, Node, Quaternion, TransformNode } from "@babylonjs/core";
+import { MeshBuilder, Node, PBRMaterial, Quaternion, StandardMaterial, TransformNode } from "@babylonjs/core";
 import { nextTick } from "vue";
 import { EnvFileHelper } from "./EnvFileHelper";
+import { RuntimeLibrary } from "@/3d/assets/runtimeLibrary";
+import { Utils } from "@/utils";
 
 /**
  * 获取层级面板的右键菜单配置
@@ -93,15 +95,86 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
             }
         ]
     },
-    // todo:将添加贴图的功能移到资产面板
-    {
-      name:'添加贴图',
-      callback: () => {
-        var helper = new EnvFileHelper();
-        //helper.loadSkyBox();
-        helper.importSkyboxTexture();
-      }
-    }
+
   ];
 }
+
+/**
+ * 资产-模型面板的右键
+ */
+export function getAssetsModelContextMenuCommands() {
+return [
+    {
+      name: '导入模型',
+      callback: () => {
+        Utils.chooseFile('.glb,.fbx').then(async (fileList) => {
+          if (fileList[0]) {
+              const node = await RuntimeLibrary.Instance.importMesh(fileList[0]);
+              RuntimeLibrary.Instance.dispatch("onChanged");
+          }
+        })
+      }
+    }
+  ]
+}
+
+/**
+ * 资产-材质面板的右键
+ */
+export function getAssetsMaterialContextMenuCommands() {
+  return [
+    {
+      name: '创建Standard材质',
+      callback: () => {
+        // 创建材质
+        const material = new StandardMaterial('Standard', Editor.Instance.Scene);
+        RuntimeLibrary.Instance.addMaterial(material);
+        // Assets.vue会监听 onChanged 然后创建预览球
+        RuntimeLibrary.Instance.dispatch("onChanged");
+      },
+    },
+    {
+      name: '创建PBR材质',
+      callback: () => {
+        const material = new PBRMaterial("PBR", Editor.Instance.Scene);
+        RuntimeLibrary.Instance.addMaterial(material);
+        RuntimeLibrary.Instance.dispatch("onChanged");
+      },
+    }
+  ]
+}
+
+export function getAssetsTextureContextMenuCommands() {
+  return [
+    {
+      name:'添加贴图',
+      callback: async () => {
+        const fileList = await Utils.chooseFile('image/*', true);
+        const array = [...fileList].filter(x => x.type == 'image/png' || x.type == 'image/jpeg' || x.type == 'image/webp')
+    
+        for (let index = 0; index < array.length; index++) {
+            const element = array[index];
+            await RuntimeLibrary.Instance.importTexture(element)
+        }
+        RuntimeLibrary.Instance.dispatch("onChanged");
+      }
+    }
+  ]
+}
+
+export function getAssetsHdrContextMenuCommands() {
+  return [
+    {
+      name: '添加环境贴图',
+      callback: async () => {
+        var helper = new EnvFileHelper();
+        //helper.loadSkyBox();
+        await helper.importSkyboxTexture();
+        RuntimeLibrary.Instance.dispatch("onChanged");
+      }
+    }
+  ]
+}
+
+
 

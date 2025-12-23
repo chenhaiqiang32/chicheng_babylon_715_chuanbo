@@ -70,7 +70,7 @@ import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
-import { getHierarchyContextMenuCommands } from '@/3d/core/utils/nodeContextMenuItem';
+import { getHierarchyContextMenuCommands } from '@/3d/core/utils/ContextMenuCommands';
 import { Node } from '@babylonjs/core';
 
 const searchText = ref('');
