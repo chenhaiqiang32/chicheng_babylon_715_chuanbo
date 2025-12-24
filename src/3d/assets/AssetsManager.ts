@@ -20,9 +20,9 @@ import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import JSZip from 'jszip';
 
 export interface ICollectAssets {
-  addTexture(texture: BaseTexture): void;
-  addMaterial(material: Material): void;
-  addGeometry(geometry: Geometry): void;
+  addTexture(texture: BaseTexture): Promise<void>;
+  addMaterial(material: Material): Promise<void>;
+  addGeometry(geometry: Geometry): Promise<void>;
 }
 
 export interface ILoaderAssets {

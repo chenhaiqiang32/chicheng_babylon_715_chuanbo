@@ -112,7 +112,7 @@ const menuItems: MenuItem[] = [
 async function saveProject() {
     try {
         await EditorFileSystem.Instance.check();
-        useScene().saveScene(Editor.Instance.Scene)
+        await useScene().saveScene(Editor.Instance.Scene)
         const sceneList = useScene().sceneInfoList;
         const files = await RuntimeLibrary.Instance.saveAll()
         files.push(['scene.json', JSON.stringify(sceneList)]);

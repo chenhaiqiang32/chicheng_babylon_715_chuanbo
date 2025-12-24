@@ -7,6 +7,7 @@ import type {
   Light,
   LightGizmo,
 } from '@babylonjs/core';
+import type { Scene, Node, Geometry, Material, BaseTexture, TransformNode, ParticleSystem, GPUParticleSystem, ThinParticleSystem, IParticleSystem, ParticleSystemSet } from '@babylonjs/core';
 
 declare module '@babylonjs/core' {
   interface Scene {
@@ -16,6 +17,7 @@ declare module '@babylonjs/core' {
   }
   interface Node {
     uuid: string;
+    isIgnore: boolean;
   }
   interface Geometry {
     uuid: string;
@@ -33,4 +35,16 @@ declare module '@babylonjs/core' {
   interface Light {
     gizmo: LightGizmo;
   }
+  interface TransformNode {
+    particleSystem: ParticleSystemSet;
+    //  gpuParticleSystem: GPUParticleSystem;
+  }
+  interface ParticleSystem {
+    isDefaultexture: boolean = true;
+
+  }
+  interface GPUParticleSystem {
+    isDefaultexture: boolean = true;
+  }
+
 }

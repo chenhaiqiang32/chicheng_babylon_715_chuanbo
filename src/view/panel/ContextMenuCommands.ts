@@ -12,6 +12,7 @@ import { nextTick } from 'vue';
 import { EnvFileHelper } from '../../3d/core/utils/EnvFileHelper';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Utils } from '@/utils';
+import { addParticleSystem } from '@/tools/particles/particles';
 
 /**
  * 获取层级面板的右键菜单配置
@@ -101,6 +102,48 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
             mesh.rotationQuaternion = new Quaternion(0, 0, 0);
             mesh.material = new PBRMaterial('SphereMat', Editor.Instance.Scene);
             useScene().addHierarchy(mesh, parentNode);
+          },
+        },
+      ],
+    },
+    {
+      name: '添加粒子',
+      subCommand: [
+        {
+          name: '添加默认粒子',
+          callback: () => {
+            addParticleSystem('default');
+          },
+        },
+        // {
+        //     name: '添加太阳',
+        //     callback: () => {
+
+        //         addParticleSystem("sun");
+        //     }
+        // },
+        {
+          name: '添加烟雾',
+          callback: () => {
+            addParticleSystem('smoke');
+          },
+        },
+        {
+          name: '添加雨',
+          callback: () => {
+            addParticleSystem('rain');
+          },
+        },
+        {
+          name: '添加火',
+          callback: () => {
+            addParticleSystem('fire');
+          },
+        },
+        {
+          name: '添加爆炸',
+          callback: () => {
+            addParticleSystem('explosion');
           },
         },
       ],

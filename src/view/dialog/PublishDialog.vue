@@ -70,12 +70,11 @@ function onSelectScene(item: { uuid?: string }) {
 
 
 async function onPublish() {
-    useScene().saveScene(Editor.Instance.Scene);
+    await useScene().saveScene(Editor.Instance.Scene);
     let publishScenes = sceneInfoList.value.filter(x => !excludeScene.value?.includes(x.uuid))
     const publish = new PublishAssets(RuntimeLibrary.Instance);
     const buffer = await publish.addScene(publishScenes, (v) => {
         loading.value = v;
-        console.log(v);
     });
     //@ts-ignore
     Tools.Download(new Blob([buffer], { type: 'application/zip' }), 'publish.zip');

@@ -35,8 +35,8 @@ interface RuntimeAssetsEventBus {
 }
 
 export interface IGetBuffer {
-  getGeoBuffer(uuid: string): Promise<Uint8Array>;
-  getTextureBuffer(uuid: string): Promise<Uint8Array>;
+  getGeoBuffer(uuid: string): any;
+  getTextureBuffer(uuid: string): any;
   getMaterialData(uuid: string): any;
   getTexturelData(uuid: string): any;
 }
@@ -128,7 +128,7 @@ export class RuntimeLibrary
     }
     root.name = file.name.split('.')[0];
     fixMaterial(root);
-    const node = serializeNode(root, this, true);
+    const node = await serializeNode(root, this, true);
     this.rootNodes.push(node);
     return node;
   }
@@ -220,6 +220,7 @@ export class RuntimeLibrary
       this.geomertyZips.push(uuid);
       files.push([uuid, blob]);
     }
+    debugger;
     if (this.tempTextureFile.size > 0) {
       for (const key of this.tempTextureFile.keys()) {
         const buffer = this.tempTextureFile.get(key);
@@ -283,13 +284,45 @@ export class RuntimeLibrary
         if (t._buffer) {
           const buffer = await serializeTextureBuffer(t._buffer);
           this.tempTextureFile.set(data.sourceUUID, buffer);
+        } else {
+          if (t.url) {
+            const buffer = await (await fetch(t.url)).arrayBuffer();
+            console.log(buffer);
+            this.tempTextureFile.set(data.sourceUUID, new Uint8Array(buffer));
+            console.log(this.tempTextureFile);
+          }
         }
       }
       return data;
     }
   }
+  InitResIntoLibrary(scene: Scene) {
+    const texturePaths = [
+      '/particle/textures/default/flare.png',
+      '/particle/textures/explosion/FlameBlastSpriteSheet.png',
+      '/particle/textures/explosion/Flare.png',
+      '/particle/textures/explosion/FlashParticle.png',
+      '/particle/textures/explosion/Smoke_SpriteSheet.png',
+      '/particle/textures/fire/Fire_SpriteSheet1_8x8.png',
+      '/particle/textures/fire/Fire_SpriteSheet2_8x8.png',
+      '/particle/textures/fire/Fire_SpriteSheet3_8x8.png',
+      '/particle/textures/fire/sparks.png',
+      '/particle/textures/rain/Rain.png',
+      '/particle/textures/smoke/Smoke_SpriteSheet_8x8.png',
+    ];
 
-  addMaterial(material: Material, force: boolean = true): void {
+    texturePaths.forEach(async (path) => {
+      try {
+        const texture = new Texture(path, scene);
+        texture.name = path.split('/').pop() || path;
+        texture.sourceUUID = ID.generateUUID();
+        await this.addTexture(texture);
+      } catch (error) {
+        console.warn(`Failed to load texture from ${path}:`, error);
+      }
+    });
+  }
+  async addMaterial(material: Material, force: boolean = true) {
     if (!material.uuid) {
       material.uuid = ID.generateUUID();
     }
@@ -334,7 +367,7 @@ export class RuntimeLibrary
       this.material.push(data);
     }
   }
-  addGeometry(geometry: Geometry): void {
+  async addGeometry(geometry: Geometry) {
     if (!geometry.uuid) {
       geometry.uuid = ID.generateUUID();
     }

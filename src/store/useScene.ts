@@ -15,8 +15,8 @@ function buildHierarchy(node: Node): HierarchyNode {
 
   // todo:根据不同类型设置 isActive 字段
   var isActive = true;
-    // 如果是摄像机，判断是否为 scene.activeCamera，如果是则=true
-  if(node.getClassName() === 'ArcRotateCamera' || node.getClassName() === 'UniversalCamera') {
+  // 如果是摄像机，判断是否为 scene.activeCamera，如果是则=true
+  if (node.getClassName() === 'ArcRotateCamera' || node.getClassName() === 'UniversalCamera') {
     isActive = Editor.Instance.Scene.activeCamera.uuid === node.uuid;
   }
 
@@ -50,9 +50,9 @@ export const useScene = defineStore('scene', () => {
 
   // 递归构建映射
   function buildMap(nodes: HierarchyNode[], map: Map<string, HierarchyNode>) {
-    for(const node of nodes){
+    for (const node of nodes) {
       map.set(node.id, node);
-      if(node.children){
+      if (node.children) {
         buildMap(node.children, map);
       }
     }
@@ -62,8 +62,8 @@ export const useScene = defineStore('scene', () => {
     sceneInfoList.value = scenes;
   }
 
-  function saveScene(scene: Scene) {
-    const sceneData = serializeScene(scene, RuntimeLibrary.Instance, false);
+  async function saveScene(scene: Scene) {
+    const sceneData = await serializeScene(scene, RuntimeLibrary.Instance, false);
     sceneInfoList.value = sceneInfoList.value.map((x) => {
       if (x.uuid == scene.uuid) {
         return sceneData;
@@ -75,24 +75,29 @@ export const useScene = defineStore('scene', () => {
   function setHierarchy(rootNodes: Node[]) {
     hierarchy.value = rootNodes.map(buildHierarchy);
     hierarychyMap.value.clear();
+    rootNodes.forEach((x) => {
+      if (x.name == 'SubemitterSystemEmitter') {
+        x.isIgnore = true;
+      }
+    });
+    hierarchy.value = rootNodes.filter((node) => !node.isIgnore).map(buildHierarchy);
     buildMap(hierarchy.value, hierarychyMap.value);
   }
 
-  function addHierarchy(node: Node, parent:Node | null){
+  function addHierarchy(node: Node, parent: Node | null) {
     const newNode = buildHierarchy(node);
     // 由于 Node 没有 parent 属性，所以只能通过找 parent 然后设置 childrent lai实现层级关系
     if (parent) {
       const parentNode = hierarychyMap.value.get(parent.uuid);
       //const parentNode = hierarchy.value.find((n) => n.id == parent.uuid);
-      if(parentNode) {
+      if (parentNode) {
         // 需要双向绑定
         node.parent = parent;
         parentNode.children?.push(newNode);
       } else {
         hierarchy.value.push(newNode);
       }
-    } 
-    else {
+    } else {
       hierarchy.value.push(newNode);
     }
     hierarychyMap.value.set(newNode.id, newNode);
@@ -113,8 +118,8 @@ export const useScene = defineStore('scene', () => {
     }
   }
 
-  function addScene(scene: Scene) {
-    const sceneData = serializeScene(scene, RuntimeLibrary.Instance, true);
+  async function addScene(scene: Scene) {
+    const sceneData = await serializeScene(scene, RuntimeLibrary.Instance, true);
     sceneInfoList.value.push(sceneData);
     sceneInfoList.value = [...sceneInfoList.value];
   }

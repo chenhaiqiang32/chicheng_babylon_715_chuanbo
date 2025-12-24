@@ -73,7 +73,6 @@ import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
 import { getHierarchyContextMenuCommands } from '@/view/panel/ContextMenuCommands';
 import { Node } from '@babylonjs/core';
-
 const searchText = ref('');
 const treeProps = {
     label: 'name',

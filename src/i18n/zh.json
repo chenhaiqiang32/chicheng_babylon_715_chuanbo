@@ -320,6 +320,48 @@
       "confirmButtonText": "确定",
       "cancelButtonText": "取消",
       "onDoubleClick": "双击"
+    },
+    "particleSystem": {
+      "particleSystems": "粒子系统集合",
+      "base": "基础",
+      "transforms": "变换",
+      "offset": "偏移",
+      "gravity": "重力",
+      "isLocal": "本地",
+      "isBillboardBased": "朝向",
+      "textures": "纹理",
+      "baseTexture": "基础纹理",
+      "emission": "发射器",
+      "capacity": "数量",
+      "rate": "速率",
+      "stopDuration": "停止时间",
+      "emitPower": "发射功率",
+      "min": "最小",
+      "max": "最大",
+      "angularSpeed": "角速度",
+      "useAngularSpeedGradients": "使用角速度渐变",
+      "useSizeGradients": "使用大小渐变",
+      "sizeGradients": "大小渐变",
+      "colors": "颜色",
+      "colorGradients": "颜色渐变",
+      "lifetime": "生命周期",
+      "emitter": "发射器",
+      "direction": "方向",
+      "emitBox": "发射盒子",
+      "radius": "半径",
+      "angle": "角度",
+      "radiusRange": "半径范围",
+      "directionRandomizer": "随机方向",
+      "heightRange": "高度范围",
+      "emitFromSpawnPointOnly": "发射器仅从发射点发射",
+      "animationSheet": "动画表",
+      "isAnimationSheetEnabled": "启用动画表",
+      "startCellId": "起始单元id",
+      "spriteCellChangeSpeed": "精灵动画播放速度",
+      "endCellId": "结束单元id",
+      "cellHeight": "单元高度",
+      "cellWidth": "单元宽度",
+      "randomStartCell": "随机起始单元"
     }
   },
   "animation": {
@@ -336,7 +378,87 @@
       "albedoColor": "颜色",
       "alpha": "透明度",
       "roughness": "粗糙度",
-      "metallic": "金属度"
+      "metallic": "金属度",
+      "albedoTexture": {
+        "vScale": "基础纹理v缩放",
+        "uScale": "基础纹理u缩放",
+        "vOffset": "基础纹理v偏移",
+        "uOffset": "基础纹理u偏移"
+      },
+      "bumpTexture": {
+        "vScale": "法线纹理v缩放",
+        "uScale": "法线纹理u缩放",
+        "vOffset": "法线纹理v偏移",
+        "uOffset": "法线纹理u偏移"
+      },
+      "emissiveTexture": {
+        "vScale": "自发光纹理v缩放",
+        "uScale": "自发光纹理u缩放",
+        "vOffset": "自发光纹理v偏移",
+        "uOffset": "自发光纹理u偏移"
+      },
+      "metallicTexture": {
+        "vScale": "金属度纹理v缩放",
+        "uScale": "金属度纹理u缩放",
+        "vOffset": "金属度纹理v偏移",
+        "uOffset": "金属度纹理u偏移"
+      },
+      "ambientTexture": {
+        "vScale": "环境光纹理v缩放",
+        "uScale": "环境光纹理u缩放",
+        "vOffset": "环境光纹理v偏移",
+        "uOffset": "环境光纹理u偏移"
+      },
+      "reflectionTexture": {
+        "vScale": "反射纹理v缩放",
+        "uScale": "反射纹理u缩放",
+        "vOffset": "反射纹理v偏移",
+        "uOffset": "反射纹理u偏移"
+      },
+      "lightmapTexture": {
+        "vScale": "光照贴图纹理v缩放",
+        "uScale": "光照贴图纹理u缩放",
+        "vOffset": "光照贴图纹理v偏移",
+        "uOffset": "光照贴图纹理u偏移"
+      },
+      "opacityTexture": {
+        "vScale": "透明度纹理v缩放",
+        "uScale": "透明度纹理u缩放",
+        "vOffset": "透明度纹理v偏移",
+        "uOffset": "透明度纹理u偏移"
+      },
+      "reflectivityTexture": {
+        "vScale": "反射度纹理v缩放",
+        "uScale": "反射度纹理u缩放",
+        "vOffset": "反射度纹理v偏移",
+        "uOffset": "反射度纹理u偏移"
+      },
+      "microSurfaceTexture": {
+        "vScale": "微表面纹理v缩放",
+        "uScale": "微表面纹理u缩放",
+        "vOffset": "微表面纹理v偏移",
+        "uOffset": "微表面纹理u偏移"
+      },
+      "clearCoat": {
+        "clearCoatTexture": {
+          "vScale": "清漆纹理v缩放",
+          "uScale": "清漆纹理u缩放",
+          "vOffset": "清漆纹理v偏移",
+          "uOffset": "清漆纹理u偏移"
+        },
+        "tintTexture": {
+          "vScale": "清漆颜色纹理v缩放",
+          "uScale": "清漆颜色纹理u缩放",
+          "vOffset": "清漆颜色纹理v偏移",
+          "uOffset": "清漆颜色纹理u偏移"
+        },
+        "bumpTexture": {
+          "vScale": "清漆法线纹理v缩放",
+          "uScale": "清漆法线纹理u缩放",
+          "vOffset": "清漆法线纹理v偏移",
+          "uOffset": "清漆法线纹理u偏移"
+        }
+      }
     }
   },
   "dialog": {

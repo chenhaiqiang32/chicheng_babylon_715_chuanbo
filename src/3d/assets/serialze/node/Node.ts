@@ -7,11 +7,11 @@ import { deserializeLight, serializeLight } from './Light';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 import { ID } from '@/utils/id';
 
-export function serializeNode(
+export async function serializeNode(
   node: TransformNode,
   assets: ICollectAssets,
   serializeAssets: boolean,
-): CC.ObjectNode {
+): Promise<CC.ObjectNode> {
   try {
     if (!node.uuid) {
       node.uuid = ID.generateUUID();
@@ -20,9 +20,7 @@ export function serializeNode(
       uuid: node.uuid,
       name: node.name,
       visible: node.isVisible,
-      children: node
-        .getChildren()
-        ?.map((item) => serializeNode(item as TransformNode, assets, serializeAssets)),
+      children: [],
     };
     if (node instanceof Mesh) {
       serializeMeshNode(node, reuslt as CC.MeshNode, assets, serializeAssets);
@@ -34,11 +32,20 @@ export function serializeNode(
       reuslt.type = 'object';
     }
     if (node instanceof TransformNode) {
-      serializeTransformNode(node, reuslt as CC.TransformNode);
+      await serializeTransformNode(node, reuslt as CC.TransformNode, assets);
     }
     if (node.metadata) {
       reuslt.metadata = node.metadata;
     }
+
+    const children = node.getChildren();
+
+    for (let index = 0; index < children.length; index++) {
+      const element = children[index];
+      const node = await serializeNode(element as TransformNode, assets, serializeAssets);
+      reuslt.children.push(node);
+    }
+
     return reuslt as CC.ObjectNode;
   } catch (error) {
     console.error('序列化节点时出错:', error);
@@ -73,7 +80,7 @@ export async function deserializeNode(
     currentNode.parent = parent;
   }
   if (currentNode instanceof TransformNode) {
-    deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode);
+    deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode, assets);
   }
   currentNode.inheritVisibility = true;
   currentNode.isVisible = node.visible;

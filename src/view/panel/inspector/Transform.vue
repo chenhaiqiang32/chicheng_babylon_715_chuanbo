@@ -31,8 +31,8 @@ const scaleRef = ref<InstanceType<typeof Vector>>()
 
 const props = defineProps<{ object: TransformNode }>();
 const getEulerAnglesFromQuaternion = () => {
-	if (!hasQuaternion.value) return
-	const euler = props.object.rotationQuaternion.toEulerAngles()
+	if (!hasQuaternion.value && !props.object.rotationQuaternion) return
+	const euler = props.object.rotationQuaternion?.toEulerAngles()
 	return {
 		x: euler.x,
 		y: euler.y,
@@ -60,7 +60,7 @@ onMounted(() => {
 
 function onPositionChanged(e: { object: TransformNode }) {
 	if (e.object == props.object) {
-		positionRef.value.syncFromObject()
+		positionRef.value?.syncFromObject()
 	}
 }
 function onRotationChanged(e: { object: TransformNode }) {
@@ -68,13 +68,13 @@ function onRotationChanged(e: { object: TransformNode }) {
 		if (hasQuaternion.value) {
 			rotationProxy.value = getEulerAnglesFromQuaternion()
 		} else {
-			rotationRef.value.syncFromObject()
+			rotationRef.value?.syncFromObject()
 		}
 	}
 }
 function onScaleChanged(e: { object: TransformNode }) {
 	if (e.object == props.object) {
-		scaleRef.value.syncFromObject()
+		scaleRef.value?.syncFromObject()
 	}
 }
 const applyRotationProxy = () => {

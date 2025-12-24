@@ -13,7 +13,7 @@ import { getObjectValue, setObjectValue } from "@/tools/property"
 import Field from "@/component/common/Field.vue"
 import { Editor } from "@/3d/Editor"
 const props = defineProps<{ object: any; property: string; label?: any; tooltip?: any; step?: number; min?: number; max?: number; noUndoRedo?: boolean }>()
-const emit = defineEmits<{ (e: "change", value: number): void; (e: "finishChange", value: number, oldValue: number): void }>()
+const emit = defineEmits<{ (e: "change", value: number, oldValue: number): void; (e: "finishChange", value: number, oldValue: number): void }>()
 
 const value = ref<number>(getObjectValue(props.object, props.property) ?? 0)
 const oldValue = ref<number>(getObjectValue(props.object, props.property) ?? 0)
@@ -34,8 +34,9 @@ let redoObserver: any = null
 const onInput = (newValue: number) => {
 	value.value = newValue
 	setObjectValue(props.object, props.property, newValue)
-	emit("change", newValue)
+	emit("change", newValue, oldValue.value)
 }
+
 
 const onBlur = () => {
 	const newValue = value.value

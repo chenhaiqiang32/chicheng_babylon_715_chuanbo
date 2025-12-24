@@ -20,11 +20,11 @@ import {
 import { parseSSAO2RenderingPipeline, serializeSSAO2RenderingPipeline } from '@/3d/rendering/ssao';
 import { parseSSRRenderingPipeline, serializeSSRRenderingPipeline } from '@/3d/rendering/ssr';
 
-export function serializeScene(
+export async function serializeScene(
   scene: Scene,
   assets: ICollectAssets,
   serializeAssets: boolean = true,
-): CC.Scene {
+): Promise<CC.Scene> {
   const result: Partial<CC.Scene> = {};
   result.uuid = scene.uuid;
   result.type = 'scene';
@@ -58,10 +58,12 @@ export function serializeScene(
     intensity: scene.environmentIntensity,
   };
   result.iblIntensity = scene.iblIntensity;
-
-  result.nodes = scene.rootNodes.map((item) =>
-    serializeNode(item as TransformNode, assets, serializeAssets),
-  );
+  result.nodes = [];
+  for (let index = 0; index < scene.rootNodes.length; index++) {
+    const element = scene.rootNodes[index];
+    const node = await serializeNode(element as TransformNode, assets, serializeAssets);
+    result.nodes.push(node);
+  }
   const defaultPipeline = scene.postProcessRenderPipelineManager.supportedPipelines.find(
     (x) => x instanceof DefaultRenderingPipeline,
   );

@@ -47,18 +47,14 @@ const { projects } = storeToRefs(useIndexDBProject());
 const model = ref(true);
 const creating = ref(false);
 const recentProjects = ref<Array<{ name: string; time: number }>>(JSON.parse(localStorage.getItem('recentProjects') || '[]'));
-
 const props = defineProps<{ close: () => void }>();
-
 const { loading } = storeToRefs(useEditor());
-onMounted(() => {
-    // openIndexDBProject('789')
-});
+
 
 async function createProject() {
     try {
         const scene = await Editor.Instance.createNewScene('默认场景');
-        useScene().addScene(scene);
+        await useScene().addScene(scene);
         Editor.Instance.setCurrentScene(scene.uuid);
         props.close();
     } finally {
@@ -76,7 +72,7 @@ async function openLocalProject() {
             Editor.Instance.setCurrentScene(sceneList[0].uuid);
         } else {
             const scene = await Editor.Instance.createNewScene('默认场景');
-            useScene().addScene(scene);
+            await useScene().addScene(scene);
             Editor.Instance.setCurrentScene(scene.uuid);
         }
         props.close();
