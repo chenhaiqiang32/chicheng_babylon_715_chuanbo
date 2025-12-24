@@ -203,7 +203,6 @@ export class RuntimeLibrary
 
     const sceneText = await fileSystem.getFileText('scene.json');
     const scene = JSON.parse(sceneText) as CC.Scene[];
-    this.dispatch('onChanged');
     loading?.(progress);
     return scene.filter((x) => x);
   }

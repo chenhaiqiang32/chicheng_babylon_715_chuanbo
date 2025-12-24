@@ -1,6 +1,5 @@
 <template>
-  <SectionField :title="$t('component.material.title')" :label="material.getClassName()">
-
+  <SectionField :title="$t('component.material.title')">
     <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
       <StringField style="flex: 1;" :label="$t('component.material.name')" :object="material" property="name" />
       <ElButton type="info" size="small" @click="changeMaterial">更换</ElButton>
@@ -121,7 +120,9 @@
 
     </SectionField>
     <SectionField :title="$t('component.material.clearCoat')">
-      <Switch :label="$t('component.material.enable')" :object="material" property="clearCoat.isEnabled" />
+      <template #right>
+        <Switch :object="material" property="clearCoat.isEnabled" />
+      </template>
       <Switch :label="$t('component.material.isTintEnabled')" :object="material" property="clearCoat.isTintEnabled" />
       <Slider :label="$t('component.material.intensity')" :object="material" property="clearCoat.intensity" :min="0"
         :max="1" />
@@ -141,7 +142,11 @@
     </SectionField>
 
     <SectionField :title="$t('component.material.refraction')">
-      <Switch :label="$t('component.material.enable')" :object="material" property="subSurface.isRefractionEnabled" />
+
+      <template #right>
+        <Switch :object="material" property="subSurface.isRefractionEnabled" />
+      </template>
+
       <Slider :label="$t('component.material.refractionIntensity')" :object="material"
         property="subSurface.refractionIntensity" :min="0" :max="1" />
       <Slider :label="$t('component.material.indexOfRefraction')" :object="material" property="indexOfRefraction"
@@ -151,13 +156,17 @@
     </SectionField>
 
     <SectionField :title="$t('component.material.translucency')">
-      <Switch :label="$t('component.material.enable')" :object="material" property="subSurface.isTranslucencyEnabled" />
+      <template #right>
+        <Switch :object="material" property="subSurface.isTranslucencyEnabled" />
+      </template>
       <Slider :label="$t('component.material.subSurface.translucencyIntensity')" :object="material"
         property="subSurface.translucencyIntensity" :min="0" :max="1" />
     </SectionField>
 
     <SectionField :title="$t('component.material.anisotropy')">
-      <Switch :label="$t('component.material.enable')" :object="material" property="anisotropy.isEnabled" />
+      <template #right>
+        <Switch :object="material" property="anisotropy.isEnabled" />
+      </template>
       <Slider :label="$t('component.material.anisotropyIntensity')" :object="material" property="anisotropy.intensity"
         :min="0" :max="1" />
       <Slider :label="$t('component.material.directionX')" :object="material" property="anisotropy.direction.x" :min="0"
@@ -167,7 +176,9 @@
     </SectionField>
 
     <SectionField :title="$t('component.material.sheen')">
-      <Switch :label="$t('component.material.enable')" :object="material" property="sheen.isEnabled" />
+      <template #right>
+        <Switch :object="material" property="sheen.isEnabled" />
+      </template>
       <Slider :label="$t('component.material.sheenIntensity')" :object="material" property="sheen.intensity" :min="0"
         :max="10" />
       <Color :label="$t('component.material.sheenColor')" :object="material" property="sheen.color" />

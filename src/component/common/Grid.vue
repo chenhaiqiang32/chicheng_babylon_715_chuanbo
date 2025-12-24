@@ -1,14 +1,18 @@
 <template>
-    <div ref="gridEl" class="grid-container" :style="{
-        gridTemplateColumns: `repeat(auto-fill, minmax(${props.minWidth}px, 1fr))`,
-        gridAutoRows: props.gap ? `calc(${props.rowHeight || 10}px + ${props.gap}px)` : '10px',
-        gap: gapPx
-    }">
-        <slot v-for="(item, index) in props.data" :key="item.id ?? item" :item="item" :index="index" />
-    </div>
+    <el-scrollbar>
+        <div ref="gridEl" class="grid-container" :style="{
+            gridTemplateColumns: `repeat(auto-fill, minmax(${props.minWidth}px, 1fr))`,
+            gridAutoRows: props.gap ? `calc(${props.rowHeight || 10}px + ${props.gap}px)` : '10px',
+            gap: gapPx
+        }">
+            <slot v-for="(item, index) in props.data" :key="item.id ?? item" :item="item" :index="index" />
+        </div>
+    </el-scrollbar>
+
 </template>
 
 <script setup lang="ts">
+import { ElScrollbar } from 'element-plus';
 import { ref, shallowRef, onMounted, onUnmounted, computed, watch } from 'vue'
 
 const props = withDefaults(

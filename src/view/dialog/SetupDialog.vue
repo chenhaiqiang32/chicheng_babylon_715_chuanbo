@@ -100,6 +100,7 @@ async function openIndexDBProject(name: string) {
             useScene().addScene(scene);
             Editor.Instance.setCurrentScene(scene.uuid);
         }
+        RuntimeLibrary.Instance.dispatch('onChanged');
         props.close();
     } catch (error) {
         console.error(error);

@@ -71,7 +71,7 @@ import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
-import { getHierarchyContextMenuCommands } from '@/3d/core/utils/ContextMenuCommands';
+import { getHierarchyContextMenuCommands } from '@/view/panel/ContextMenuCommands';
 import { Node } from '@babylonjs/core';
 
 const searchText = ref('');
@@ -106,11 +106,12 @@ function contextMenu(e: MouseEvent, nodeData?: HierarchyNode) {
 
     // parent 优先为选中的节点；如果没有，则获取鼠标当前选中的节点
     let parentNode: Node | null = null;
-    if (currentSelected.value.length > 0)
+    if (currentSelected.value.length > 0) {
         parentNode = Editor.Instance.getNodeById(currentSelected.value[0]);
-    else
+    }
+    else {
         parentNode = nodeData ? Editor.Instance.getNodeById(nodeData.id) : null;
-    //const    parentNode = nodeData ? Editor.Instance.getNodeById(nodeData.id) : null;
+    }
 
     openContextMenu({
         position: {

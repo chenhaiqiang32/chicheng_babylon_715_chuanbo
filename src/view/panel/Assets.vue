@@ -54,13 +54,13 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import SVG from '@/component/common/SVG.vue';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
-import { materialPreviewGenerator } from '@/tools/preview/materialPreviewGenerator';
-import { Engine } from '@babylonjs/core';
+import { Engine, TubeBuilder } from '@babylonjs/core';
 import { openContextMenu } from '@/component/content-menu';
+import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 import {
     getAssetsHdrContextMenuCommands, getAssetsMaterialContextMenuCommands,
     getAssetsModelContextMenuCommands, getAssetsTextureContextMenuCommands
-} from '@/3d/core/utils/ContextMenuCommands';
+} from '@/view/panel/ContextMenuCommands';
 
 const minWidth = 70
 const rowHeight = 70
@@ -70,7 +70,7 @@ const materialList = ref<any[]>([]);
 const textureList = ref<any[]>([]);
 const hdrTextureList = ref<any[]>([]);
 
-let generator: materialPreviewGenerator;
+
 
 function handleDragStart(ev: DragEvent, data: any) {
     ev.dataTransfer?.setData('assets', JSON.stringify(data))
@@ -83,7 +83,8 @@ onMounted(() => {
 
 
 async function onchange() {
-    console.log("onchange");
+    console.log("onChange");
+
     objectList.value = RuntimeLibrary.Instance.rootNodes.map(x => {
         return {
             type: 'object',
@@ -121,13 +122,11 @@ async function onchange() {
             })
         }
     }
-    if (!generator)
-        generator = new materialPreviewGenerator(Editor.Instance.Engine as Engine, 64);
 
     for (var i = 0; i < materialList.value.length; i++) {
         const material = materialList.value[i];
         const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
-        const prevUrl = await generator.render(mat);
+        const prevUrl = await renderMaterail(mat, true, Editor.Instance.Engine);
         material.previewUrl = prevUrl;
     }
     Editor.Instance.Engine.resize()

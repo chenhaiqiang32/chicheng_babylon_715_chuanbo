@@ -1,6 +1,6 @@
 <template>
   <div>
-    <SectionField :title="'Material'" :label="material.getClassName()">
+    <SectionField :title="'Material'">
       <StringField label="Name" :object="material" property="name" />
       <Switch label="Back Face Culling" :object="material" property="backFaceCulling" />
       <Number label="Alpha" :object="material" property="alpha" :min="0" :max="1" />

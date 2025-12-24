@@ -1,7 +1,8 @@
 <template>
-  <Field :title="label">
+  <Field :title="label" v-if="label">
     <el-switch style="margin-left: auto;" v-model="value" @change="change" />
   </Field>
+  <el-switch @click.stop v-else style="margin-left: auto; height: auto;" v-model="value" @change="change" />
 </template>
 
 <script setup lang="ts">

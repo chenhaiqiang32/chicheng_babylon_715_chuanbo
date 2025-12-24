@@ -2,16 +2,16 @@
 	<Field :title="label" :tooltip="tooltip" :text-width="60">
 		<el-input-number class="vector-input" size="small" v-model="vx" :step="step" :min="axisMin(0)" :max="axisMax(0)"
 			:controls="false" @update:modelValue="val => onAxisChange('x', val as number)" @change="onFinishChange"
-			@blur="onFinishChange" />
+			@blur="onFinishChange" :precision="3" />
 		<el-input-number class="vector-input" size="small" v-model="vy" :step="step" :min="axisMin(1)" :max="axisMax(1)"
 			:controls="false" @update:modelValue="val => onAxisChange('y', val as number)" @change="onFinishChange"
-			@blur="onFinishChange" />
+			@blur="onFinishChange" :precision="3" />
 		<el-input-number class="vector-input" size="small" v-if="hasZ" v-model="vz" :step="step" :min="axisMin(2)"
 			:max="axisMax(2)" :controls="false" @update:modelValue="val => onAxisChange('z', val as number)"
-			@change="onFinishChange" @blur="onFinishChange" />
-		<el-input-number class="vector-input" size="small" v-if="hasW" v-model="vw" :step="step" :min="axisMin(3)"
-			:max="axisMax(3)" :controls="false" @update:modelValue="val => onAxisChange('w', val as number)"
-			@change="onFinishChange" @blur="onFinishChange" />
+			@change="onFinishChange" @blur="onFinishChange" :precision="3" />
+		<el-input-number class="vector-input" size="small" v-if="hasW" v-model="vw" :min="axisMin(3)" :max="axisMax(3)"
+			:controls="false" @update:modelValue="val => onAxisChange('w', val as number)" @change="onFinishChange"
+			@blur="onFinishChange" :precision="3" :step="0.1" />
 	</Field>
 </template>
 
@@ -37,19 +37,18 @@ const hasZ = computed(() => props.object?.[props.property]?.z !== undefined || p
 const hasW = computed(() => props.object?.[props.property]?.w !== undefined)
 //保留三位小数
 
-const toDisplay = (v: number) => parseFloat((props.asDegrees ? (v * 180) / Math.PI : v).toFixed(3))
 const toStore = (v: number) => (props.asDegrees ? (v * Math.PI) / 180 : v)
 
-const vx = ref<number>(toDisplay(props.object?.[props.property]?.x ?? 0))
-const vy = ref<number>(toDisplay(props.object?.[props.property]?.y ?? 0))
-const vz = ref<number>(toDisplay(props.object?.[props.property]?.z ?? 0))
-const vw = ref<number>(toDisplay(props.object?.[props.property]?.w ?? 0))
+const vx = ref<number>(props.object?.[props.property]?.x ?? 0)
+const vy = ref<number>(props.object?.[props.property]?.y ?? 0)
+const vz = ref<number>(props.object?.[props.property]?.z ?? 0)
+const vw = ref<number>(props.object?.[props.property]?.w ?? 0)
 
 function syncFromObject() {
-	vx.value = toDisplay(props.object?.[props.property]?.x ?? 0)
-	vy.value = toDisplay(props.object?.[props.property]?.y ?? 0)
-	vz.value = toDisplay(props.object?.[props.property]?.z ?? 0)
-	vw.value = toDisplay(props.object?.[props.property]?.w ?? 0)
+	vx.value = props.object?.[props.property]?.x ?? 0
+	vy.value = props.object?.[props.property]?.y ?? 0
+	vz.value = props.object?.[props.property]?.z ?? 0
+	vw.value = props.object?.[props.property]?.w ?? 0
 }
 
 watch(() => [props.object], () => {

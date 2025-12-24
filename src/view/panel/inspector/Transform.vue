@@ -1,7 +1,7 @@
 <template>
 	<SectionField :title="$t('component.transform.title')">
 		<Vector ref="positionRef" :label="$t('component.transform.position')" :object="object" property="position"
-			@change="notifyNodeModified" />
+			@change="notifyNodeModified" :step="1" />
 		<Vector ref="rotationProxyRef" v-if="hasQuaternion" :label="$t('component.transform.rotation')"
 			:object="rotationProxyObj" property="proxy" :asDegrees="true" :step="0.1" @change="applyRotationProxy"
 			@finishChange="applyRotationProxy" />

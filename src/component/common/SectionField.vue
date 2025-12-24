@@ -15,7 +15,7 @@
         </div>
         <div class="editor-section__right">
           <div class="editor-section__label">
-            <slot name="label">{{ label }}</slot>
+            <slot name="right"></slot>
           </div>
           <el-tooltip v-if="tooltip" :content="tooltip" placement="top">
             <el-icon class="editor-section__info">

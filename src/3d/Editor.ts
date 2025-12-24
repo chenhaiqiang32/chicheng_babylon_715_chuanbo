@@ -31,6 +31,8 @@ import {
   Engine,
   Quaternion,
   ParticleHelper,
+  AreaLight,
+  RectAreaLight,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -331,7 +333,7 @@ export class Editor extends Dispatch<EditorEvent> {
     return scene;
   }
 
-  createLight(type: 'directional' | 'point' | 'spot', scene: Scene): Light {
+  createLight(type: 'directional' | 'point' | 'spot' | 'area', scene: Scene): Light {
     let light: Light;
     switch (type) {
       case 'directional':
@@ -339,6 +341,9 @@ export class Editor extends Dispatch<EditorEvent> {
         break;
       case 'point':
         light = new PointLight('pointLight', new Vector3(0, 0, 0), scene);
+        break;
+      case 'area':
+        light = new RectAreaLight('areaLight', new Vector3(0, 0, 0), 1, 1, scene);
         break;
       case 'spot':
         light = new SpotLight(

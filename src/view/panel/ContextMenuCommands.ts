@@ -9,7 +9,7 @@ import {
   TransformNode,
 } from '@babylonjs/core';
 import { nextTick } from 'vue';
-import { EnvFileHelper } from './EnvFileHelper';
+import { EnvFileHelper } from '../../3d/core/utils/EnvFileHelper';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Utils } from '@/utils';
 
@@ -18,12 +18,6 @@ import { Utils } from '@/utils';
  */
 export function getHierarchyContextMenuCommands(parentNode?: Node | null): ContextMenuItem[] {
   return [
-    {
-      name: '添加场景',
-      callback: () => {
-        console.log('添加场景');
-      },
-    },
     {
       name: '添加节点',
       callback: () => {
@@ -53,6 +47,13 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
           name: '聚光灯',
           callback: () => {
             const light = Editor.Instance.createLight('spot', Editor.Instance.Scene);
+            useScene().addHierarchy(light, parentNode);
+          },
+        },
+        {
+          name: '面光',
+          callback: () => {
+            const light = Editor.Instance.createLight('area', Editor.Instance.Scene);
             useScene().addHierarchy(light, parentNode);
           },
         },
@@ -88,6 +89,7 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
           name: 'Box',
           callback: () => {
             const mesh = MeshBuilder.CreateBox('Box');
+            mesh.material = new PBRMaterial('BoxMat', Editor.Instance.Scene);
             mesh.rotationQuaternion = new Quaternion(0, 0, 0);
             useScene().addHierarchy(mesh, parentNode);
           },
@@ -97,6 +99,7 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
           callback: () => {
             var mesh = MeshBuilder.CreateSphere('Sphere');
             mesh.rotationQuaternion = new Quaternion(0, 0, 0);
+            mesh.material = new PBRMaterial('SphereMat', Editor.Instance.Scene);
             useScene().addHierarchy(mesh, parentNode);
           },
         },
