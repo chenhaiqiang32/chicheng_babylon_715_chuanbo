@@ -1,4 +1,4 @@
-import type { Scene, Node, Geometry, Material, BaseTexture, TransformNode, ParticleSystem, GPUParticleSystem, IParticleSystem, ParticleSystemSet } from '@babylonjs/core';
+import type { Scene, Node, Geometry, Material, BaseTexture, TransformNode, ParticleSystem, GPUParticleSystem, ThinParticleSystem, IParticleSystem, ParticleSystemSet } from '@babylonjs/core';
 
 declare module '@babylonjs/core' {
   interface Scene {
@@ -27,4 +27,12 @@ declare module '@babylonjs/core' {
     particleSystem: ParticleSystemSet;
     //  gpuParticleSystem: GPUParticleSystem;
   }
+  interface ParticleSystem {
+    isDefaultexture: boolean = true;
+
+  }
+  interface GPUParticleSystem {
+    isDefaultexture: boolean = true;
+  }
+
 }

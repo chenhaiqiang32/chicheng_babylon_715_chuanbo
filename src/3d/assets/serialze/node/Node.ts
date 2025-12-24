@@ -4,7 +4,7 @@ import { deserializeMeshNode, serializeMeshNode } from './Mesh';
 import { deserializeCamera, serializeCamera } from './Camera';
 import { deserializeTransformNode, serializeTransformNode } from './Transform';
 import { deserializeLight, serializeLight } from './Light';
-import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
+import { AssetsManager, ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 import { ID } from '@/utils/id';
 
 export function serializeNode(
@@ -34,7 +34,7 @@ export function serializeNode(
       reuslt.type = 'object';
     }
     if (node instanceof TransformNode) {
-      serializeTransformNode(node, reuslt as CC.TransformNode);
+      serializeTransformNode(node, reuslt as CC.TransformNode, assets);
     }
     return reuslt as CC.ObjectNode;
   } catch (error) {
@@ -70,7 +70,7 @@ export async function deserializeNode(
     currentNode.parent = parent;
   }
   if (currentNode instanceof TransformNode) {
-    deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode);
+    deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode, assets);
   }
   currentNode.inheritVisibility = true;
   currentNode.isVisible = node.visible;

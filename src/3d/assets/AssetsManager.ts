@@ -78,6 +78,7 @@ export class AssetsManager implements ICollectAssets, ILoaderAssets {
 
     this.texture.push(texture);
   }
+
   addCubeTexture(cubeTexture: CubeTexture) {
     if (!cubeTexture.uuid) {
       cubeTexture.uuid = ID.generateUUID();
@@ -232,8 +233,8 @@ export class AssetsManager implements ICollectAssets, ILoaderAssets {
       false,
       true,
       null,
-      () => {},
-      () => {},
+      () => { },
+      () => { },
       file,
     );
 
@@ -290,4 +291,5 @@ function imgToBlob(img: HTMLImageElement | ImageBitmap) {
       resolve(blob);
     });
   });
+
 }

@@ -107,7 +107,8 @@ export async function deserializeScene(
   scene.fogEnd = sceneData.fog?.fogEnd;
   scene.fogDensity = sceneData.fog?.fogDensity;
   scene.iblIntensity = sceneData.iblIntensity;
-  // scene.debugLayer.show();
+  await import("@babylonjs/inspector")
+  scene.debugLayer.show();
   if (sceneData.physic) {
     scene.physicsEnabled = sceneData.physic.enabled;
     if (sceneData.physic.gravity) {

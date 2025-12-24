@@ -36,8 +36,7 @@ interface RuntimeAssetsEventBus {
 
 export class RuntimeLibrary
   extends Dispatch<RuntimeAssetsEventBus>
-  implements ICollectAssets, ILoaderAssets
-{
+  implements ICollectAssets, ILoaderAssets {
   async getTextureURL(sourceUUID: string) {
     if (!sourceUUID) {
       return '';
@@ -252,7 +251,33 @@ export class RuntimeLibrary
       return data;
     }
   }
+  InitResIntoLibrary(scene: Scene) {
+    const texturePaths = [
+      '/particle/textures/default/flare.png',
+      '/particle/textures/explosion/FlameBlastSpriteSheet.png',
+      '/particle/textures/explosion/Flare.png',
+      '/particle/textures/explosion/FlashParticle.png',
+      '/particle/textures/explosion/Smoke_SpriteSheet.png',
+      '/particle/textures/fire/Fire_SpriteSheet1_8x8.png',
+      '/particle/textures/fire/Fire_SpriteSheet2_8x8.png',
+      '/particle/textures/fire/Fire_SpriteSheet3_8x8.png',
+      '/particle/textures/fire/sparks.png',
+      '/particle/textures/rain/Rain.png',
+      '/particle/textures/smoke/Smoke_SpriteSheet_8x8.png'
+    ];
 
+    texturePaths.forEach(async (path) => {
+      try {
+        const texture = new Texture(path, scene);
+        texture.name = path.split('/').pop() || path;
+        texture.sourceUUID = ID.generateUUID();
+        await this.addTexture(texture);
+      } catch (error) {
+        console.warn(`Failed to load texture from ${path}:`, error);
+      }
+    });
+
+  }
   addMaterial(material: Material, force: boolean = true): void {
     if (!material.uuid) {
       material.uuid = ID.generateUUID();
