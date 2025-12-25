@@ -1,4 +1,4 @@
-import { ParticleSystemSet, Quaternion, type TransformNode } from '@babylonjs/core';
+import { Mesh, ParticleSystemSet, Quaternion, type TransformNode } from '@babylonjs/core';
 import type { CC } from '../../BaseRes';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 
@@ -18,8 +18,8 @@ export async function serializeTransformNode(
 
       for (let index = 0; index < trans.particleSystem.systems.length; index++) {
         const p = trans.particleSystem.systems[index];
+        await assetsManager.addTexture(p.particleTexture);
         if (p.particleTexture) {
-          await assetsManager.addTexture(p.particleTexture);
         }
         node.particleSet.systems[index].particleTextureMap = p.particleTexture?.uuid;
         delete node.particleSet.systems[index].particleTexture;
@@ -46,6 +46,7 @@ export function deserializeTransformNode(
   trans.scaling.set(node.scale[0], node.scale[1], node.scale[2]);
   if (node.particleSet) {
     trans.particleSystem = ParticleSystemSet.Parse(node.particleSet, trans.getScene());
+    trans.particleSystem.emitterNode = trans.position;
     node.particleSet.systems.forEach((p: { particleTextureMap: any }, i: number) => {
       if (p.particleTextureMap) {
         assetsManager.getTexture(p.particleTextureMap).then((texture) => {

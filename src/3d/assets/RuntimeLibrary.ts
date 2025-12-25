@@ -43,8 +43,7 @@ export interface IGetBuffer {
 
 export class RuntimeLibrary
   extends Dispatch<RuntimeAssetsEventBus>
-  implements ICollectAssets, ILoaderAssets, IGetBuffer
-{
+  implements ICollectAssets, ILoaderAssets, IGetBuffer {
   async getTextureURL(sourceUUID: string) {
     if (!sourceUUID) {
       return '';
@@ -220,7 +219,7 @@ export class RuntimeLibrary
       this.geomertyZips.push(uuid);
       files.push([uuid, blob]);
     }
-    debugger;
+    //debugger;
     if (this.tempTextureFile.size > 0) {
       for (const key of this.tempTextureFile.keys()) {
         const buffer = this.tempTextureFile.get(key);

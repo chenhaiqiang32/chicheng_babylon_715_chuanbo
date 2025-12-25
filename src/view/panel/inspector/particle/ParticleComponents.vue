@@ -30,6 +30,8 @@ const buttonText = computed(() => started.value ? "Stop" : "Start");
 const buttonType = computed(() => started.value ? "primary" : "info");
 const refreshSystems = () => {
     systems.value = props.object?.particleSystem.systems;
+    started.value = props.object.particleSystem.systems.every(sys => sys.isStarted());
+
 };
 
 const handleStartOrStop = () => {
@@ -45,7 +47,7 @@ const reset = () => {
 };
 
 onMounted(() => {
-    console.log(props.object);
+    //   console.log(props.object);
     refreshSystems();
 });
 

@@ -116,7 +116,6 @@
       "rotation": "旋转",
       "scaling": "缩放"
     },
-
     "material": {
       "title": "材质",
       "enable": "启用",
@@ -273,7 +272,7 @@
       "bloom": "泛光",
       "threshold": "阈值",
       "scale": "缩放",
-      "kernel": "核心",
+      "kernal": "核心",
       "sharpen": "锐化",
       "edgeAmount": "边缘强度",
       "colorAmount": "颜色强度",
@@ -349,6 +348,7 @@
       "direction": "方向",
       "emitBox": "发射盒子",
       "radius": "半径",
+      "height": "高度",
       "angle": "角度",
       "radiusRange": "半径范围",
       "directionRandomizer": "随机方向",

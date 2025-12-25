@@ -49,6 +49,8 @@ import { createSSRRenderingPipeline } from './rendering/ssr';
 import { createMotionBlurPostProcess } from './rendering/motion-blur';
 import { registerKeyDown } from '@/utils/ShortcutKey';
 import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
+import { isAbstractMesh } from '@/tools/guards/nodes';
+import { isVector3 } from '@/tools/guards/math';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -497,7 +499,27 @@ export class Editor extends Dispatch<EditorEvent> {
     if (!node) {
       return;
     }
-    const { min, max } = node.getHierarchyBoundingVectors(true);
+    let min: Vector3, max: Vector3;
+    if (node.particleSystem) {
+      const firstSystem = node.particleSystem.systems[0];
+      console.log(firstSystem.emitter);
+
+      if (isAbstractMesh(firstSystem.emitter)) {
+        console.log('firstSystem.emitter');
+        const boundingInfo = firstSystem.emitter.getBoundingInfo();
+        min = boundingInfo.boundingBox.minimumWorld;
+        max = boundingInfo.boundingBox.maximumWorld;
+      } else if (isVector3(firstSystem.emitter)) {
+        const emitterPos = firstSystem.emitter as Vector3;
+        min = new Vector3(emitterPos.x - 0.5, emitterPos.y - 0.5, emitterPos.z - 0.5);
+        max = new Vector3(emitterPos.x + 0.5, emitterPos.y + 0.5, emitterPos.z + 0.5);
+      }
+    } else {
+      min = node.getHierarchyBoundingVectors(true).min;
+      max = node.getHierarchyBoundingVectors(true).max;
+    }
+
+    //const { min, max } = node.getHierarchyBoundingVectors(true);
     const center = new Vector3().add(min).add(max).scale(0.5);
 
     const size = new Vector3().add(max).subtract(min);

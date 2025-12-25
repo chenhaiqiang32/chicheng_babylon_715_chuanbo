@@ -12,8 +12,9 @@
                 @change="force" :min="0" :max="5" />
         </SectionField>
         <SectionField :title="$t('component.sceneSetting.fog')">
-            <Switch :label="$t('component.sceneSetting.enabled')" :object="scene" property="fogEnabled"
-                @change="force" />
+            <template #right>
+                <Switch :object="scene" property="fogEnabled" @change="force" />
+            </template>
             <template v-if="scene.fogEnabled">
                 <Field :title="$t('component.sceneSetting.fogColor')">
                     <el-select v-model="fogMode" @change="onFogModeChange" style="margin-left: auto; width: 100px;">
@@ -37,11 +38,12 @@
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.renderingPipeline')">
-            <Switch :label="$t('component.sceneSetting.enabled')" :object="pipelineConfig" property="enabled"
+            <Switch label="FXAA Enabled" :object="renderingPipeline" property="fxaaEnabled" />
+            <!-- <Switch :label="$t('component.sceneSetting.enabled')" :object="pipelineConfig" property="enabled"
                 @change="toggleDefaultPipeline" />
             <template v-if="renderingPipeline">
                 <Switch label="FXAA Enabled" :object="renderingPipeline" property="fxaaEnabled" />
-            </template>
+            </template> -->
             <template v-if="renderingPipeline">
                 <SectionField :title="$t('component.sceneSetting.imageProcessing')">
                     <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
@@ -233,8 +235,11 @@
 
 
         <SectionField :title="$t('component.sceneSetting.ssao2')">
-            <Switch :label="$t('component.sceneSetting.enabled')" :object="ssaoConfig" property="enabled"
-                :noUndoRedo="true" @change="toggleSSAO" />
+            <template #right>
+                <ElSwitch :style="{ height: '20px' }" :label="$t('component.sceneSetting.enabled')" v-model="ssaoConfig"
+                    @change="toggleSSAO" />
+            </template>
+
             <template v-if="ssao2">
                 <Number :label="$t('component.sceneSetting.radius')" :object="ssao2" property="radius" />
                 <Number :label="$t('component.sceneSetting.totalStrength')" :object="ssao2" property="totalStrength" />
@@ -258,8 +263,13 @@
         </SectionField> -->
 
         <SectionField :title="$t('component.sceneSetting.reflections')">
-            <Switch :label="$t('component.sceneSetting.enabled')" :object="ssrConfig" property="enabled"
-                :noUndoRedo="true" @change="toggleSSR" />
+            <!-- <Switch :label="$t('component.sceneSetting.enabled')" :object="ssrConfig" property="enabled"
+                :noUndoRedo="true" @change="toggleSSR" /> -->
+            <template #right>
+                <ElSwitch :style="{ height: '20px' }" :label="$t('component.sceneSetting.enabled')" v-model="ssrConfig"
+                    @change="toggleSSR" />
+            </template>
+
             <template v-if="ssr">
                 <Number :label="$t('component.sceneSetting.step')" :object="ssr" property="step" :min="0" />
                 <Number :label="$t('component.sceneSetting.thickness')" :object="ssr" property="thickness" />
@@ -291,7 +301,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, shallowRef } from "vue";
+import { reactive, ref, shallowRef, watch } from "vue";
 import { Scene, DepthOfFieldEffectBlurLevel, TonemappingOperator, DefaultRenderingPipeline, SSAO2RenderingPipeline, SSRRenderingPipeline } from "@babylonjs/core";
 import { registerUndoRedo } from "@/tools/undoredo";
 import { parseDefaultRenderingPipeline, serializeDefaultRenderingPipeline } from "@/3d/rendering/default-pipeline";
@@ -308,6 +318,7 @@ import { Editor } from "@/3d/Editor";
 import Field from "@/component/common/Field.vue";
 import Slider from "@/component/base/Slider.vue";
 import { onMounted } from "vue";
+import { ElSwitch } from "element-plus";
 
 
 // const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
@@ -328,10 +339,10 @@ const scene = shallowRef<Scene>(Editor.Instance.Scene);
 const renderingPipeline = ref<DefaultRenderingPipeline>();
 const pipelineConfig = ref({ enabled: false });
 const ssao2 = ref<SSAO2RenderingPipeline>();
-const ssaoConfig = ref({ enabled: false });
+const ssaoConfig = ref(false);
 const fogMode = ref<number>();
 const ssr = ref<SSRRenderingPipeline>();
-const ssrConfig = ref({ enabled: false });
+const ssrConfig = ref(false);
 const motionBlur = ref();
 const motionBlurConfig = ref({ enabled: false });
 
@@ -340,6 +351,9 @@ const focusStep = ref<number>();
 const focusMax = ref<number>();
 const dofBlurLevel = ref<number>();
 onMounted(() => {
+    updateSceneSettings();
+});
+const updateSceneSettings = () => {
     fogMode.value = scene.value.fogMode;
     focusStep.value = (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) / 1000;
     focusMax.value = (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) * 1000;
@@ -347,14 +361,19 @@ onMounted(() => {
     renderingPipeline.value = Editor.Instance.getRenderingPipeline(false)
     pipelineConfig.value.enabled = !!renderingPipeline.value;
     ssao2.value = Editor.Instance.getSSAORenderingPipeline(false);
-    ssaoConfig.value.enabled = !!ssao2.value;
+    ssaoConfig.value = !!ssao2.value;
     toneMappingType.value = renderingPipeline.value?.imageProcessing?.toneMappingType ?? TonemappingOperator.Hable;
     ssr.value = Editor.Instance.getSSRRenderingPipeline(false);
-    ssrConfig.value.enabled = !!ssr.value;
+    ssrConfig.value = !!ssr.value;
+    console.log(ssaoConfig.value);
+
     motionBlur.value = Editor.Instance.getMotionBlurPostProcess(false);
     motionBlurConfig.value.enabled = !!motionBlur.value;
+};
+watch(() => Editor.Instance.Scene, () => {
+    scene.value = Editor.Instance.Scene;
+    updateSceneSettings();
 });
-
 const onToneMappingTypeChange = (v: number) => {
     if (renderingPipeline.value?.imageProcessing) {
         renderingPipeline.value.imageProcessing.toneMappingType = v;
@@ -429,7 +448,7 @@ const toggleSSAO = () => {
             }
         }, action: () => {
             ssao2.value = Editor.Instance.getSSAORenderingPipeline(false);
-            ssaoConfig.value.enabled = !!ssao2.value;
+            ssaoConfig.value = !!ssao2.value;
         }
     });
 };
@@ -495,7 +514,7 @@ const toggleSSR = () => {
         },
         action: () => {
             ssr.value = Editor.Instance.getSSRRenderingPipeline(false);
-            ssrConfig.value.enabled = !!ssr.value;
+            ssrConfig.value = !!ssr.value;
         }
     });
 };

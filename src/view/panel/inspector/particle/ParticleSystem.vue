@@ -100,8 +100,8 @@
                     </div>
                 </gradientProperty> -->
                 <SectionField :title="$t('component.particleSystem.angularSpeed')">
-                    <Switch :object="props.object" property="useAngularSpeedGradients"
-                        :label="$t('component.particleSystem.useAngularSpeedGradients')" @change="forceUpdate" />
+                    <!-- <Switch :object="props.object" property="useAngularSpeedGradients"
+                        :label="$t('component.particleSystem.useAngularSpeedGradients')" @change="forceUpdate" /> -->
                     <Number gray-label as-degrees :object="props.object" property="minAngularSpeed"
                         :label="$t('component.particleSystem.min')" :step="0.1" />
                     <Number gray-label as-degrees :object="props.object" property="maxAngularSpeed"
@@ -119,8 +119,8 @@
                     </div>
                 </gradientProperty> -->
                 <SectionField :title="$t('component.particleSystem.sizeGradients')">
-                    <Switch :object="props.object" property="useSizeGradients"
-                        :label="$t('component.particleSystem.useSizeGradients')" @change="forceUpdate" />
+                    <!-- <Switch :object="props.object" property="useSizeGradients"
+                        :label="$t('component.particleSystem.useSizeGradients')" @change="forceUpdate" /> -->
                     <Number gray-label :object="props.object" property="minSize"
                         :label="$t('component.particleSystem.min')" :min="0" />
                     <Number gray-label :object="props.object" property="maxSize"
@@ -293,7 +293,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive, computed } from "vue";
+import { ref, onMounted, onUnmounted, reactive, computed, watch } from "vue";
 import {
     ParticleSystem,
     IParticleEmitterType,
@@ -312,14 +312,9 @@ import {
 } from "@babylonjs/core";
 
 import { registerUndoRedo } from "../../../../tools/undoredo";
-import { isParticleSystem } from "@/tools/particles/particles";
-
 import gradientProperty from "./gradientProperty.vue";
-import Slider from '@/component/base/Slider.vue';
 const props = defineProps<{ object: IParticleSystem; }>();
-onMounted(() => {
-    console.log(props.object);
-});
+
 const started = ref(props.object?.isStarted());
 const version = ref(0);
 const buttonText = computed(() => started.value ? "Stop" : "Start");
@@ -327,11 +322,19 @@ const buttonType = computed(() => started.value ? "primary" : "info");
 const forceUpdate = () => {
     version.value++;
 };
+onMounted(() => {
 
+
+});
 onUnmounted(() => {
 
 });
-
+// 监听 props.object 变化，更新 started 状态
+watch(() => props.object, (newObject) => {
+    if (newObject) {
+        started.value = newObject.isStarted();
+    }
+}, { immediate: true });
 function handleStartOrStop() {
     if (started.value) {
         props.object.stop();
