@@ -220,7 +220,6 @@ export class RuntimeLibrary
       this.geomertyZips.push(uuid);
       files.push([uuid, blob]);
     }
-    debugger;
     if (this.tempTextureFile.size > 0) {
       for (const key of this.tempTextureFile.keys()) {
         const buffer = this.tempTextureFile.get(key);
