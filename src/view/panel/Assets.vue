@@ -35,11 +35,11 @@
                 </Grid>
             </el-tab-pane>
             <el-tab-pane label="环境贴图" @contextmenu="hdrContextMenu">
-                <Grid :data="hdrTextureList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
+                <Grid :data="envTextureList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
                     <template #default="{ item, index }">
                         <div class="grid-item" :title="item.name" draggable="true"
                             @dragstart="e => handleDragStart(e, item)">
-                            <img v-if="item.url" :src="item.url" alt="" style="width: 80%; height: 80%;">
+                            <img v-if="item.url" :src="item.previewUrl" alt="" style="width: 80%; height: 80%;">
                             <span class="itme-name">{{ item.name }}</span>
                         </div>
                     </template>
@@ -56,7 +56,7 @@ import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
 import { Engine, TubeBuilder } from '@babylonjs/core';
 import { openContextMenu } from '@/component/content-menu';
-import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
+import { renderEnvTexture, renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 import {
     getAssetsHdrContextMenuCommands, getAssetsMaterialContextMenuCommands,
     getAssetsModelContextMenuCommands, getAssetsTextureContextMenuCommands
@@ -68,7 +68,7 @@ const rowHeight = 70
 const objectList = ref<any[]>([]);
 const materialList = ref<any[]>([]);
 const textureList = ref<any[]>([]);
-const hdrTextureList = ref<any[]>([]);
+const envTextureList = ref<any[]>([]);
 
 
 
@@ -101,18 +101,32 @@ async function onchange() {
     });
     const texstureArray = RuntimeLibrary.Instance.texture.map(x => {
         return {
-            type: 'texture',
+            type: 'envTexture',
             name: x.name,
             sourceUUID: x.sourceUUID,
+            uuid: x.uuid
         }
     });
-    const set = new Set<string>()
+    const set = new Set<string>();
+    const envSet = new Set<string>();
     textureList.value = texstureArray.filter(x => {
+        const ext = x.name.toLowerCase().split('.').pop();
+        if(['hdr','env','exr'].includes(ext))
+            return false;
         if (set.has(x.sourceUUID)) {
             return false
         }
         set.add(x.sourceUUID)
         return true
+    })
+    envTextureList.value = texstureArray.filter(x => {
+        const ext = x.name.toLowerCase().split('.').pop();
+        if(!['hdr','env','exr'].includes(ext))
+            return false;
+        if(envSet.has(x.sourceUUID))
+            return false;
+        envSet.add(x.sourceUUID)
+            return true;
     })
     for (let index = 0; index < textureList.value.length; index++) {
         const element = textureList.value[index];
@@ -120,6 +134,16 @@ async function onchange() {
             RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
                 element.url = url
             })
+        }
+    }
+    for (let index = 0; index < envTextureList.value.length; index++) {
+        const element = envTextureList.value[index];
+        if (!element.url) {
+            element.url = await RuntimeLibrary.Instance.getTextureURL(element.sourceUUID);
+            const texture = await RuntimeLibrary.Instance.getTexture(element.uuid);
+            const ext = element.name.toLowerCase().split('.').pop();
+            const url = await renderEnvTexture(texture.uuid, element.url, ext, true, Editor.Instance.Engine);
+            element.previewUrl = url;
         }
     }
 

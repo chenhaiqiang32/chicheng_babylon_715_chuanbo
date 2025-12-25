@@ -1,67 +1,89 @@
 import { Editor } from "@/3d/Editor";
 import { RuntimeLibrary } from "@/3d/assets/runtimeLibrary";
 import { Utils } from "@/utils";
-import { CubeTexture, EXRCubeTexture, EnvironmentTextureTools, HDRCubeTexture, Scene } from "@babylonjs/core";
+import { BaseTexture, CubeTexture, EXRCubeTexture, HDRCubeTexture, Scene } from "@babylonjs/core";
 
-
-export class EnvFileHelper{
-    /**
-     * 将天空盒的贴图导入为资产
-     */
-    async importSkyboxTexture(){
-        const scene = Editor.Instance.Scene;
-        const fileList = await Utils.chooseFile(".hdr,.exr,.env", true);
-        for(let i=0; i<fileList.length; i++){
-            const item = fileList[i];
-            await RuntimeLibrary.Instance.importTexture(item);
-        }
+/**
+ * 将环境贴图导入为贴图资产
+ */
+export async function importSkyboxTexture(){
+    const scene = Editor.Instance.Scene;
+    const fileList = await Utils.chooseFile(".hdr,.exr,.env", true);
+    for(let i=0; i<fileList.length; i++){
+        const item = fileList[i];
+        await RuntimeLibrary.Instance.importTexture(item);
     }
+}
 
-    /**
-     * 根据选择文件类型加载对应环境贴图并渲染为天空盒
-     * 目前只支持 hdr, exr, env 三种格式
-     */
-    async loadSkyBox(){
-        const scene = Editor.Instance.Scene;
-        const fileList = await Utils.chooseFile(".hdr,.exr,.env");
-        if(fileList && fileList.length > 0){
-            const file = fileList[0];
-            const extension = file.name.split('.').pop();
-            switch(extension){
-                case 'hdr':
-                    this.loadHdrSkybox(file, scene);
-                    break;
-                case 'exr':
-                    this.loadExrSkybox(file, scene);
-                    break;
-                case 'env':
-                    this.loadEnvSkybox(file, scene);
-                    break;
-
-                default:
-                    console.error(`Unsupported file extension: ${extension}`);
-                    break;
-            }
-        }
-    }
-
-    private loadHdrSkybox(file:File, scene:Scene){
-        var url = URL.createObjectURL(file);
-        const hdr = new HDRCubeTexture(url, scene, 1024, false, true, false, true, () => {
-            scene.createDefaultSkybox(hdr, true);
-        });
-    }
-
-    private loadExrSkybox(file:File, scene:Scene){
-        var url = URL.createObjectURL(file);
-        const exr = new EXRCubeTexture(url, scene, 1024, false, true, false, true, () => {
+/**
+ * 将环境贴图应用到当前场景的天空盒上
+ * @param name 环境贴图的名字，需要根据其后缀判断贴图类型
+ * @param sourceUUID 环境贴图资源在RuntimeLibrary里面的uuid
+ */
+export async function loadSkyBox(scene:Scene, name:string, sourceUUID:string){
+    if(name == undefined || sourceUUID == undefined) return;
+    const ext = name.toLowerCase().split('.').pop();
+    const url = await RuntimeLibrary.Instance.getTextureURL(sourceUUID);
+    switch(ext){
+        case 'hdr':
+            const hdr = await loadHdrSkybox(scene, url, 1024);
+            // todo:这里会导致创建一个skybox的material，而被RuntimeLibrary.material收集
+            const skyBox = scene.createDefaultSkybox(hdr, true);
+            scene.environmentTexture.name = name;
+            scene.environmentTexture.uuid = sourceUUID;
+            skyBox.isSkyBox = true;
+            break;
+        case 'exr':
+            const exr = await loadExrSkybox(scene, url, 1024);
             scene.createDefaultSkybox(exr, true);
-        });
-    }
+            break;
+        case 'env':
+            const env = await loadEnvSkybox(scene, url);
+            scene.createDefaultSkybox(env, true);
+            break;
 
-    private loadEnvSkybox(file:File, scene:Scene){
-        var url = URL.createObjectURL(file);
-        const envTexture = CubeTexture.CreateFromPrefilteredData(url, scene, ".env");
-        scene.createDefaultSkybox(envTexture, true);
+        default:
+            console.error(`Unsupported file extension: ${ext}`);
+            break;
     }
+}
+
+export function loadSkyboxWithExt(scene:Scene, url:string, ext:string, size:number):Promise<BaseTexture>{
+    switch(ext){
+        case "hdr":
+            return loadHdrSkybox(scene, url, size);
+
+        case "exr":
+            return loadExrSkybox(scene, url, size);
+        
+        case "env":
+            return loadEnvSkybox(scene, url);
+    }
+}
+
+function loadHdrSkybox(scene:Scene, url:string, size=128):Promise<BaseTexture>{
+    const hdr = new HDRCubeTexture(url, scene, size);
+    return new Promise((resolve) => {
+        hdr.onLoadObservable.addOnce(() => {
+            resolve(hdr);
+        })
+    })
+}
+
+function loadExrSkybox(scene:Scene, url:string, size=128):Promise<BaseTexture>{
+    const exr = new EXRCubeTexture(url, scene, size);
+    return new Promise((resolve) => {
+        exr.onLoadObservable.addOnce(() => {
+            resolve(exr);
+        })
+    })
+}
+
+function loadEnvSkybox(scene:Scene, url:string):Promise<BaseTexture>{
+    const envTexture = CubeTexture.CreateFromPrefilteredData(url, scene, ".env");
+    return new Promise((resolve) => {
+        envTexture.onLoadObservable.addOnce(() => {
+            resolve(envTexture)
+        })
+    })
 }
