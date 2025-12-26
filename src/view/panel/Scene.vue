@@ -11,6 +11,7 @@ import ToolBar from './scene/ToolBar.vue'
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { useScene } from '@/store/useScene';
 import { TransformNode } from '@babylonjs/core';
+import { useEditor } from '@/store/useEditor';
 
 const canvasRef = ref<HTMLCanvasElement>()
 onMounted(async () => {
@@ -32,7 +33,9 @@ async function handleDrop(ev: DragEvent) {
 async function createObject(ev: DragEvent, uuid: string) {
     const bound = canvasRef.value.getBoundingClientRect()
     const ray = Editor.Instance.getRaycastPoint(ev.clientX - bound.left, ev.clientY - bound.top)
-    const node = await RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, uuid) as TransformNode
+    const node = RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, uuid, (s) => {
+        useEditor().setLoading(s)
+    }) as TransformNode
     node.position.set(ray.x, ray.y, ray.z)
     useScene().setHierarchy(Editor.Instance.Scene.rootNodes)
 }

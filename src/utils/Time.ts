@@ -1,60 +1,51 @@
-
 export class Clock {
-	private startTime = 0;
-	private oldTime = 0;
-	private elapsedTime = 0;
-	private running = false;
-	private autoStart = true;
+  private startTime = 0;
+  private oldTime = 0;
+  private elapsedTime = 0;
+  private running = false;
+  private autoStart = true;
 
-	start() {
-		this.startTime = performance.now();
-		this.oldTime = this.startTime;
-		this.elapsedTime = 0;
-		this.running = true;
-	}
+  start() {
+    this.startTime = performance.now();
+    this.oldTime = this.startTime;
+    this.elapsedTime = 0;
+    this.running = true;
+  }
 
-	stop() {
+  stop() {
+    this.getElapsedTime();
+    this.running = false;
+    this.autoStart = false;
+  }
 
-		this.getElapsedTime();
-		this.running = false;
-		this.autoStart = false;
+  getElapsedTime() {
+    this.getDelta();
+    return this.elapsedTime;
+  }
 
-	}
+  getDelta() {
+    let diff = 0;
 
-	getElapsedTime() {
+    if (this.autoStart && !this.running) {
+      this.start();
+      return 0;
+    }
 
-		this.getDelta();
-		return this.elapsedTime;
+    if (this.running) {
+      const newTime = performance.now();
 
-	}
+      diff = (newTime - this.oldTime) / 1000;
+      this.oldTime = newTime;
 
+      this.elapsedTime += diff;
+    }
 
-	getDelta() {
-
-		let diff = 0;
-
-		if (this.autoStart && !this.running) {
-
-			this.start();
-			return 0;
-
-		}
-
-		if (this.running) {
-
-			const newTime = performance.now();
-
-			diff = (newTime - this.oldTime) / 1000;
-			this.oldTime = newTime;
-
-			this.elapsedTime += diff;
-
-		}
-
-		return diff;
-
-	}
-
+    return diff;
+  }
 }
 
-
+export namespace Timer {
+  export function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}

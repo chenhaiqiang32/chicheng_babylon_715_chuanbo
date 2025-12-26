@@ -7,6 +7,7 @@ import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { ID } from '@/utils/id';
+import { Timer } from '@/utils/Time';
 
 function buildHierarchy(node: Node): HierarchyNode {
   if (!node.uuid) {
@@ -124,15 +125,26 @@ export const useScene = defineStore('scene', () => {
     sceneInfoList.value = [...sceneInfoList.value];
   }
 
-  async function getScene(uuid: string): Promise<Scene> {
+  async function getScene(
+    uuid: string,
+    progressCallback: (percent: number) => void,
+    sceneRef?: Scene,
+  ): Promise<Scene> {
     const ccNode = sceneInfoList.value.find((x) => x.uuid == uuid) as CC.Scene;
     if (ccNode) {
-      const padding: Array<Promise<any>> = [];
-      const scene = await RuntimeLibrary.Instance.deserializeScene(
-        new Scene(Editor.Instance.Engine),
+      const padding: Array<Padding> = [];
+      const scene = RuntimeLibrary.Instance.deserializeScene(
+        sceneRef ?? new Scene(Editor.Instance.Engine),
         ccNode,
         padding,
       );
+      const groupPadding = groupArray(padding, 20);
+      for (let index = 0; index < groupPadding.length; index++) {
+        const group = groupPadding[index].map((f) => f());
+        // await Promise.all(group);
+        await Timer.sleep(0);
+        progressCallback((index + 1) / groupPadding.length);
+      }
       return scene;
     }
   }
@@ -156,3 +168,11 @@ export const useScene = defineStore('scene', () => {
   };
 });
 export { ViewFlagsMode };
+
+function groupArray<T>(array: Array<T>, size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < array.length; index += size) {
+    result.push(array.slice(index, index + size));
+  }
+  return result;
+}

@@ -56,12 +56,9 @@ const comps = computed(() => {
     const arr = []
     if (selectedObject.value instanceof TransformNode) {
         arr.push(Common, Transform)
-        console.log(selectedObject.value);
-
         if (selectedObject.value.particleSystem != null) {
             arr.push(ParticleComponents)
         }
-
     }
     if (selectedObject.value instanceof Mesh) {
         arr.push(MaterialInspectorRouter)

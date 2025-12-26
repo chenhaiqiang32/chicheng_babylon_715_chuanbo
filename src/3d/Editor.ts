@@ -49,6 +49,7 @@ import { createSSRRenderingPipeline } from './rendering/ssr';
 import { createMotionBlurPostProcess } from './rendering/motion-blur';
 import { registerKeyDown } from '@/utils/ShortcutKey';
 import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
+import { useEditor } from '@/store/useEditor';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -209,10 +210,17 @@ export class Editor extends Dispatch<EditorEvent> {
       this.scene.onPointerObservable.removeCallback(this.onPointerDonw);
       this.scene.activeCamera.detachControl();
       Editor.Instance.dispatch('onSceneChangeBefore', { scene: this.scene });
-      useScene().saveScene(this.scene);
+      await useScene().saveScene(this.scene);
       this.scene.dispose();
     }
-    const scene = await useScene().getScene(uuid);
+    const scene = new Scene(this.engine);
+    useScene().getScene(
+      uuid,
+      (percent) => {
+        useEditor().setLoading(percent);
+      },
+      scene,
+    );
     if (scene) {
       this.initGizmos(scene);
       scene.activeCamera.attachControl();

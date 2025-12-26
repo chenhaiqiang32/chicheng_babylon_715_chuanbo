@@ -20,6 +20,7 @@ import { ref } from 'vue'
 import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
 import { useIndexDBProject } from '@/store/useIndexDBProject';
 import { useDialog } from './dialog';
+import { useEditor } from '@/store/useEditor';
 
 const isDark = useDark({
     valueDark: 'dark',
@@ -144,7 +145,9 @@ function importModel() {
     Utils.chooseFile('.glb,.fbx').then(async (fileList) => {
         if (fileList[0]) {
             const node = await RuntimeLibrary.Instance.importMesh(fileList[0]);
-            await RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, node);
+            await RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, node, (v) => {
+                useEditor().setLoading(v);
+            });
             RuntimeLibrary.Instance.dispatch('onChanged');
             setTimeout(() => {
                 useScene().setHierarchy(Editor.Instance.Scene.rootNodes);

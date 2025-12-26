@@ -53,17 +53,17 @@ export async function serializeNode(
   }
 }
 
-export async function deserializeNode(
+export function deserializeNode(
   node: CC.ObjectNode,
   scene: Scene,
   assets: ILoaderAssets,
   parent?: Node,
   clone?: boolean,
-  padding: Array<Promise<any>> = [],
+  padding: Array<Padding> = [],
 ) {
   let currentNode: Node;
   if (node.type === 'mesh') {
-    currentNode = await deserializeMeshNode(node as CC.MeshNode, scene, assets, padding);
+    currentNode = deserializeMeshNode(node as CC.MeshNode, scene, assets, padding);
   } else if (node.type === 'camera') {
     currentNode = deserializeCamera(node as CC.CameraNode, scene, assets);
   } else if (node.type === 'light') {
@@ -89,7 +89,7 @@ export async function deserializeNode(
   }
   for (let index = 0; index < node.children.length; index++) {
     const element = node.children[index];
-    await deserializeNode(element, scene, assets, currentNode, clone, padding);
+    deserializeNode(element, scene, assets, currentNode, clone, padding);
   }
   return currentNode;
 }
