@@ -54,7 +54,6 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import SVG from '@/component/common/SVG.vue';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
-import { Engine, TubeBuilder } from '@babylonjs/core';
 import { openContextMenu } from '@/component/content-menu';
 import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 import {
@@ -78,13 +77,11 @@ function handleDragStart(ev: DragEvent, data: any) {
 
 
 onMounted(() => {
-    RuntimeLibrary.Instance.on('onChanged', onchange)
+    RuntimeLibrary.Instance.on('onChanged', onChange)
 })
 
 
-async function onchange() {
-    console.log("onChange");
-
+async function onChange() {
     objectList.value = RuntimeLibrary.Instance.rootNodes.map(x => {
         return {
             type: 'object',
@@ -186,7 +183,7 @@ function hdrContextMenu(e: MouseEvent) {
 }
 
 onUnmounted(() => {
-    RuntimeLibrary.Instance.off('onChanged', onchange)
+    RuntimeLibrary.Instance.off('onChanged', onChange)
 })
 
 </script>

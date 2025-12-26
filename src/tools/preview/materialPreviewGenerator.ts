@@ -40,7 +40,7 @@ function initScene(engine: AbstractEngine) {
 export function renderMaterail(material: Material, useCache = true, engine: AbstractEngine) {
   // 默认使用缓存
   if (useCache) {
-    const url = cache.has(material.uuid);
+    const url = cache.get(material.uuid);
     if (url) {
       return url;
     }

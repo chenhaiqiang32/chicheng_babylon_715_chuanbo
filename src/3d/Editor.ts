@@ -382,9 +382,7 @@ export class Editor extends Dispatch<EditorEvent> {
     let node: Node = getSceneNodeByUUid(this.scene, id, this.weakMap);
     return node;
   }
-
   gizmoLayer: UtilityLayerRenderer;
-
   /**
    * 初始化 gizmo
    */
@@ -403,9 +401,9 @@ export class Editor extends Dispatch<EditorEvent> {
 
     // 添加灯光 gizmo
 
-    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => { });
-    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => { });
-    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => { });
+    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {});
 
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
@@ -648,14 +646,12 @@ export class Editor extends Dispatch<EditorEvent> {
       new Vector3(0, 1, -5),
       this.scene,
     );
-    camera.speed = 0.5;
+    camera.speed = 1;
     camera.inertia = 0;
 
     // 开启场景和摄像机碰撞
     camera.checkCollisions = true;
-    camera.applyGravity = true;
-    // 摄像机碰撞体范围
-    camera.ellipsoid = new Vector3(1, 1, 1);
+    camera.ellipsoid = new Vector3(0.4, 1.2, 0.4);
     nextTick(() => {
       this.activeCamera(camera);
     });
