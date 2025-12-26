@@ -3,7 +3,7 @@
         <SectionField :title="props.object.name">
             <SectionField :title="$t('component.particleSystem.base')">
                 <StringField label="Name" :object="props.object" property="name" />
-                <Switch :object="props.object" property="preventAutoStart" label="Prevent Auto Start" />
+                <!-- <Switch :object="props.object" property="preventAutoStart" label="Prevent Auto Start" /> -->
                 <div class="ActionsFlex">
                     <ElButton title="Start/Stop" :type="buttonType" :style="{ width: '50%' }" @click="handleStartOrStop"
                         class="handleStartOrStopClass">
@@ -128,18 +128,17 @@
                 </SectionField>
             </SectionField>
 
-            <SectionField :title="$t('component.particleSystem.colors')">
-                <gradientProperty :title="$t('component.particleSystem.colorGradients')" label="useColorGradients"
-                    :object="props.object" :getGradients="() => props.object.getColorGradients()"
-                    :createGradient="() => props.object.addColorGradient(0, props.object.color1.clone(), props.object.color2.clone())"
-                    :addGradient="(gradient: any, value1: any, value2: any) => props.object.addColorGradient(gradient, value1, value2)"
-                    :removeGradient="(gradient: any) => props.object.removeColorGradient(gradient)"
-                    :onUpdate="forceUpdate">
-                    <!-- <Color :object="props.object" property="color1" label="Color 1" />
+
+            <gradientProperty :title="$t('component.particleSystem.colorGradients')" label="useColorGradients"
+                :object="props.object" :getGradients="() => props.object.getColorGradients()"
+                :createGradient="() => props.object.addColorGradient(0, props.object.color1.clone(), props.object.color2.clone())"
+                :addGradient="(gradient: any, value1: any, value2: any) => props.object.addColorGradient(gradient, value1, value2)"
+                :removeGradient="(gradient: any) => props.object.removeColorGradient(gradient)" :onUpdate="forceUpdate">
+                <!-- <Color :object="props.object" property="color1" label="Color 1" />
                     <Color :object="props.object" property="color2" label="Color 2" />
                     <Color :object="props.object" property="colorDead" label="Dead" /> -->
-                </gradientProperty>
-                <!-- <Switch :object="props.object" property="useColorGradients" label="Use Color Gradients"
+            </gradientProperty>
+            <!-- <Switch :object="props.object" property="useColorGradients" label="Use Color Gradients"
                     @change="forceUpdate" />
                 <Color :object="props.object" property="color1" label="Color1Start" />
                 <Color :object="props.object" property="color1" label="Color1End" />
@@ -150,7 +149,7 @@
                 <Slider label="color2Weight" :object="props.object" property="gradient" :min="0" :max="1" :step="0.01"
                     :value="[]" class="flex-1" @valuechange="" />
                 <Color :object="props.object" property="colorDead" label="Dead" />-->
-            </SectionField>
+
 
             <SectionField :title="$t('component.particleSystem.emitter')">
                 <el-select v-model="emitterTypeObject.particleEmitterType" size="small" class="w-full"
@@ -270,9 +269,10 @@
             </SectionField>
 
             <SectionField :title="$t('component.particleSystem.animationSheet')">
-                <Switch gray-label :object="props.object" property="isAnimationSheetEnabled"
-                    :label="$t('component.particleSystem.isAnimationSheetEnabled')" @change="forceUpdate" />
-
+                <template #right>
+                    <Switch gray-label :object="props.object" property="isAnimationSheetEnabled"
+                        @change="forceUpdate" />
+                </template>
                 <template v-if="props.object.isAnimationSheetEnabled">
                     <Number gray-label :object="props.object" property="startSpriteCellID"
                         :label="$t('component.particleSystem.startCellId')" :min="0" />
@@ -307,7 +307,6 @@ import {
     PointParticleEmitter,
     HemisphericParticleEmitter,
     MeshParticleEmitter,
-    Observer,
     IParticleSystem
 } from "@babylonjs/core";
 

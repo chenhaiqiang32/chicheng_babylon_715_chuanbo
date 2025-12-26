@@ -29,6 +29,13 @@ export namespace CC {
     scale: number[];
     particleSet: any;
   }
+  export interface ParticleContainer extends ObjectNode {
+    type: 'particle';
+    position: number[];
+    rotation: number[];
+    scale: number[];
+    particleSet: any;
+  }
 
   export interface MeshNode extends ObjectNode {
     type: 'mesh';

@@ -51,6 +51,7 @@ import { registerKeyDown } from '@/utils/ShortcutKey';
 import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
 import { isAbstractMesh } from '@/tools/guards/nodes';
 import { isVector3 } from '@/tools/guards/math';
+import { ParticleContainer } from './core/Extension/ParticleContainer';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -492,16 +493,16 @@ export class Editor extends Dispatch<EditorEvent> {
     this.gizmoManager.scaleGizmoEnabled = false;
   }
 
-  focusTransformNode(node?: TransformNode) {
+  focusTransformNode(node?: ParticleContainer) {
     if (!node) {
-      node = this._selectNodes[0] instanceof TransformNode ? this._selectNodes[0] : null;
+      node = this._selectNodes[0] instanceof ParticleContainer ? this._selectNodes[0] : null;
     }
     if (!node) {
       return;
     }
     let min: Vector3, max: Vector3;
-    if (node.particleSystem) {
-      const firstSystem = node.particleSystem.systems[0];
+    if (node.particleSystems) {
+      const firstSystem = node.particleSystems.systems[0];
       console.log(firstSystem.emitter);
 
       if (isAbstractMesh(firstSystem.emitter)) {

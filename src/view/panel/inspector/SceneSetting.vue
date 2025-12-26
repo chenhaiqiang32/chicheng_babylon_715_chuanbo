@@ -46,8 +46,9 @@
             </template> -->
             <template v-if="renderingPipeline">
                 <SectionField :title="$t('component.sceneSetting.imageProcessing')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="imageProcessingEnabled" />
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="imageProcessingEnabled" />
+                    </template>
                     <template v-if="renderingPipeline.imageProcessingEnabled">
                         <Number :label="$t('component.sceneSetting.exposure')"
                             :object="renderingPipeline.imageProcessing" property="exposure" />
@@ -99,6 +100,7 @@
                     v-if="renderingPipeline.imageProcessingEnabled">
                     <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline.imageProcessing"
                         property="colorCurvesEnabled" @change="force" />
+
                     <div v-if="renderingPipeline.imageProcessing.colorCurvesEnabled" style="margin-left: 20px;">
                         <div class="colorCurvesClild">{{ $t('component.sceneSetting.global') }}
                             <Number :label="$t('component.sceneSetting.hue')"
@@ -167,8 +169,10 @@
                 </SectionField>
 
                 <SectionField :title="$t('component.sceneSetting.bloom')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="bloomEnabled" @change="force" />
+
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="bloomEnabled" @change="force" />
+                    </template>
                     <template v-if="renderingPipeline.bloomEnabled">
                         <Number :label="$t('component.sceneSetting.threshold')" :object="renderingPipeline"
                             property="bloomThreshold" />
@@ -182,8 +186,10 @@
                 </SectionField>
 
                 <SectionField :title="$t('component.sceneSetting.sharpen')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="sharpenEnabled" @change="force" />
+
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="sharpenEnabled" @change="force" />
+                    </template>
                     <template v-if="renderingPipeline.sharpenEnabled">
                         <Number :label="$t('component.sceneSetting.edgeAmount')" :object="renderingPipeline.sharpen"
                             property="edgeAmount" />
@@ -193,8 +199,10 @@
                 </SectionField>
 
                 <SectionField :title="$t('component.sceneSetting.grain')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="grainEnabled" @change="force" />
+
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="grainEnabled" @change="force" />
+                    </template>
                     <template v-if="renderingPipeline.grainEnabled">
                         <Number :label="$t('component.sceneSetting.intensity')" :object="renderingPipeline.grain"
                             property="intensity" />
@@ -204,8 +212,10 @@
                 </SectionField>
 
                 <SectionField :title="$t('component.sceneSetting.depthOfField')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="depthOfFieldEnabled" @change="force" />
+
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="depthOfFieldEnabled" @change="force" />
+                    </template>
                     <template v-if="renderingPipeline.depthOfFieldEnabled">
                         <div class="flex items-center gap-2">
                             <div class="w-40">{{ $t('component.sceneSetting.blurLevel') }}</div>

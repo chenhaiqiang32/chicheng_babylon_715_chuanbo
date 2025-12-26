@@ -23,6 +23,7 @@ import { _EventBus } from '@/utils/dispatch';
 import ParticleComponents from './inspector/particle/ParticleComponents.vue';
 
 import LightComp from './inspector/Light.vue';
+import { ParticleContainer } from '@/3d/core/Extension/ParticleContainer';
 const { currentSelected } = storeToRefs(useScene());
 const selectedObject = shallowRef<any>(null);
 
@@ -54,13 +55,10 @@ const comps = computed(() => {
         return []
     }
     const arr = []
+
     if (selectedObject.value instanceof TransformNode) {
         arr.push(Common, Transform)
-        console.log(selectedObject.value);
-
-        if (selectedObject.value.particleSystem != null) {
-            arr.push(ParticleComponents)
-        }
+        // console.log(selectedObject.value);
 
     }
     if (selectedObject.value instanceof Mesh) {
@@ -72,6 +70,9 @@ const comps = computed(() => {
     }
     if (selectedObject.value instanceof Light) {
         arr.push(LightComp)
+    }
+    if (selectedObject.value instanceof ParticleContainer) {
+        arr.push(ParticleComponents)
     }
     arr.push(Event)
     return arr

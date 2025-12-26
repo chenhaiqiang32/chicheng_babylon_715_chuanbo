@@ -11,20 +11,6 @@ export async function serializeTransformNode(
     node.position = trans.position.asArray();
     node.rotation = trans.rotationQuaternion?.asArray() || trans.rotation?.asArray() || [];
     node.scale = trans.scaling?.asArray();
-    console.log(node.particleSet);
-
-    if (trans.particleSystem) {
-      node.particleSet = trans.particleSystem.serialize();
-
-      for (let index = 0; index < trans.particleSystem.systems.length; index++) {
-        const p = trans.particleSystem.systems[index];
-        await assetsManager.addTexture(p.particleTexture);
-        if (p.particleTexture) {
-        }
-        node.particleSet.systems[index].particleTextureMap = p.particleTexture?.uuid;
-        delete node.particleSet.systems[index].particleTexture;
-      }
-    }
     return node;
   } catch (error) {
     console.error('序列化变换节点时出错:', node);
@@ -44,15 +30,5 @@ export function deserializeTransformNode(
     node.rotation[3],
   );
   trans.scaling.set(node.scale[0], node.scale[1], node.scale[2]);
-  if (node.particleSet) {
-    trans.particleSystem = ParticleSystemSet.Parse(node.particleSet, trans.getScene());
-    trans.particleSystem.emitterNode = trans.position;
-    node.particleSet.systems.forEach((p: { particleTextureMap: any }, i: number) => {
-      if (p.particleTextureMap) {
-        assetsManager.getTexture(p.particleTextureMap).then((texture) => {
-          trans.particleSystem.systems[i].particleTexture = texture;
-        });
-      }
-    });
-  }
+
 }

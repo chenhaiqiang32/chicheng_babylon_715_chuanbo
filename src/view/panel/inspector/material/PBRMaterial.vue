@@ -203,8 +203,10 @@ import AlphaModeField from "@/component/base/AlphaModeField.vue"
 import { useDialog } from "@/view/dialog"
 import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary"
 import { PBRMaterial } from "@babylonjs/core"
+import { Editor } from "@/3d/Editor"
 
 const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
+const emit = defineEmits(['materialChanged']);
 const force = () => { }
 const transparencyMode = ref(0)
 
@@ -231,7 +233,10 @@ async function changeMaterial() {
       if (res) {
         const material = await RuntimeLibrary.Instance.getMaterial(res.uuid)
         if (material) {
-          props.mesh.material = material
+          const oldMaterial = props.mesh.material;
+          props.mesh.material = material;
+          emit('materialChanged', material);
+          propertyChanged?.('material', material, oldMaterial, 'material');
         }
       }
     },

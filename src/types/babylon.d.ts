@@ -36,8 +36,6 @@ declare module '@babylonjs/core' {
     gizmo: LightGizmo;
   }
   interface TransformNode {
-    particleSystem: ParticleSystemSet;
-    //  gpuParticleSystem: GPUParticleSystem;
   }
   interface ParticleSystem {
     isDefaultexture: boolean = true;
