@@ -19,11 +19,12 @@ export async function serializeParticleNode(
 
             for (let index = 0; index < trans.particleSystems.systems.length; index++) {
                 const p = trans.particleSystems.systems[index];
-                await assetsManager.addTexture(p.particleTexture);
                 if (p.particleTexture) {
+                    await assetsManager.addTexture(p.particleTexture);
+                    node.particleSet.systems[index].particleTextureMap = p.particleTexture?.uuid;
+                    delete node.particleSet.systems[index].particleTexture;
                 }
-                node.particleSet.systems[index].particleTextureMap = p.particleTexture?.uuid;
-                delete node.particleSet.systems[index].particleTexture;
+
             }
         }
         return node;

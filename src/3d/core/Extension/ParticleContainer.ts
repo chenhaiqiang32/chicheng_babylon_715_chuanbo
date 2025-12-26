@@ -5,7 +5,6 @@ export class ParticleContainer extends TransformNode {
     constructor(name: string, scene: Scene) {
         super(name, scene);
     }
-    
     public getClassName(): string {
         return "ParticleContainer";
     }

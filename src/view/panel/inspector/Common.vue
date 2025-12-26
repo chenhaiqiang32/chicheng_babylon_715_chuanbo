@@ -18,11 +18,8 @@ import StringField from '@/component/base/StringField.vue'
 import Switch from "@/component/base/Switch.vue";
 import Field from "@/component/common/Field.vue";
 import { Editor } from "@/3d/Editor";
-import { AbstractMesh, PhysicsImpostor } from "@babylonjs/core";
-import { ParticleContainer } from "@/3d/core/Extension/ParticleContainer";
+import { AbstractMesh } from "@babylonjs/core";
 const props = defineProps<{ object: any }>()
-//const objectType = ref<string>("");
-// 计算属性：获取物体类型信息
 const objectType = computed(() => {
     if (!props.object) return 'None';
     console.log(props.object.getClassName?.());

@@ -45,6 +45,7 @@ export const useScene = defineStore('scene', () => {
   const currentScene = ref<string>();
   const sceneInfoList = shallowRef<Partial<CC.Scene>[]>([]);
 
+  const currentSelectResNode = ref<string>();
   // uuid -> HeirarchyNode 映射
   const hierarychyMap = ref<Map<string, HierarchyNode>>(new Map());
 
@@ -106,7 +107,9 @@ export const useScene = defineStore('scene', () => {
   function setCurrentSelect(objectIds?: string[]) {
     currentSelected.value = objectIds ?? [];
   }
-
+  function setCurrentSelectResNode(uuid: string) {
+    currentSelectResNode.value = uuid;
+  }
   function setCurrentControlMode(mode: ControlMode) {
     currentControlMode.value = mode;
   }
@@ -153,6 +156,8 @@ export const useScene = defineStore('scene', () => {
     setCurrentControlMode,
     currentViewFlagsMode,
     setCurrentViewFlagsMode,
+    currentSelectResNode,
+    setCurrentSelectResNode
   };
 });
 export { ViewFlagsMode };
