@@ -3,6 +3,19 @@
         <SectionField :title="$t('component.sceneSetting.backgroundcolor')">
             <Color :label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor" />
             <Color :label="$t('component.sceneSetting.ambientColor')" :object="scene" property="ambientColor" />
+            <Field :title="$t('component.sceneSetting.backgroundType')">
+                <el-select v-model="bgType"  @change="onBgTypeChange" style="margin-left: auto; width: 100px;">
+                    <el-option :label="'背景贴图'"      :value = 1 />
+                    <el-option :label="'图片'"          :value= 2 />
+                    <el-option :label="'全景图'"        :value= 3 />
+                    <el-option :label="'颜色'"          :value= 4 />
+                </el-select>
+            </Field>
+            <Texture v-if="bgType == 1" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundTexture')" :object="scene"
+                property="bgTexture" @change="onSelectBgTexture" />
+            <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')" :object="scene"
+                property="bgTexture" @change="onSelectBgImage" />
+            <Color v-if="bgType == 4":label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor"/>
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.environment')">
@@ -292,7 +305,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, shallowRef } from "vue";
-import { Scene, DepthOfFieldEffectBlurLevel, TonemappingOperator, DefaultRenderingPipeline, SSAO2RenderingPipeline, SSRRenderingPipeline } from "@babylonjs/core";
+import { Scene, DepthOfFieldEffectBlurLevel, TonemappingOperator, DefaultRenderingPipeline, SSAO2RenderingPipeline, SSRRenderingPipeline, Texture as BJS_Texture, Layer, Color4 } from "@babylonjs/core";
 import { registerUndoRedo } from "@/tools/undoredo";
 import { parseDefaultRenderingPipeline, serializeDefaultRenderingPipeline } from "@/3d/rendering/default-pipeline";
 import { parseSSAO2RenderingPipeline, serializeSSAO2RenderingPipeline } from "@/3d/rendering/ssao";
@@ -308,6 +321,7 @@ import { Editor } from "@/3d/Editor";
 import Field from "@/component/common/Field.vue";
 import Slider from "@/component/base/Slider.vue";
 import { onMounted } from "vue";
+import { loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvFileHelper";
 
 
 // const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
@@ -329,6 +343,7 @@ const renderingPipeline = ref<DefaultRenderingPipeline>();
 const pipelineConfig = ref({ enabled: false });
 const ssao2 = ref<SSAO2RenderingPipeline>();
 const ssaoConfig = ref({ enabled: false });
+const bgType = ref<number>();
 const fogMode = ref<number>();
 const ssr = ref<SSRRenderingPipeline>();
 const ssrConfig = ref({ enabled: false });
@@ -533,6 +548,19 @@ const toggleVLS = () => {
 //         registerUndoRedo({ executeRedo: true, undo: () => { post.mesh = oldMesh; const s = serializeVLSPostProcess(); disposeVLSPostProcess(); parseVLSPostProcess(s); }, redo: () => { post.mesh = node as any; const s = serializeVLSPostProcess(); disposeVLSPostProcess(); parseVLSPostProcess(s); } });
 //     }
 // };
+
+const onSelectBgTexture = async (tex:BJS_Texture) => {
+    await loadSkyBox(Editor.Instance.Scene, tex.name, tex.sourceUUID);
+}
+
+const onSelectBgImage = async (tex:BJS_Texture) => {
+    loadImageBG(tex, Editor.Instance.Scene);
+}
+
+
+const onBgTypeChange = (v: number) => {
+    Editor.Instance.Scene.bgType = v;
+}
 
 const onFogModeChange = (v: number) => {
     const oldValue = scene.value.fogMode;

@@ -1,7 +1,7 @@
 import { Editor } from "@/3d/Editor";
 import { RuntimeLibrary } from "@/3d/assets/runtimeLibrary";
 import { Utils } from "@/utils";
-import { BaseTexture, CubeTexture, EXRCubeTexture, HDRCubeTexture, Scene } from "@babylonjs/core";
+import { BaseTexture, CreateBox, CubeTexture, EXRCubeTexture, HDRCubeTexture, Layer, Mesh, Nullable, PBRMaterial, Scene, StandardMaterial, Texture } from "@babylonjs/core";
 
 /**
  * 将环境贴图导入为贴图资产
@@ -24,22 +24,19 @@ export async function loadSkyBox(scene:Scene, name:string, sourceUUID:string){
     if(name == undefined || sourceUUID == undefined) return;
     const ext = name.toLowerCase().split('.').pop();
     const url = await RuntimeLibrary.Instance.getTextureURL(sourceUUID);
+    let skyBox;
     switch(ext){
         case 'hdr':
             const hdr = await loadHdrSkybox(scene, url, 1024);
-            // todo:这里会导致创建一个skybox的material，而被RuntimeLibrary.material收集
-            const skyBox = scene.createDefaultSkybox(hdr, true);
-            scene.environmentTexture.name = name;
-            scene.environmentTexture.uuid = sourceUUID;
-            skyBox.isSkyBox = true;
+            skyBox = createSkybox(hdr, scene);
             break;
         case 'exr':
             const exr = await loadExrSkybox(scene, url, 1024);
-            scene.createDefaultSkybox(exr, true);
+            skyBox = createSkybox(exr, scene);
             break;
         case 'env':
             const env = await loadEnvSkybox(scene, url);
-            scene.createDefaultSkybox(env, true);
+            skyBox = createSkybox(env, scene);
             break;
 
         default:
@@ -86,4 +83,57 @@ function loadEnvSkybox(scene:Scene, url:string):Promise<BaseTexture>{
             resolve(envTexture)
         })
     })
+}
+
+/**
+ * 由于bjs的 createDefaultSkybox 会改变 environmentTexture 属性，所以实现一个只创建skybox网格的
+ */
+function createSkybox(texture:BaseTexture, scene:Scene, pbr = false, scale = 1000, blur = 0, setGlobalEnvTexture = true) : Nullable<Mesh> {
+    /// Skybox
+    const hdrSkybox = CreateBox("hdrSkyBox", { size: scale }, scene);
+    if (pbr) {
+        const hdrSkyboxMaterial = new PBRMaterial("skyBox", scene);
+        hdrSkyboxMaterial.backFaceCulling = false;
+        hdrSkyboxMaterial.reflectionTexture = texture;
+        if (hdrSkyboxMaterial.reflectionTexture) {
+            hdrSkyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+        }
+        hdrSkyboxMaterial.microSurface = 1.0 - blur;
+        hdrSkyboxMaterial.disableLighting = true;
+        hdrSkyboxMaterial.twoSidedLighting = true;
+        hdrSkybox.material = hdrSkyboxMaterial;
+    } else {
+        const skyboxMaterial = new StandardMaterial("skyBox", scene);
+        skyboxMaterial.backFaceCulling = false;
+        skyboxMaterial.reflectionTexture = texture;
+        if (skyboxMaterial.reflectionTexture) {
+            skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
+        }
+        skyboxMaterial.disableLighting = true;
+        hdrSkybox.material = skyboxMaterial;
+    }
+    hdrSkybox.isPickable = false;
+    hdrSkybox.infiniteDistance = true;
+    hdrSkybox.ignoreCameraMaxZ = true;
+    // 标记为isSkyBox不被序列化
+    hdrSkybox.isSkyBox = true;
+    return hdrSkybox;
+}
+
+export function loadImageBG(tex:Texture, scene:Scene) {
+    const bgTex = new Texture(
+        tex.url,
+        scene,
+        false,
+        false,
+        Texture.TRILINEAR_SAMPLINGMODE);
+
+    // 创建一个背景 layer
+    const layer = new Layer(
+        "bgImage",
+        bgTex.url,
+        scene,
+        true);
+    
+    // todo:如果本身有天空盒，会被天空盒挡住
 }

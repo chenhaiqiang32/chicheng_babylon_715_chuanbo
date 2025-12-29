@@ -19,6 +19,7 @@ import {
 } from '@/3d/rendering/default-pipeline';
 import { parseSSAO2RenderingPipeline, serializeSSAO2RenderingPipeline } from '@/3d/rendering/ssao';
 import { parseSSRRenderingPipeline, serializeSSRRenderingPipeline } from '@/3d/rendering/ssr';
+import { BackgroundEnvFactory } from './BackgroundEnv';
 
 export async function serializeScene(
   scene: Scene,
@@ -57,10 +58,14 @@ export async function serializeScene(
     url: (scene.environmentTexture as CubeTexture).url,
     intensity: scene.environmentIntensity,
   };
+  // 用策略模式根据背景类型不同，执行不同的序列化
+  console.log(scene?.bgType);
+  result.background = await BackgroundEnvFactory.createFromScene(scene?.bgType).serialize(scene);
   result.iblIntensity = scene.iblIntensity;
   result.nodes = [];
   for (let index = 0; index < scene.rootNodes.length; index++) {
     const element = scene.rootNodes[index];
+    if(element.isSkyBox) continue;
     const node = await serializeNode(element as TransformNode, assets, serializeAssets);
     result.nodes.push(node);
   }
@@ -126,6 +131,9 @@ export async function deserializeScene(
   if (sceneData.environment) {
     scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
     scene.environmentIntensity = sceneData.environment.intensity;
+  }
+  if(sceneData.background) {
+    BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene, sceneData);
   }
   if (sceneData.defaultRenderingPipeline) {
     parseDefaultRenderingPipeline(sceneData.defaultRenderingPipeline, scene);
