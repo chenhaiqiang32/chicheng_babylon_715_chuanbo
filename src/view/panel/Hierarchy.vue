@@ -136,8 +136,11 @@ async function addScene() {
 
 
 function changeScene(scene: string) {
-    currentSelected.value = [];
-    Editor.Instance.setCurrentScene(scene);
+    if (useScene().currentScene != scene) {
+        currentSelected.value = [];
+        Editor.Instance.setCurrentScene(scene);
+    }
+
 }
 
 

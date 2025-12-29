@@ -28,32 +28,30 @@ export function serializeMeshNode(
   }
 }
 
-export async function deserializeMeshNode(
+export function deserializeMeshNode(
   data: CC.MeshNode,
   scene: Scene,
   assets: ILoaderAssets,
-  padding: Array<Promise<any>> = [],
+  padding: Array<Padding> = [],
 ) {
   const mesh = new Mesh(data.name, scene, {});
   mesh.checkCollisions = data.checkCollisions;
   if (data.geometry) {
-    const geometryPromise = assets.getGeometry(data.geometry);
-    padding.push(geometryPromise);
-
-    geometryPromise.then((g) => {
+    const getMesh = async () => {
+      const g = await assets.getGeometry(data.geometry);
       g.applyToMesh(mesh);
       mesh.geometry.uuid = data.geometry;
       mesh.sideOrientation = 0;
-    });
-  } else {
+    };
+    padding.push(getMesh);
   }
   if (data.material) {
-    const materialPromise = assets.getMaterial(data.material);
-    padding.push(materialPromise);
-    materialPromise.then((s) => {
-      mesh.material = s;
+    const getMaterial = async () => {
+      const m = await assets.getMaterial(data.material);
+      mesh.material = m;
       mesh.markAsDirty();
-    });
+    };
+    padding.push(getMaterial);
   }
   return mesh;
 }

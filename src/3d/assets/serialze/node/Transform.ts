@@ -11,8 +11,6 @@ export async function serializeTransformNode(
     node.position = trans.position.asArray();
     node.rotation = trans.rotationQuaternion?.asArray() || trans.rotation?.asArray() || [];
     node.scale = trans.scaling?.asArray();
-    console.log(node.particleSet);
-
     if (trans.particleSystem) {
       node.particleSet = trans.particleSystem.serialize();
 
