@@ -321,7 +321,7 @@ import { Editor } from "@/3d/Editor";
 import Field from "@/component/common/Field.vue";
 import Slider from "@/component/base/Slider.vue";
 import { onMounted } from "vue";
-import { loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvFileHelper";
+import { closeEnv, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
 
 
 // const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
@@ -550,10 +550,12 @@ const toggleVLS = () => {
 // };
 
 const onSelectBgTexture = async (tex:BJS_Texture) => {
+    closeEnv();
     await loadSkyBox(Editor.Instance.Scene, tex.name, tex.sourceUUID);
 }
 
 const onSelectBgImage = async (tex:BJS_Texture) => {
+    closeEnv();
     loadImageBG(tex, Editor.Instance.Scene);
 }
 

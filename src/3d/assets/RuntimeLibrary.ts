@@ -34,6 +34,7 @@ const GEOMETRY = 'geometry';
 
 interface RuntimeAssetsEventBus {
   onChanged: void;
+  onMaterialChanged: {useCache:boolean};
 }
 
 export interface IGetBuffer {

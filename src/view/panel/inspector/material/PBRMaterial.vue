@@ -223,6 +223,8 @@ const propertyChanged = inject<(property: string, newValue: any, oldValue: any, 
 
 function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
   propertyChanged?.('material.' + property, newValue, oldValue, type);
+  // 更新材质球的效果
+  RuntimeLibrary.Instance.dispatch('onMaterialChanged', {useCache: false});
 }
 
 async function changeMaterial() {

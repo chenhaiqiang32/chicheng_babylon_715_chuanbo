@@ -11,7 +11,7 @@ import ToolBar from './scene/ToolBar.vue'
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { useScene } from '@/store/useScene';
 import { TransformNode } from '@babylonjs/core';
-import { loadSkyBox } from '@/3d/core/utils/EnvFileHelper';
+import { loadSkyBox } from '@/3d/core/utils/EnvSkybox';
 import { useEditor } from '@/store/useEditor';
 
 const canvasRef = ref<HTMLCanvasElement>()

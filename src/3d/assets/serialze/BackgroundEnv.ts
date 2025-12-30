@@ -1,7 +1,7 @@
 import { Color4, Scene, Texture } from "@babylonjs/core";
 import { CC } from "../BaseRes";
 import { RuntimeLibrary } from "../RuntimeLibrary";
-import { loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvFileHelper";
+import { loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
 
 /**
  * 背景环境序列化

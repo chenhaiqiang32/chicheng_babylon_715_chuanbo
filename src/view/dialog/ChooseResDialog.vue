@@ -38,6 +38,7 @@ import { Utils } from '@/utils';
 import SVG from '@/component/common/SVG.vue';
 import { ElDialog } from 'element-plus';
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 const visible = ref<boolean>(true);
 const props = defineProps<{
     close: () => void,
@@ -64,6 +65,12 @@ onMounted(() => {
 async function getResList() {
     if (props.type == 'material') {
         data.value = [...RuntimeLibrary.Instance.material]
+        // 获取材质预览图
+        for(let index = 0; index < data.value.length; index++) {
+            const element = data.value[index];
+            const mat = await RuntimeLibrary.Instance.getMaterial(element.uuid);
+            element.url = await renderMaterail(mat, true);
+        }
     } else {
         const array = [...RuntimeLibrary.Instance.texture].map(x => {
             return {

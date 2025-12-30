@@ -77,7 +77,8 @@ function handleDragStart(ev: DragEvent, data: any) {
 
 
 onMounted(() => {
-    RuntimeLibrary.Instance.on('onChanged', onChange)
+    RuntimeLibrary.Instance.on('onChanged', onChange);
+    RuntimeLibrary.Instance.on('onMaterialChanged', onMaterialChanged);
 })
 
 
@@ -106,25 +107,28 @@ async function onChange() {
     });
     const set = new Set<string>();
     const envSet = new Set<string>();
-    textureList.value = texstureArray.filter(x => {
-        const ext = x.name.toLowerCase().split('.').pop();
-        if(['hdr','env','exr'].includes(ext))
-            return false;
-        if (set.has(x.sourceUUID)) {
-            return false
+    const textures = [];
+    const envTextures = [];
+    
+    // 分流普通贴图和环境贴图
+    for(const item of texstureArray) {
+        const ext = item.name.toLowerCase().split('.').pop();
+        const isEnvTexture = ['hdr', 'env', 'exr'].includes(ext);
+        if(isEnvTexture){
+            if(!envSet.has(item.sourceUUID)){
+                envSet.add(item.sourceUUID);
+                envTextures.push(item);
+            }
+        } else {
+            if(!set.has(item.sourceUUID)){
+                set.add(item.sourceUUID);
+                textures.push(item);
+            }
         }
-        set.add(x.sourceUUID)
-        return true
-    })
-    envTextureList.value = texstureArray.filter(x => {
-        const ext = x.name.toLowerCase().split('.').pop();
-        if(!['hdr','env','exr'].includes(ext))
-            return false;
-        if(envSet.has(x.sourceUUID))
-            return false;
-        envSet.add(x.sourceUUID)
-            return true;
-    })
+    }
+    textureList.value = textures;
+    envTextureList.value = envTextures;
+
     for (let index = 0; index < textureList.value.length; index++) {
         const element = textureList.value[index];
         if (!element.url) {
@@ -144,12 +148,21 @@ async function onChange() {
     for (var i = 0; i < materialList.value.length; i++) {
         const material = materialList.value[i];
         const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
-        const prevUrl = await renderMaterail(mat, true, Editor.Instance.Engine);
+        const prevUrl = await renderMaterail(mat, true);
         material.previewUrl = prevUrl;
     }
     Editor.Instance.Engine.resize()
 }
 
+// 当材质属性发生改变时
+async function onMaterialChanged(e: {useCache:boolean}) {
+    for (var i = 0; i < materialList.value.length; i++) {
+        const material = materialList.value[i];
+        const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
+        const prevUrl = await renderMaterail(mat, e.useCache);
+        material.previewUrl = prevUrl;
+    }
+}
 
 
 function modelContextMenu(e: MouseEvent) {
@@ -204,7 +217,8 @@ function hdrContextMenu(e: MouseEvent) {
 }
 
 onUnmounted(() => {
-    RuntimeLibrary.Instance.off('onChanged', onChange)
+    RuntimeLibrary.Instance.off('onChanged', onChange);
+    RuntimeLibrary.Instance.off('onMaterialChanged', onMaterialChanged);
 })
 
 </script>

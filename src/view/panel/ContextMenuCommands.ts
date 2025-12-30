@@ -12,7 +12,7 @@ import { nextTick } from 'vue';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Utils } from '@/utils';
 import { addParticleSystem } from '@/tools/particles/particles';
-import { importSkyboxTexture } from '@/3d/core/utils/EnvFileHelper';
+import { importSkyboxTexture } from '@/3d/core/utils/EnvSkybox';
 
 /**
  * 获取层级面板的右键菜单配置

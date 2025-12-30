@@ -1,9 +1,10 @@
 import { Editor } from "@/3d/Editor";
 import { RuntimeLibrary } from "@/3d/assets/runtimeLibrary";
 import { Utils } from "@/utils";
-import { BaseTexture, CreateBox, CubeTexture, EXRCubeTexture, HDRCubeTexture, Layer, Mesh, Nullable, PBRMaterial, Scene, StandardMaterial, Texture } from "@babylonjs/core";
+import { BaseTexture, CreateBox, CubeTexture, EXRCubeTexture, HDRCubeTexture, Layer, Mesh, Nullable, PBRMaterial, Scene, StandardMaterial, Texture, Vector2 } from "@babylonjs/core";
 
 let hdrSkybox: Mesh;
+let bgImageLayer: Layer;
 
 /**
  * 将环境贴图导入为贴图资产
@@ -92,10 +93,7 @@ function loadEnvSkybox(scene:Scene, url:string):Promise<BaseTexture>{
  */
 function createSkybox(texture:BaseTexture, scene:Scene, pbr = false, scale = 1000, blur = 0, setGlobalEnvTexture = true) : Nullable<Mesh> {
     /// Skybox
-    if(hdrSkybox){
-        hdrSkybox.dispose();
-        hdrSkybox = null;
-    }
+    closeEnv();
     hdrSkybox = CreateBox("hdrSkyBox", { size: scale }, scene);
     if (pbr) {
         const hdrSkyboxMaterial = new PBRMaterial("skyBox", scene);
@@ -127,6 +125,7 @@ function createSkybox(texture:BaseTexture, scene:Scene, pbr = false, scale = 100
 }
 
 export function loadImageBG(tex:Texture, scene:Scene) {
+    closeEnv();
     const bgTex = new Texture(
         tex.url,
         scene,
@@ -135,11 +134,20 @@ export function loadImageBG(tex:Texture, scene:Scene) {
         Texture.TRILINEAR_SAMPLINGMODE);
 
     // 创建一个背景 layer
-    const layer = new Layer(
+    bgImageLayer = new Layer(
         "bgImage",
         bgTex.url,
         scene,
         true);
-    
-    // todo:如果本身有天空盒，会被天空盒挡住
+}
+
+export function closeEnv(){
+    if(hdrSkybox){
+        hdrSkybox.dispose();
+        hdrSkybox = null;
+    }
+    if(bgImageLayer) {
+        bgImageLayer.dispose();
+        bgImageLayer = null;
+    }
 }
