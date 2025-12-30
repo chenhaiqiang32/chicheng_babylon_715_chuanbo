@@ -8,6 +8,7 @@ import {
   Color4,
   CubeTexture,
   DirectionalLight,
+  Effect,
   EXRCubeTexture,
   FreeCamera,
   HDRCubeTexture,
@@ -17,11 +18,13 @@ import {
   MeshBuilder,
   PBRMaterial,
   Scene,
+  ShaderMaterial,
   StandardMaterial,
   Texture,
   Tools,
   Vector3,
 } from '@babylonjs/core';
+import { envTextureVertexShader, envTextureFragmentShader } from '@/shaders/envTexture';
 
 let scene: Scene;
 let camera: FreeCamera;
@@ -99,22 +102,37 @@ export async function renderEnvTexture(uuid:string, url: string, ext:string, use
     // todo:由于要加载，所以会导致加载性能下降
     const env = await loadSkyboxWithExt(scene, url,ext, 128);
 
-    const mat = new StandardMaterial("envMat", scene);
-    mat.reflectionTexture = env;
-    plane.material = mat;
+    const shaderMaterial = new ShaderMaterial("envTextureShader", scene,
+      {
+        vertex: "envTexture",
+        fragment: "envTexture",
+      },
+      {
+        attributes: ["position", "uv"],
+        uniforms: ["worldViewProjection", "cubeTexture"],
+        samplers: ["cubeTexture"]
+      }
+    );
+
+    if(!Effect.ShadersStore["envTextureVertexShader"]) {
+      Effect.ShadersStore["envTextureVertexShader"] = envTextureVertexShader;
+      Effect.ShadersStore["envTextureFragmentShader"] = envTextureFragmentShader;
+    }
+
+    shaderMaterial.setTexture("cubeTexture", env);
+    plane.material = shaderMaterial;
 
     return new Promise((resolve) => {
-        plane.material = mat;
-          Tools.CreateScreenshotUsingRenderTarget(
-              engine,
-              camera,
-              size,
-              (data) => {
-                plane.material = null;
-                envCache.set(uuid, data);
-                resolve(data);
-              },
-              'image/png',
-            );
+        Tools.CreateScreenshotUsingRenderTarget(
+          engine,
+          camera,
+          size,
+          (data) => {
+            shaderMaterial.dispose();
+            envCache.set(uuid, data);
+            resolve(data);
+          },
+          'image/png',
+        )
     })
 }

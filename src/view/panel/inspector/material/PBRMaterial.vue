@@ -25,6 +25,7 @@
       <Switch :label="$t('component.material.disableLighting')" :object="material" property="disableLighting" />
       <Switch :label="$t('component.material.pointsCloud')" :object="material" property="pointsCloud" />
       <Slider :label="$t('component.material.pointSize')" :object="material" property="pointSize" :min="0" :max="10" />
+      <Switch :label="$t('component.material.wireframe')" :object="material" property="wireframe" />
 
     </SectionField>
 

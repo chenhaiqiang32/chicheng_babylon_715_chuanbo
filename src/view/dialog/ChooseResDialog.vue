@@ -61,7 +61,7 @@ onMounted(() => {
     getResList()
 });
 
-function getResList() {
+async function getResList() {
     if (props.type == 'material') {
         data.value = [...RuntimeLibrary.Instance.material]
     } else {
@@ -69,6 +69,7 @@ function getResList() {
             return {
                 name: x.name,
                 sourceUUID: x.sourceUUID,
+                uuid: x.uuid
             }
         })
 
@@ -83,9 +84,16 @@ function getResList() {
         for (let index = 0; index < data.value.length; index++) {
             const element = data.value[index];
             if (!element.url) {
-                RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
-                    element.url = url
-                })
+                const ext = element.name.toLowerCase().split('.').pop();
+                // 环境贴图
+                if(['hdr','exr','env'].includes(ext)){
+                    element.url = await RuntimeLibrary.Instance.getEnvTextureURL(element.sourceUUID, element.uuid, ext);
+                } else {
+                    // 普通贴图
+                    RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
+                        element.url = url
+                    })
+                }
             }
         }
     }

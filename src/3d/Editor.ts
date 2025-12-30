@@ -135,7 +135,8 @@ export class Editor extends Dispatch<EditorEvent> {
       this.gizmoManager.attachToMesh(v[0]);
     } else if (v[0] instanceof Light) {
       //@ts-ignore 灯光作用于其父节点 transformNode
-      this.gizmoManager.attachToMesh(v[0]);
+      //this.gizmoManager.attachToMesh(v[0]);
+      this.gizmoManager.attachToMesh(v[0].gizmo.attachedMesh);
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
       if (v[0].getChildMeshes().length > 0) this.gizmoManager.attachToNode(v[0]);

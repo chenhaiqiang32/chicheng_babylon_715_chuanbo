@@ -77,7 +77,7 @@ export const useScene = defineStore('scene', () => {
     hierarchy.value = rootNodes.map(buildHierarchy);
     hierarychyMap.value.clear();
     rootNodes.forEach((x) => {
-      if (x.name == 'SubemitterSystemEmitter') {
+      if (x.name == 'SubemitterSystemEmitter' || x.name == 'hdrSkyBox') {
         x.isIgnore = true;
       }
     });

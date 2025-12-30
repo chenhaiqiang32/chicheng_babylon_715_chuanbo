@@ -39,7 +39,7 @@
                     <template #default="{ item, index }">
                         <div class="grid-item" :title="item.name" draggable="true"
                             @dragstart="e => handleDragStart(e, item)">
-                            <img v-if="item.url" :src="item.previewUrl" alt="" style="width: 80%; height: 80%;">
+                            <img v-if="item.url" :src="item.url" alt="" style="width: 80%; height: 80%;">
                             <span class="itme-name">{{ item.name }}</span>
                         </div>
                     </template>
@@ -136,11 +136,8 @@ async function onChange() {
     for (let index = 0; index < envTextureList.value.length; index++) {
         const element = envTextureList.value[index];
         if (!element.url) {
-            element.url = await RuntimeLibrary.Instance.getTextureURL(element.sourceUUID);
-            const texture = await RuntimeLibrary.Instance.getTexture(element.uuid);
             const ext = element.name.toLowerCase().split('.').pop();
-            const url = await renderEnvTexture(texture.uuid, element.url, ext, true, Editor.Instance.Engine);
-            element.previewUrl = url;
+            element.url = await RuntimeLibrary.Instance.getEnvTextureURL(element.sourceUUID, element.uuid, ext);
         }
     }
 

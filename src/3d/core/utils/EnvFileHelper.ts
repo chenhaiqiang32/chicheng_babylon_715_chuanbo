@@ -3,6 +3,8 @@ import { RuntimeLibrary } from "@/3d/assets/runtimeLibrary";
 import { Utils } from "@/utils";
 import { BaseTexture, CreateBox, CubeTexture, EXRCubeTexture, HDRCubeTexture, Layer, Mesh, Nullable, PBRMaterial, Scene, StandardMaterial, Texture } from "@babylonjs/core";
 
+let hdrSkybox: Mesh;
+
 /**
  * 将环境贴图导入为贴图资产
  */
@@ -90,7 +92,11 @@ function loadEnvSkybox(scene:Scene, url:string):Promise<BaseTexture>{
  */
 function createSkybox(texture:BaseTexture, scene:Scene, pbr = false, scale = 1000, blur = 0, setGlobalEnvTexture = true) : Nullable<Mesh> {
     /// Skybox
-    const hdrSkybox = CreateBox("hdrSkyBox", { size: scale }, scene);
+    if(hdrSkybox){
+        hdrSkybox.dispose();
+        hdrSkybox = null;
+    }
+    hdrSkybox = CreateBox("hdrSkyBox", { size: scale }, scene);
     if (pbr) {
         const hdrSkyboxMaterial = new PBRMaterial("skyBox", scene);
         hdrSkyboxMaterial.backFaceCulling = false;

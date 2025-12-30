@@ -125,6 +125,7 @@
       "disableLighting": "禁用光照",
       "pointsCloud": "点云",
       "pointSize": "点大小",
+      "wireframe": "线框",
       "isTintEnabled": "启用颜色",
       "name": "材质名称",
       "backFaceCulling": "背面裁剪",
