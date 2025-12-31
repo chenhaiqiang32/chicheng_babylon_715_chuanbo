@@ -20,6 +20,7 @@ export namespace CC {
     children: ObjectNode[];
     visible?: boolean;
     metadata?: any;
+    isIgnore?: boolean;  // 对应 bjs.Node.isIgnore 自定义属性
   }
 
   export interface TransformNode extends ObjectNode {

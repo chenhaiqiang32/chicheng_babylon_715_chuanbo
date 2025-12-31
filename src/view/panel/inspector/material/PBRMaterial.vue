@@ -208,7 +208,10 @@ import { PBRMaterial } from "@babylonjs/core"
 const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
 const force = () => { }
 const transparencyMode = ref(0)
-
+// 创建通知父组件事件
+const emit = defineEmits<{
+  (e: 'matChanged'): void
+}>()
 watch(() => props.material, () => {
   transparencyMode.value = props.material.transparencyMode;
 }, {
@@ -235,12 +238,14 @@ async function changeMaterial() {
         const material = await RuntimeLibrary.Instance.getMaterial(res.uuid)
         if (material) {
           props.mesh.material = material
+          emit('matChanged');
         }
       }
     },
     type: 'material'
   })
 }
+
 onMounted(() => {
 })
 </script>

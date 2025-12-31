@@ -9,7 +9,7 @@ export function serializeMeshNode(
   serializeAssets: boolean = true,
 ) {
   // 天空盒会创建一个skybox的mesh，过滤掉
-  if (mesh instanceof GaussianSplattingMesh || mesh.isSkyBox) {
+  if (mesh instanceof GaussianSplattingMesh || mesh.isIgnore) {
     return;
   }
 

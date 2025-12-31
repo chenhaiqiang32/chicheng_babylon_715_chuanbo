@@ -1,10 +1,11 @@
 import { Editor } from "@/3d/Editor";
 import { RuntimeLibrary } from "@/3d/assets/runtimeLibrary";
 import { Utils } from "@/utils";
-import { BaseTexture, CreateBox, CubeTexture, EXRCubeTexture, HDRCubeTexture, Layer, Mesh, Nullable, PBRMaterial, Scene, StandardMaterial, Texture, Vector2 } from "@babylonjs/core";
+import { BaseTexture, CreateBox, CubeTexture, EXRCubeTexture, HDRCubeTexture, Layer, Mesh, Node, Nullable, PBRMaterial, PhotoDome, Scene, StandardMaterial, Texture, Vector2 } from "@babylonjs/core";
 
 let hdrSkybox: Mesh;
 let bgImageLayer: Layer;
+let dome: PhotoDome;
 
 /**
  * 将环境贴图导入为贴图资产
@@ -46,6 +47,11 @@ export async function loadSkyBox(scene:Scene, name:string, sourceUUID:string){
             console.error(`Unsupported file extension: ${ext}`);
             break;
     }
+    // 有时候虽然加载了环境图，但是scene.bgTexture没有赋值，所以构造一个，环境贴图只关心 name 和 sourceUUID
+    let bgTexture = new Texture("");
+    bgTexture.name = name;
+    bgTexture.sourceUUID = sourceUUID;
+    scene.bgTexture = bgTexture;
 }
 
 export function loadSkyboxWithExt(scene:Scene, url:string, ext:string, size:number):Promise<BaseTexture>{
@@ -119,8 +125,7 @@ function createSkybox(texture:BaseTexture, scene:Scene, pbr = false, scale = 100
     hdrSkybox.isPickable = false;
     hdrSkybox.infiniteDistance = true;
     hdrSkybox.ignoreCameraMaxZ = true;
-    // 标记为isSkyBox不被序列化
-    hdrSkybox.isSkyBox = true;
+    setIgnoreForAllChildren(hdrSkybox);
     return hdrSkybox;
 }
 
@@ -139,6 +144,15 @@ export function loadImageBG(tex:Texture, scene:Scene) {
         bgTex.url,
         scene,
         true);
+    scene.bgTexture = tex;
+}
+
+export function load360ImageBG(tex:Texture, scene:Scene) {
+    closeEnv();
+    dome = new PhotoDome("360ImageBG", tex.url, {resolution: 128, size: 1000}, scene);
+    setIgnoreForAllChildren(dome);
+    dome.mesh.material.backFaceCulling = false;
+    scene.bgTexture = tex;
 }
 
 export function closeEnv(){
@@ -149,5 +163,22 @@ export function closeEnv(){
     if(bgImageLayer) {
         bgImageLayer.dispose();
         bgImageLayer = null;
+    }
+    if(dome){
+        dome.dispose();
+        dome = null;
+    }
+}
+
+// 给自身和所有子节点添加 isIgnore 属性，不在hirarchy显示
+function setIgnoreForAllChildren(node: Node) {
+    if(node)
+        node.isIgnore = true;
+
+    const children = node.getChildren();
+    if(children && children.length > 0) {
+        children.forEach(child => {
+            setIgnoreForAllChildren(child);
+        })
     }
 }

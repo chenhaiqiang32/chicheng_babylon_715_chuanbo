@@ -65,7 +65,6 @@ export async function serializeScene(
   result.nodes = [];
   for (let index = 0; index < scene.rootNodes.length; index++) {
     const element = scene.rootNodes[index];
-    if(element.isSkyBox) continue;
     const node = await serializeNode(element as TransformNode, assets, serializeAssets);
     result.nodes.push(node);
   }
@@ -133,6 +132,7 @@ export function deserializeScene(
     scene.environmentIntensity = sceneData.environment.intensity;
   }
   if(sceneData.background) {
+    scene.bgType = sceneData.background.type;
     BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene, sceneData);
   }
   if (sceneData.defaultRenderingPipeline) {

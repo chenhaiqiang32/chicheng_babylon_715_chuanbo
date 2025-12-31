@@ -15,6 +15,8 @@
                 property="bgTexture" @change="onSelectBgTexture" />
             <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')" :object="scene"
                 property="bgTexture" @change="onSelectBgImage" />
+            <Texture v-if="bgType == 3" :acceptCubeTexture="true" :title="$t('component.sceneSetting.background360Image')" :object="scene"
+                property="bgTexture" @change="onSelect360BGImage" />
             <Color v-if="bgType == 4":label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor"/>
         </SectionField>
 
@@ -321,7 +323,7 @@ import { Editor } from "@/3d/Editor";
 import Field from "@/component/common/Field.vue";
 import Slider from "@/component/base/Slider.vue";
 import { onMounted } from "vue";
-import { closeEnv, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { load360ImageBG, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
 
 
 // const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
@@ -550,13 +552,15 @@ const toggleVLS = () => {
 // };
 
 const onSelectBgTexture = async (tex:BJS_Texture) => {
-    closeEnv();
     await loadSkyBox(Editor.Instance.Scene, tex.name, tex.sourceUUID);
 }
 
 const onSelectBgImage = async (tex:BJS_Texture) => {
-    closeEnv();
     loadImageBG(tex, Editor.Instance.Scene);
+}
+
+const onSelect360BGImage = async (tex:BJS_Texture) => {
+    load360ImageBG(tex, Editor.Instance.Scene);
 }
 
 

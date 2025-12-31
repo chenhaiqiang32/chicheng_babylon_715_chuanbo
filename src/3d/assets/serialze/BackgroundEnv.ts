@@ -1,7 +1,7 @@
 import { Color4, Scene, Texture } from "@babylonjs/core";
 import { CC } from "../BaseRes";
 import { RuntimeLibrary } from "../RuntimeLibrary";
-import { loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { load360ImageBG, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
 
 /**
  * 背景环境序列化
@@ -37,21 +37,9 @@ export class TextureBgEnv implements BackgroundEnv {
     }
     deserialize(scene: Scene, sceneData: CC.Scene){
         if(sceneData.background.texture){
+            console.log(sceneData.background.texture);
             loadSkyBox(scene, sceneData.background.texture.name, sceneData.background.texture.sourceUUID);
         }
-    }
-}
-
-export class ColorBgEnv implements BackgroundEnv {
-    serialize(scene: Scene): Promise<CC.Scene['background']> {
-        return Promise.resolve({
-            type: 4,
-            texture: null,
-            clearColor: scene.clearColor.asArray()
-        })
-    }
-    deserialize(scene: Scene, sceneData: CC.Scene): void {
-        scene.clearColor = new Color4(...sceneData.clearColor);
     }
 }
 
@@ -78,11 +66,49 @@ export class ImageBgEnv implements BackgroundEnv {
     }
 }
 
+export class Image360BgEnv implements BackgroundEnv {
+    async serialize(scene: Scene) : Promise<CC.Scene["background"]> {
+        const data = await RuntimeLibrary.Instance.addTexture(scene.bgTexture);
+        return {
+            type: 3,
+            texture: {
+                name: data.name,
+                sourceUUID: data.sourceUUID,
+                uuid:  data.uuid
+            },
+            clearColor: [],
+        }
+    }
+    deserialize(scene: Scene, sceneData: CC.Scene): void {
+        const uuid = sceneData.background.texture.uuid;
+        if(uuid){
+            RuntimeLibrary.Instance.getTexture(uuid).then((texture) => {
+                load360ImageBG(texture as Texture, scene);
+            })
+        }
+    }
+}
+
+export class ColorBgEnv implements BackgroundEnv {
+    serialize(scene: Scene): Promise<CC.Scene['background']> {
+        return Promise.resolve({
+            type: 4,
+            texture: null,
+            clearColor: scene.clearColor.asArray()
+        })
+    }
+    deserialize(scene: Scene, sceneData: CC.Scene): void {
+        scene.clearColor = new Color4(...sceneData.clearColor);
+    }
+}
+
+
 /** -----------工厂------------- */
 export class BackgroundEnvFactory {
     private static strategies: Map<number, BackgroundEnv> = new Map([
         [1, new TextureBgEnv()],
-        [2, new ImageBgEnv()]
+        [2, new ImageBgEnv()],
+        [3, new Image360BgEnv()]
         // todo: 添加其他类型
     ]);
 

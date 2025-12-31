@@ -223,6 +223,7 @@
       "backgroundType": "背景类型",
       "backgroundTexture": "背景贴图",
       "backgroundImage": "背景图片",
+      "background360Image": "背景全景图",
       "gravity": "重力",
       "clearColor": "背景颜色",
       "ambientColor": "环境光颜色",
