@@ -73,6 +73,8 @@ import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
 import { getHierarchyContextMenuCommands } from '@/view/panel/ContextMenuCommands';
 import { Node } from '@babylonjs/core';
+import { registerKeyDown, unregisterKeyDown } from '@/utils/ShortcutKey';
+import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
 const searchText = ref('');
 const treeProps = {
     label: 'name',
@@ -97,6 +99,8 @@ onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
     Editor.Instance.on('onActiveCameraChanged', onActiveCameraChanged);
     Editor.Instance.on('onNodeActiveChanged', onNodeActiveChanged)
+
+    registerKeyDown(onKeydown);
 })
 
 function contextMenu(e: MouseEvent, nodeData?: HierarchyNode) {
@@ -220,9 +224,36 @@ const toggleSceneSetting = async () => {
     useDialog(SceneSettingDialog)
 }
 
+async function onKeydown(e: KeyboardEvent) {
+    const key = e.key.toLowerCase();
+    // 拷贝节点
+    if (e.ctrlKey && key === 'c') {
+        if(Editor.Instance.selectNodes.length > 0){
+            const node = Editor.Instance.selectNodes[0];
+            const serializedNode = await nodeCRUD().copyNode(node);
+            useScene().currentCopy = serializedNode;
+        }
+    } 
+    // 粘贴节点
+    else if (e.ctrlKey && key === 'v') {
+        if(useScene().currentCopy) {
+            let parent = Editor.Instance.selectNodes.length > 0 ? Editor.Instance.selectNodes[0] : null;
+            // 非shift则粘贴在同层级，shift则粘贴为子节点
+            if(!e.shiftKey && parent)
+                parent = parent.parent;
+            const clone  = await nodeCRUD().pasteNode(useScene().currentCopy, parent);
+        }
+    }
+    // 删除节点
+    else if(key == 'delete'){
+        if(Editor.Instance.selectNodes.length > 0){
+            nodeCRUD().deleteNode(Editor.Instance.selectNodes[0]);
+        }
+    }
+}
 
 onUnmounted(() => {
-
+    unregisterKeyDown(onkeydown);
 })
 
 

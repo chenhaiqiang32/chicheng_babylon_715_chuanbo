@@ -1,4 +1,4 @@
-import { ControlMode, ViewFlagsMode, useScene } from '@/store/useScene';
+import { ViewFlagsMode, useScene } from '@/store/useScene';
 import {
   ArcRotateCamera,
   CubeTexture,
@@ -50,6 +50,8 @@ import { createMotionBlurPostProcess } from './rendering/motion-blur';
 import { registerKeyDown } from '@/utils/ShortcutKey';
 import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
 import { useEditor } from '@/store/useEditor';
+import { ControlMode } from '@/store/useSceneModule/useControl';
+import { nodeCRUD } from './core/utils/nodeCRUD';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -115,7 +117,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
   private weakMap = new Map<string, Node>();
   get selectNodes() {
-    return this.selectNodes;
+    return this._selectNodes;
   }
   set selectNodes(v: Node[]) {
     if (this._selectNodes?.length > 0) {

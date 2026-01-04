@@ -1,7 +1,7 @@
 <template>
     <div>
         <SectionField :title="$t('component.sceneSetting.backgroundcolor')">
-            <Color :label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor" />
+            <!-- <Color :label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor" /> -->
             <Color :label="$t('component.sceneSetting.ambientColor')" :object="scene" property="ambientColor" />
             <Field :title="$t('component.sceneSetting.backgroundType')">
                 <el-select v-model="bgType"  @change="onBgTypeChange" style="margin-left: auto; width: 100px;">
@@ -17,7 +17,7 @@
                 property="bgTexture" @change="onSelectBgImage" />
             <Texture v-if="bgType == 3" :acceptCubeTexture="true" :title="$t('component.sceneSetting.background360Image')" :object="scene"
                 property="bgTexture" @change="onSelect360BGImage" />
-            <Color v-if="bgType == 4":label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor"/>
+            <Color v-if="bgType == 4":label="$t('component.sceneSetting.clearColor')" @change="onSelectClearColor" :object="scene" property="clearColor"/>
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.environment')">
@@ -323,7 +323,7 @@ import { Editor } from "@/3d/Editor";
 import Field from "@/component/common/Field.vue";
 import Slider from "@/component/base/Slider.vue";
 import { onMounted } from "vue";
-import { load360ImageBG, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { closeEnv, load360ImageBG, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
 
 
 // const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
@@ -357,6 +357,7 @@ const focusStep = ref<number>();
 const focusMax = ref<number>();
 const dofBlurLevel = ref<number>();
 onMounted(() => {
+    bgType.value = scene.value.bgType == 0 ? 4 : scene.value.bgType;
     fogMode.value = scene.value.fogMode;
     focusStep.value = (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) / 1000;
     focusMax.value = (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) * 1000;
@@ -553,19 +554,31 @@ const toggleVLS = () => {
 
 const onSelectBgTexture = async (tex:BJS_Texture) => {
     await loadSkyBox(Editor.Instance.Scene, tex.name, tex.sourceUUID);
+    saveBgType(1);
 }
 
 const onSelectBgImage = async (tex:BJS_Texture) => {
     loadImageBG(tex, Editor.Instance.Scene);
+    saveBgType(2);
 }
 
 const onSelect360BGImage = async (tex:BJS_Texture) => {
     load360ImageBG(tex, Editor.Instance.Scene);
+    saveBgType(3);
+}
+
+const onSelectClearColor = () => {
+    closeEnv();
+    saveBgType(4);
+}
+
+const saveBgType = (v: number) => {
+    Editor.Instance.Scene.bgType = v;
+    bgType.value = v;
 }
 
 
 const onBgTypeChange = (v: number) => {
-    Editor.Instance.Scene.bgType = v;
 }
 
 const onFogModeChange = (v: number) => {
