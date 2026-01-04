@@ -13,7 +13,7 @@
             <div class="bar10"></div>
             <div class="bar11"></div>
             <div class="bar12"></div>
-            <span>{{ progress * 100 }}%</span>
+            <span>{{ (progress * 100).toFixed(0) }}%</span>
         </div>
     </div>
 

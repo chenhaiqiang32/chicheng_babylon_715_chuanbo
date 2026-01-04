@@ -174,19 +174,19 @@ export class Editor extends Dispatch<EditorEvent> {
           this.focusTransformNode();
           break;
         }
-        case 'q': {
+        case '1': {
           useScene().currentControlMode = ControlMode.Select;
           break;
         }
-        case 'w': {
+        case '2': {
           useScene().currentControlMode = ControlMode.Move;
           break;
         }
-        case 'e': {
+        case '3': {
           useScene().currentControlMode = ControlMode.Rotate;
           break;
         }
-        case 'r': {
+        case '4': {
           useScene().currentControlMode = ControlMode.Scale;
           break;
         }
@@ -656,6 +656,14 @@ export class Editor extends Dispatch<EditorEvent> {
     );
     camera.speed = 1;
     camera.inertia = 0;
+    camera.keysUp.push(87); // W (keyCode 87)
+    camera.keysDown.push(83); // S (83)
+    camera.keysLeft.push(65); // A (65)
+    camera.keysRight.push(68); // D (68)
+    this.scene.meshes.forEach(m=>m.createOrUpdateSubmeshesOctree());
+    // 设置 QE 为垂直升降（默认没有，需要手动添加）
+    camera.keysUpward.push(69); // E 上昇 (69)
+    camera.keysDownward.push(81); // Q 下降 (81)
 
     // 开启场景和摄像机碰撞
     camera.checkCollisions = true;

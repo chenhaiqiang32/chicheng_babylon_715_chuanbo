@@ -5,7 +5,6 @@ export const useEditor = defineStore('editor', () => {
   const loading = ref(0);
   const setLoading = (v: number) => {
     loading.value = Math.floor(v * 100) * 0.01;
-    console.log('loading', loading.value);
   };
   const editorLayout = ref({
     left: 280,
@@ -19,7 +18,6 @@ export const useEditor = defineStore('editor', () => {
     }
   }
   init();
-
   watch(
     editorLayout,
     (newVal, oldVal) => {
@@ -29,7 +27,6 @@ export const useEditor = defineStore('editor', () => {
       deep: true,
     },
   );
-
   return {
     loading,
     setLoading,
