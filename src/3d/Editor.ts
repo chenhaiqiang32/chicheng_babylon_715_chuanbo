@@ -122,6 +122,8 @@ export class Editor extends Dispatch<EditorEvent> {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
           this.toggleMeshMask(item, false);
+        } else if(item instanceof Light) {
+          item.gizmo.scaleRatio = 0;  // 关掉灯的gizmo
         }
       });
     }
@@ -134,8 +136,9 @@ export class Editor extends Dispatch<EditorEvent> {
     if (v[0] instanceof AbstractMesh) {
       this.gizmoManager.attachToMesh(v[0]);
     } else if (v[0] instanceof Light) {
-      //@ts-ignore 灯光作用于其父节点 transformNode
-      this.gizmoManager.attachToMesh(v[0]);
+      //this.gizmoManager.attachToMesh(v[0]);
+      this.gizmoManager.attachToMesh(v[0].gizmo.attachedMesh);
+      v[0].gizmo.scaleRatio = 2;
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
       if (v[0].getChildMeshes().length > 0) this.gizmoManager.attachToNode(v[0]);
@@ -229,7 +232,7 @@ export class Editor extends Dispatch<EditorEvent> {
       scene.lights.forEach((light) => {
         const lightGizmo = new LightGizmo();
         lightGizmo.light = light;
-        lightGizmo.scaleRatio = 2;
+        lightGizmo.scaleRatio = 0;
         light.gizmo = lightGizmo;
       });
     }
@@ -371,7 +374,7 @@ export class Editor extends Dispatch<EditorEvent> {
       const layer = new UtilityLayerRenderer(scene);
       const lightGizmo = new LightGizmo(layer);
       lightGizmo.light = light;
-      lightGizmo.scaleRatio = 2;
+      lightGizmo.scaleRatio = 0;
       light.gizmo = lightGizmo;
     }
     return light;

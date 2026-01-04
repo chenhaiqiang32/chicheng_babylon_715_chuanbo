@@ -21,6 +21,7 @@ export async function serializeNode(
       name: node.name,
       visible: node.isVisible,
       children: [],
+      isIgnore: node.isIgnore
     };
     if (node instanceof Mesh) {
       serializeMeshNode(node, reuslt as CC.MeshNode, assets, serializeAssets);
@@ -84,6 +85,7 @@ export function deserializeNode(
   }
   currentNode.inheritVisibility = true;
   currentNode.isVisible = node.visible;
+  currentNode.isIgnore = node.isIgnore;
   if (node.metadata) {
     currentNode.metadata = node.metadata;
   }

@@ -35,7 +35,7 @@
                 </Grid>
             </el-tab-pane>
             <el-tab-pane label="环境贴图" @contextmenu="hdrContextMenu">
-                <Grid :data="hdrTextureList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
+                <Grid :data="envTextureList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
                     <template #default="{ item, index }">
                         <div class="grid-item" :title="item.name" draggable="true"
                             @dragstart="e => handleDragStart(e, item)">
@@ -55,7 +55,7 @@ import SVG from '@/component/common/SVG.vue';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
 import { openContextMenu } from '@/component/content-menu';
-import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
+import { renderEnvTexture, renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 import {
     getAssetsHdrContextMenuCommands, getAssetsMaterialContextMenuCommands,
     getAssetsModelContextMenuCommands, getAssetsTextureContextMenuCommands
@@ -67,7 +67,7 @@ const rowHeight = 70
 const objectList = ref<any[]>([]);
 const materialList = ref<any[]>([]);
 const textureList = ref<any[]>([]);
-const hdrTextureList = ref<any[]>([]);
+const envTextureList = ref<any[]>([]);
 
 
 
@@ -77,7 +77,8 @@ function handleDragStart(ev: DragEvent, data: any) {
 
 
 onMounted(() => {
-    RuntimeLibrary.Instance.on('onChanged', onChange)
+    RuntimeLibrary.Instance.on('onChanged', onChange);
+    RuntimeLibrary.Instance.on('onMaterialChanged', onMaterialChanged);
 })
 
 
@@ -98,19 +99,36 @@ async function onChange() {
     });
     const texstureArray = RuntimeLibrary.Instance.texture.map(x => {
         return {
-            type: 'texture',
+            type: 'envTexture',
             name: x.name,
             sourceUUID: x.sourceUUID,
+            uuid: x.uuid
         }
     });
-    const set = new Set<string>()
-    textureList.value = texstureArray.filter(x => {
-        if (set.has(x.sourceUUID)) {
-            return false
+    const set = new Set<string>();
+    const envSet = new Set<string>();
+    const textures = [];
+    const envTextures = [];
+    
+    // 分流普通贴图和环境贴图
+    for(const item of texstureArray) {
+        const ext = item.name.toLowerCase().split('.').pop();
+        const isEnvTexture = ['hdr', 'env', 'exr'].includes(ext);
+        if(isEnvTexture){
+            if(!envSet.has(item.sourceUUID)){
+                envSet.add(item.sourceUUID);
+                envTextures.push(item);
+            }
+        } else {
+            if(!set.has(item.sourceUUID)){
+                set.add(item.sourceUUID);
+                textures.push(item);
+            }
         }
-        set.add(x.sourceUUID)
-        return true
-    })
+    }
+    textureList.value = textures;
+    envTextureList.value = envTextures;
+
     for (let index = 0; index < textureList.value.length; index++) {
         const element = textureList.value[index];
         if (!element.url) {
@@ -119,16 +137,32 @@ async function onChange() {
             })
         }
     }
+    for (let index = 0; index < envTextureList.value.length; index++) {
+        const element = envTextureList.value[index];
+        if (!element.url) {
+            const ext = element.name.toLowerCase().split('.').pop();
+            element.url = await RuntimeLibrary.Instance.getEnvTextureURL(element.sourceUUID, element.uuid, ext);
+        }
+    }
 
     for (var i = 0; i < materialList.value.length; i++) {
         const material = materialList.value[i];
         const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
-        const prevUrl = await renderMaterail(mat, true, Editor.Instance.Engine);
+        const prevUrl = await renderMaterail(mat, true);
         material.previewUrl = prevUrl;
     }
     Editor.Instance.Engine.resize()
 }
 
+// 当材质属性发生改变时
+async function onMaterialChanged(e: {useCache:boolean}) {
+    for (var i = 0; i < materialList.value.length; i++) {
+        const material = materialList.value[i];
+        const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
+        const prevUrl = await renderMaterail(mat, e.useCache);
+        material.previewUrl = prevUrl;
+    }
+}
 
 
 function modelContextMenu(e: MouseEvent) {
@@ -183,7 +217,8 @@ function hdrContextMenu(e: MouseEvent) {
 }
 
 onUnmounted(() => {
-    RuntimeLibrary.Instance.off('onChanged', onChange)
+    RuntimeLibrary.Instance.off('onChanged', onChange);
+    RuntimeLibrary.Instance.off('onMaterialChanged', onMaterialChanged);
 })
 
 </script>

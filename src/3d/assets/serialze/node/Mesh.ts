@@ -8,7 +8,8 @@ export function serializeMeshNode(
   assetsManager: ICollectAssets,
   serializeAssets: boolean = true,
 ) {
-  if (mesh instanceof GaussianSplattingMesh) {
+  // 天空盒会创建一个skybox的mesh，过滤掉
+  if (mesh instanceof GaussianSplattingMesh || mesh.isIgnore) {
     return;
   }
 

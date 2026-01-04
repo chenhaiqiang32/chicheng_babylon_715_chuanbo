@@ -27,12 +27,14 @@ import { deserializeScene } from './serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import '@babylonjs/loaders/SPLAT/splatFileLoader';
 import { Timer } from '@/utils/Time';
+import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
 
 interface RuntimeAssetsEventBus {
   onChanged: void;
+  onMaterialChanged: {useCache:boolean};
 }
 
 export interface IGetBuffer {
@@ -61,6 +63,13 @@ export class RuntimeLibrary
     //@ts-ignore
     const url = URL.createObjectURL(new Blob([buffer]));
     return url;
+  }
+  // 环境贴图的缩略图url
+  async getEnvTextureURL(sourceUUID: string, uuid: string, ext: string, useCache=true) {
+    const url = await this.getTextureURL(sourceUUID);
+    const texture = await this.getTexture(uuid);
+    const envUrl = await renderEnvTexture(texture.uuid, url, ext, useCache, Editor.Instance.Engine);
+    return envUrl;
   }
   private sceneList: CC.Scene[] = [];
   private static instance: RuntimeLibrary;

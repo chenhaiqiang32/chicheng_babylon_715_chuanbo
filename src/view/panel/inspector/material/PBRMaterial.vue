@@ -25,6 +25,7 @@
       <Switch :label="$t('component.material.disableLighting')" :object="material" property="disableLighting" />
       <Switch :label="$t('component.material.pointsCloud')" :object="material" property="pointsCloud" />
       <Slider :label="$t('component.material.pointSize')" :object="material" property="pointSize" :min="0" :max="10" />
+      <Switch :label="$t('component.material.wireframe')" :object="material" property="wireframe" />
 
     </SectionField>
 
@@ -207,7 +208,10 @@ import { PBRMaterial } from "@babylonjs/core"
 const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
 const force = () => { }
 const transparencyMode = ref(0)
-
+// 创建通知父组件事件
+const emit = defineEmits<{
+  (e: 'matChanged'): void
+}>()
 watch(() => props.material, () => {
   transparencyMode.value = props.material.transparencyMode;
 }, {
@@ -222,6 +226,8 @@ const propertyChanged = inject<(property: string, newValue: any, oldValue: any, 
 
 function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
   propertyChanged?.('material.' + property, newValue, oldValue, type);
+  // 更新材质球的效果
+  RuntimeLibrary.Instance.dispatch('onMaterialChanged', {useCache: false});
 }
 
 async function changeMaterial() {
@@ -232,12 +238,14 @@ async function changeMaterial() {
         const material = await RuntimeLibrary.Instance.getMaterial(res.uuid)
         if (material) {
           props.mesh.material = material
+          emit('matChanged');
         }
       }
     },
     type: 'material'
   })
 }
+
 onMounted(() => {
 })
 </script>

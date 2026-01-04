@@ -38,6 +38,7 @@ import { Utils } from '@/utils';
 import SVG from '@/component/common/SVG.vue';
 import { ElDialog } from 'element-plus';
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 const visible = ref<boolean>(true);
 const props = defineProps<{
     close: () => void,
@@ -61,14 +62,21 @@ onMounted(() => {
     getResList()
 });
 
-function getResList() {
+async function getResList() {
     if (props.type == 'material') {
         data.value = [...RuntimeLibrary.Instance.material]
+        // 获取材质预览图
+        for(let index = 0; index < data.value.length; index++) {
+            const element = data.value[index];
+            const mat = await RuntimeLibrary.Instance.getMaterial(element.uuid);
+            element.url = await renderMaterail(mat, true);
+        }
     } else {
         const array = [...RuntimeLibrary.Instance.texture].map(x => {
             return {
                 name: x.name,
                 sourceUUID: x.sourceUUID,
+                uuid: x.uuid
             }
         })
 
@@ -83,9 +91,16 @@ function getResList() {
         for (let index = 0; index < data.value.length; index++) {
             const element = data.value[index];
             if (!element.url) {
-                RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
-                    element.url = url
-                })
+                const ext = element.name.toLowerCase().split('.').pop();
+                // 环境贴图
+                if(['hdr','exr','env'].includes(ext)){
+                    element.url = await RuntimeLibrary.Instance.getEnvTextureURL(element.sourceUUID, element.uuid, ext);
+                } else {
+                    // 普通贴图
+                    RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
+                        element.url = url
+                    })
+                }
             }
         }
     }
