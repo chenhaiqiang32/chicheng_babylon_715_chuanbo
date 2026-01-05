@@ -52,6 +52,8 @@ import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
 import { isAbstractMesh } from '@/tools/guards/nodes';
 import { isVector3 } from '@/tools/guards/math';
 import { ParticleContainer } from './core/Extension/ParticleContainer';
+import { useEditor } from '@/store/useEditor';
+
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -212,10 +214,17 @@ export class Editor extends Dispatch<EditorEvent> {
       this.scene.onPointerObservable.removeCallback(this.onPointerDonw);
       this.scene.activeCamera.detachControl();
       Editor.Instance.dispatch('onSceneChangeBefore', { scene: this.scene });
-      useScene().saveScene(this.scene);
+      await useScene().saveScene(this.scene);
       this.scene.dispose();
     }
-    const scene = await useScene().getScene(uuid);
+    const scene = new Scene(this.engine);
+    useScene().getScene(
+      uuid,
+      (percent) => {
+        useEditor().setLoading(percent);
+      },
+      scene,
+    );
     if (scene) {
       this.initGizmos(scene);
       scene.activeCamera.attachControl();
@@ -385,9 +394,7 @@ export class Editor extends Dispatch<EditorEvent> {
     let node: Node = getSceneNodeByUUid(this.scene, id, this.weakMap);
     return node;
   }
-
   gizmoLayer: UtilityLayerRenderer;
-
   /**
    * 初始化 gizmo
    */
@@ -671,14 +678,12 @@ export class Editor extends Dispatch<EditorEvent> {
       new Vector3(0, 1, -5),
       this.scene,
     );
-    camera.speed = 0.5;
+    camera.speed = 1;
     camera.inertia = 0;
 
     // 开启场景和摄像机碰撞
     camera.checkCollisions = true;
-    camera.applyGravity = true;
-    // 摄像机碰撞体范围
-    camera.ellipsoid = new Vector3(1, 1, 1);
+    camera.ellipsoid = new Vector3(0.4, 1.2, 0.4);
     nextTick(() => {
       this.activeCamera(camera);
     });

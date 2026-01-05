@@ -1,6 +1,6 @@
 <template>
     <SectionField :title="$t('component.event.title')">
-        <template #label>
+        <template #right>
             <span @click.stop="">
                 <el-dropdown>
                     <SVG name="add"></SVG>

@@ -90,7 +90,7 @@ async function openIndexDBProject(name: string) {
 
         if (sceneList.length > 0) {
             useScene().setSceneList(sceneList);
-            await Editor.Instance.setCurrentScene(sceneList[0].uuid);
+            Editor.Instance.setCurrentScene(sceneList[0].uuid);
         } else {
             const scene = await Editor.Instance.createNewScene('默认场景');
             useScene().addScene(scene);

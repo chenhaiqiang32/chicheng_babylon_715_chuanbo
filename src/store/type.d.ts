@@ -5,3 +5,5 @@ declare interface ResInfo {
   type: string;
   target?: any;
 }
+
+declare type Padding = () => Promise<void>;

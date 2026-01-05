@@ -26,6 +26,7 @@ import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import { deserializeScene } from './serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import '@babylonjs/loaders/SPLAT/splatFileLoader';
+import { Timer } from '@/utils/Time';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -163,6 +164,22 @@ export class RuntimeLibrary
     this.texture = assets.texture;
     const ids = new Set<string>();
     const padding = new Set<Promise<any>>();
+
+    this.geomertyZips = assets.geomertyZips;
+    for (const zip of this.geomertyZips) {
+      const loadZip = new Promise(async (resolve, reject) => {
+        const blob = await fileSystem.getFileArrayBuffer(zip);
+        const zipFile = await readZipAsync(blob);
+        const keys = Object.keys(zipFile);
+        for (let index = 0; index < keys.length; index++) {
+          const buffer = zipFile[keys[index]];
+          this.geomertyFile.set(keys[index], buffer);
+        }
+        resolve(null);
+      });
+      padding.add(loadZip);
+    }
+
     for (let index = 0; index < this.texture.length; index++) {
       const element = this.texture[index];
       delete element.url;
@@ -175,31 +192,16 @@ export class RuntimeLibrary
         this.textureMap.set(element.sourceUUID, file);
       });
       padding.add(loadFile);
-      loading?.(progress + (0.4 * (index + 1)) / this.texture.length);
     }
-    progress += 0.5;
-    await Promise.all(padding);
-    padding.clear();
-    ids.clear();
+
     this.material = assets.material;
-    this.geomertyZips = assets.geomertyZips;
     this.rootNodes = assets.rootNode;
-    let zipIndex = 0;
-    for (const zip of this.geomertyZips) {
-      zipIndex++;
-      const blob = await fileSystem.getFileArrayBuffer(zip);
-      const zipFile = await readZipAsync(blob);
-      const keys = Object.keys(zipFile);
-      for (let index = 0; index < keys.length; index++) {
-        const buffer = zipFile[keys[index]];
-        this.geomertyFile.set(keys[index], buffer);
-        let v = ((((index + 1) / keys.length) * zipIndex) / this.geomertyZips.length) * 0.4;
-        loading?.(progress + v);
-      }
-    }
+
+    promiseEvery([...padding], (v) => {
+      loading?.(progress + v * 0.9);
+    });
     await Promise.all(padding);
     progress = 1;
-
     const sceneText = await fileSystem.getFileText('scene.json');
     const scene = JSON.parse(sceneText) as CC.Scene[];
     loading?.(progress);
@@ -440,7 +442,7 @@ export class RuntimeLibrary
     }
   }
 
-  async addToScene(scene: Scene, rootNode: CC.ObjectNode | string) {
+  addToScene(scene: Scene, rootNode: CC.ObjectNode | string, progress?: (v: number) => void) {
     if (scene != this.currentScene) {
       this.currentScene = scene;
       this.sceneMaterial.clear();
@@ -451,15 +453,22 @@ export class RuntimeLibrary
       typeof rootNode === 'string'
         ? this.rootNodes.find((x) => x.uuid === rootNode)
         : <CC.ObjectNode>rootNode;
-    return await deserializeNode(node, scene, this, null, true);
+    const array = new Array<Padding>();
+    const objectNode = deserializeNode(node, scene, this, null, true, array) as TransformNode;
+    const groupPadding = ArrayUtils.groupArray(array, 20);
+    for (let index = 0; index < groupPadding.length; index++) {
+      groupPadding[index].map((f) => f());
+      progress?.((index + 1) / groupPadding.length);
+    }
+    return objectNode;
   }
 
-  async deserializeScene(scene: Scene, rootNode: CC.Scene, padding: Array<Promise<any>> = []) {
+  deserializeScene(scene: Scene, rootNode: CC.Scene, padding: Array<Padding> = []) {
     this.currentScene = scene;
     this.sceneMaterial.clear();
     this.sceneGeometry.clear();
     this.sceneTexture.clear();
-    return await deserializeScene(rootNode, scene.getEngine() as Engine, this, scene, padding);
+    return deserializeScene(rootNode, scene.getEngine() as Engine, this, scene, padding);
   }
   saveComplate() {
     this.tempGeometryFile.forEach((item, key) => {
@@ -509,4 +518,10 @@ function fixMaterial(node: TransformNode) {
   //   mesh.material = mat;
   //   mat.cullBackFaces = false;
   // });
+}
+
+function promiseEvery<T>(events: Promise<T>[], callback: (percent: number) => void) {
+  events.forEach((item, index) => {
+    item.then(() => callback((index + 1) / events.length));
+  });
 }

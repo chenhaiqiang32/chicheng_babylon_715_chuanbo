@@ -199,12 +199,12 @@ export class AppAssets {
       }
     }
   }
-  async deserializeScene(scene: Scene, rootNode: CC.Scene, padding: Array<Promise<any>> = []) {
+  async deserializeScene(scene: Scene, rootNode: CC.Scene, padding: Array<Padding> = []) {
     this.currentScene = scene;
     this.sceneMaterial.clear();
     this.sceneGeometry.clear();
     this.sceneTexture.clear();
-    return await deserializeScene(rootNode, scene.getEngine() as Engine, this, scene, padding);
+    return deserializeScene(rootNode, scene.getEngine() as Engine, this, scene, padding);
   }
 }
 

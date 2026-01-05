@@ -86,12 +86,12 @@ export async function serializeScene(
   return result as CC.Scene;
 }
 
-export async function deserializeScene(
+export function deserializeScene(
   sceneData: CC.Scene,
   engine: Engine,
   assets: ILoaderAssets,
   scene?: Scene,
-  padding: Array<Promise<any>> = [],
+  padding: Array<Padding> = [],
 ) {
   scene = scene ?? new Scene(engine);
   scene.runtimeAnimation = sceneData.animation as any;
@@ -121,7 +121,7 @@ export async function deserializeScene(
     scene.getPhysicsEngine()?.setGravity(new Vector3(...sceneData.physic?.gravity));
   }
   for (const node of sceneData.nodes) {
-    await deserializeNode(node, scene, assets, null, false, padding);
+    deserializeNode(node, scene, assets, null, false, padding);
   }
   if (sceneData.environment) {
     scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
