@@ -9,7 +9,7 @@
                         class="handleStartOrStopClass">
                         <span> {{ buttonText }}</span>
                     </ElButton>
-                    <ElButton title="Reset" type="primary" :style="{ width: '50%' }" @click="() => props.object.reset()"
+                    <ElButton title="Reset" type="info" :style="{ width: '50%' }" @click="() => props.object.reset()"
                         class="handleResetClass">
                         <span>Reset</span>
                     </ElButton>
@@ -317,7 +317,7 @@ const props = defineProps<{ object: IParticleSystem; }>();
 const started = ref(props.object?.isStarted());
 const version = ref(0);
 const buttonText = computed(() => started.value ? "Stop" : "Start");
-const buttonType = computed(() => started.value ? "primary" : "info");
+const buttonType = computed(() => started.value ? "info" : "info");
 const forceUpdate = () => {
     version.value++;
 };

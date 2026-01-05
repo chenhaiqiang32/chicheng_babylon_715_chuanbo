@@ -6,7 +6,7 @@
                     class="handleStartOrStopClass">
                     <span> {{ buttonText }}</span>
                 </ElButton>
-                <ElButton title="Reset" type="primary" :style="{ width: '50%' }" @click="() => reset()"
+                <ElButton title="Reset" type="info" :style="{ width: '50%' }" @click="() => reset()"
                     class="handleResetClass">
                     <span>Reset</span>
                 </ElButton>
@@ -28,7 +28,7 @@ const props = defineProps<{ object: ParticleContainer }>();
 const systems = ref<IParticleSystem[]>();
 const started = ref(false);
 const buttonText = computed(() => started.value ? "Stop" : "Start");
-const buttonType = computed(() => started.value ? "primary" : "info");
+const buttonType = computed(() => started.value ? "info" : "info");
 const refreshSystems = () => {
     systems.value = props.object?.particleSystems.systems;
     started.value = props.object.particleSystems.systems.every(sys => sys.isStarted());
