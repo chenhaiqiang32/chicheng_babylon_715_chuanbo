@@ -16,7 +16,7 @@ export class App {
   private engine: AbstractEngine;
   private static instance: App;
   private assets: AppAssets;
-  private scene: Scene;
+  scene: Scene;
   private canvas: HTMLCanvasElement;
   static get Instance(): App {
     if (!this.instance) {
@@ -30,10 +30,7 @@ export class App {
   async init(canvas: HTMLCanvasElement, gpu: boolean) {
     this.canvas = canvas;
     if (gpu) {
-      this.engine = new WebGPUEngine(canvas, {
-        adaptToDeviceRatio: true,
-        limitDeviceRatio: 2,
-      });
+      this.engine = new Engine(canvas, true);
       if (this.engine instanceof WebGPUEngine) {
         await this.engine.initAsync();
       }

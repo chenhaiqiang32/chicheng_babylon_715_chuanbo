@@ -13,6 +13,7 @@ import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Utils } from '@/utils';
 import { addParticleSystem } from '@/tools/particles/particles';
 import { importSkyboxTexture } from '@/3d/core/utils/EnvSkybox';
+import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
 
 /**
  * 获取层级面板的右键菜单配置
@@ -148,6 +149,30 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
         },
       ],
     },
+    // 对节点进行操作
+    ...(parentNode ? [
+    {
+      name: '删除',
+      callback: () => {
+        nodeCRUD().deleteNode(parentNode);
+      },
+    },
+    {
+      name: '复制',
+      callback: async () => {
+        const serializedNode = await nodeCRUD().copyNode(parentNode);
+        useScene().currentCopy = serializedNode;
+      }
+    },
+    ] : []),
+    ...(useScene().currentCopy ? [
+    {
+      name: '粘贴',
+      callback: async () => {
+        const clone = await nodeCRUD().pasteNode(useScene().currentCopy, parentNode || null);
+      }
+    }
+    ] : []),
   ];
 }
 

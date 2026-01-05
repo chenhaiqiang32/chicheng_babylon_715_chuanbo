@@ -2,7 +2,7 @@
 
 
     <Field :title="title">
-        <el-popover width="350" v-if="textureUrl" :disabled="noPopover" placement="left" popper-class="texture-popover"
+        <el-popover width="350" v-if="previewTemporaryUrl" :disabled="noPopover" placement="left" popper-class="texture-popover"
             transition="el-fade-in" :offset="8">
             <template #reference>
                 <div class="texture-preview-inner" @drop="handleDrop" @dragover="e => e.preventDefault()">
@@ -229,10 +229,9 @@ const handleDrop = (ev: DragEvent) => {
 
 const computeTemporaryPreview = async () => {
     const texture: any = getObjectValue(props.object, props.property)
-    if (!texture?.url || getExtname(texture.url).toLowerCase() === ".exr") return
+    if (!texture?.url) return
     previewError.value = false
     previewTemporaryUrl.value = texture.url
-
 }
 
 
