@@ -144,8 +144,10 @@ async function saveProject() {
 function importModel() {
     Utils.chooseFile('.glb,.fbx').then(async (fileList) => {
         if (fileList[0]) {
-            const node = await RuntimeLibrary.Instance.importMesh(fileList[0]);
-            await RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, node, (v) => {
+            const node = await RuntimeLibrary.Instance.importMesh(fileList[0], (v) => {
+                useEditor().setLoading(v);
+            });
+            RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, node, (v) => {
                 useEditor().setLoading(v);
             });
             RuntimeLibrary.Instance.dispatch('onChanged');

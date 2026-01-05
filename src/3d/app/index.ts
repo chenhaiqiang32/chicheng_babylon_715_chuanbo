@@ -1,6 +1,8 @@
 import {
   AbstractEngine,
   ActionManager,
+  Color3,
+  Color4,
   Engine,
   ExecuteCodeAction,
   Mesh,
@@ -66,8 +68,11 @@ export class App {
     }
     const sceneNode = this.assets.scene[0];
     const scene = new Scene(this.engine);
-    await this.assets.deserializeScene(scene, sceneNode);
+    const padding = new Array<Padding>();
+    this.assets.deserializeScene(scene, sceneNode, padding);
+    await Promise.all(padding.map((p) => p()));
     this.scene = scene;
+    scene.clearColor = new Color4(1, 1, 1, 1);
     scene.activeCamera.attachControl(this.canvas, true);
     this.registerAction();
   }

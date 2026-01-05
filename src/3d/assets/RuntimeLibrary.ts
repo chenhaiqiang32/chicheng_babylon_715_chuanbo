@@ -25,6 +25,7 @@ import { deserializeScene } from './serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import '@babylonjs/loaders/SPLAT/splatFileLoader';
 import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
+import { Timer } from '@/utils/Time';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -107,11 +108,15 @@ export class RuntimeLibrary
     return this.fileSystem.getFileArrayBuffer(uuid, TEXTURE);
   }
 
-  async importMesh(file: File) {
+  async importMesh(file: File, progressCallback?: (v: number) => void) {
     if (!this.resScene) {
       this.resScene = Editor.Instance.newResScene();
     }
-    const data = await ImportMeshAsync(file, this.resScene, {});
+    const data = await ImportMeshAsync(file, this.resScene, {
+      onProgress: (v) => {
+        progressCallback?.((v.loaded / v.total) * 0.5);
+      },
+    });
     const all = [...data.meshes, ...data.transformNodes];
     let root = all.find((x) => x.name == '__root__');
     if (!root) {
@@ -125,7 +130,16 @@ export class RuntimeLibrary
     }
     root.name = file.name.split('.')[0];
     fixMaterial(root);
-    const node = await serializeNode(root, this, true);
+    const padding: Array<Padding> = [];
+    const node = serializeNode(root, this, padding);
+    const groupPadding = ArrayUtils.groupArray(padding, Math.ceil(padding.length / 20));
+    for (let index = 0; index < groupPadding.length; index++) {
+      const group = groupPadding[index].map((f) => f());
+      await Promise.all(group);
+      await Timer.sleep(0);
+      progressCallback(((index + 1) / groupPadding.length) * 0.5 + 0.5);
+    }
+    progressCallback(1);
     this.rootNodes.push(node);
     return node;
   }
@@ -158,7 +172,6 @@ export class RuntimeLibrary
     }
     const assets = JSON.parse(assetsText) as any;
     this.texture = assets.texture;
-    const ids = new Set<string>();
     const padding = new Set<Promise<any>>();
     this.material = assets.material;
     this.rootNodes = assets.rootNode;
@@ -278,7 +291,7 @@ export class RuntimeLibrary
         //@ts-ignore
         if (material[key] instanceof Texture) {
           if (!key.startsWith('_') && key.indexOf('environment') == -1) {
-            this.addTexture(value);
+            await this.addTexture(value);
             data[key + '_MAP'] = value.uuid;
             delete data[key];
           }
@@ -294,7 +307,7 @@ export class RuntimeLibrary
           //@ts-ignore
           if (clearCoat[key] instanceof Texture) {
             if (!key.startsWith('_') && key.indexOf('environment') == -1) {
-              this.addTexture(value);
+              await this.addTexture(value);
               data['clearCoat.' + key + '_MAP'] = value.uuid;
               delete clearCoatData[key];
             }
@@ -310,6 +323,7 @@ export class RuntimeLibrary
       this.material.push(data);
     }
   }
+  private geometryArray: Array<Geometry> = [];
   async addGeometry(geometry: Geometry) {
     if (!geometry.uuid) {
       geometry.uuid = ID.generateUUID();
@@ -317,6 +331,7 @@ export class RuntimeLibrary
     if (this.geomertyIDs.has(geometry.uuid)) {
       return;
     }
+    this.geometryArray.push(geometry);
     const data = geometry.serializeVerticeData();
     const buffer = vertexToBuffer(data);
     await this.fileSystem.saveFile(geometry.uuid, buffer, GEOMETRY);
@@ -327,6 +342,10 @@ export class RuntimeLibrary
     if (this.sceneGeometry.has(uuid)) {
       return Promise.resolve(this.sceneGeometry.get(uuid) as Geometry);
     } else {
+      const tempGeo = this.geometryArray.find((x) => x.uuid == uuid);
+      if (tempGeo) {
+        return Promise.resolve(tempGeo);
+      }
       let buffer = await this.fileSystem.getFileArrayBuffer(uuid, GEOMETRY);
       if (!buffer) {
         return Promise.reject(`Failed to load geometry from ${uuid}`);

@@ -15,7 +15,7 @@ onMounted(async () => {
         await App.Instance.init(canvas.value, true);
     }
     const assets = new AppAssets();
-    await assets.loadFromUrl('publish (10).zip')
+    await assets.loadFromUrl('publish.zip')
     App.Instance.setAssetsLibrary(assets);
     await App.Instance.setScene();
 

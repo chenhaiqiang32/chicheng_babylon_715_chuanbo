@@ -2,31 +2,19 @@ import { ParticleSystemSet, Quaternion, type TransformNode } from '@babylonjs/co
 import type { CC } from '../../BaseRes';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 
-export async function serializeTransformNode(
+export function serializeTransformNode(
   trans: TransformNode,
   node: CC.TransformNode,
   assetsManager: ICollectAssets,
-): Promise<Partial<CC.TransformNode>> {
+): CC.TransformNode {
   try {
     node.position = trans.position.asArray();
     node.rotation = trans.rotationQuaternion?.asArray() || trans.rotation?.asArray() || [];
     node.scale = trans.scaling?.asArray();
-    if (trans.particleSystem) {
-      node.particleSet = trans.particleSystem.serialize();
-
-      for (let index = 0; index < trans.particleSystem.systems.length; index++) {
-        const p = trans.particleSystem.systems[index];
-        if (p.particleTexture) {
-          await assetsManager.addTexture(p.particleTexture);
-        }
-        node.particleSet.systems[index].particleTextureMap = p.particleTexture?.uuid;
-        delete node.particleSet.systems[index].particleTexture;
-      }
-    }
     return node;
   } catch (error) {
     console.error('序列化变换节点时出错:', node);
-    return {};
+    return null;
   }
 }
 export function deserializeTransformNode(

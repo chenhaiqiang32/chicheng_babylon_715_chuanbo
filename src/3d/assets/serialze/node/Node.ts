@@ -7,11 +7,11 @@ import { deserializeLight, serializeLight } from './Light';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 import { ID } from '@/utils/id';
 
-export async function serializeNode(
+export function serializeNode(
   node: TransformNode,
   assets: ICollectAssets,
-  serializeAssets: boolean,
-): Promise<CC.ObjectNode> {
+  padding: Array<Padding> = [],
+): CC.ObjectNode {
   try {
     if (!node.uuid) {
       node.uuid = ID.generateUUID();
@@ -21,10 +21,10 @@ export async function serializeNode(
       name: node.name,
       visible: node.isVisible,
       children: [],
-      isIgnore: node.isIgnore
+      isIgnore: node.isIgnore,
     };
     if (node instanceof Mesh) {
-      serializeMeshNode(node, reuslt as CC.MeshNode, assets, serializeAssets);
+      serializeMeshNode(node, reuslt as CC.MeshNode, assets, padding);
     } else if (node instanceof Camera) {
       serializeCamera(node, reuslt as CC.CameraNode, assets);
     } else if (node instanceof Light) {
@@ -33,7 +33,7 @@ export async function serializeNode(
       reuslt.type = 'object';
     }
     if (node instanceof TransformNode) {
-      await serializeTransformNode(node, reuslt as CC.TransformNode, assets);
+      serializeTransformNode(node, reuslt as CC.TransformNode, assets);
     }
     if (node.metadata) {
       reuslt.metadata = node.metadata;
@@ -43,7 +43,7 @@ export async function serializeNode(
 
     for (let index = 0; index < children.length; index++) {
       const element = children[index];
-      const node = await serializeNode(element as TransformNode, assets, serializeAssets);
+      const node = serializeNode(element as TransformNode, assets, padding);
       reuslt.children.push(node);
     }
 
