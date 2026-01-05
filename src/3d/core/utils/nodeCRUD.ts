@@ -78,10 +78,28 @@ export function nodeCRUD() {
         Editor.Instance.Scene.getNodes().find((x) =>x.uuid == node.uuid)?.dispose();
     }
 
+    /**
+     * 更新 Node 的新层级
+     */
+    function updateNodeHierarchy(node:Node, newParent:Node | null, type:"before" | "after" | "inner") {
+        if(type == 'before') {
+            // @ts-ignore
+            node.setParent(newParent.parent);
+        } else if(type == 'after') {
+            // @ts-ignore
+            node.setParent(newParent.parent);
+        } else if(type == 'inner') {
+            // inner 不需要考虑顺序
+            // @ts-ignore
+            node.setParent(newParent);
+        }
+    }
+
     
     return {
         copyNode,
         pasteNode,
         deleteNode,
+        updateNodeHierarchy,
     }
 }

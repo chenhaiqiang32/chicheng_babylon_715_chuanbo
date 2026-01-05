@@ -16,7 +16,33 @@ export async function importSkyboxTexture(){
     for(let i=0; i<fileList.length; i++){
         const item = fileList[i];
         await RuntimeLibrary.Instance.importTexture(item);
+        RuntimeLibrary.Instance.addTexture
     }
+}
+
+/**
+ * 环境贴图只需要将贴图文件解析为对应的BaseTexture即可
+ */
+export async function loadEnv(scene:Scene, name:string, sourceUUID: string):Promise<BaseTexture> {
+    if(name == undefined || sourceUUID == undefined) return;
+    const ext = name.toLowerCase().split('.').pop();
+    const url = await RuntimeLibrary.Instance.getTextureURL(sourceUUID);
+    let ret = null;
+    switch(ext){
+        case 'hdr':
+            ret = await loadHdrSkybox(scene, url, 1024);
+            break;
+        case 'exr':
+            ret = await loadExrSkybox(scene, url, 1024);
+            break;
+        case 'env':
+            ret = await loadEnvSkybox(scene, url);
+            break;
+        default:
+            console.error(`Unsupported file extension: ${ext}`);
+            break;
+    }
+    return ret;
 }
 
 /**

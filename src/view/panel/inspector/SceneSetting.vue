@@ -4,7 +4,7 @@
             <!-- <Color :label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor" /> -->
             <Color :label="$t('component.sceneSetting.ambientColor')" :object="scene" property="ambientColor" />
             <Field :title="$t('component.sceneSetting.backgroundType')">
-                <el-select v-model="bgType"  @change="onBgTypeChange" style="margin-left: auto; width: 100px;">
+                <el-select v-model="bgType" style="margin-left: auto; width: 100px;">
                     <el-option :label="'背景贴图'"      :value = 1 />
                     <el-option :label="'图片'"          :value= 2 />
                     <el-option :label="'全景图'"        :value= 3 />
@@ -22,7 +22,7 @@
 
         <SectionField :title="$t('component.sceneSetting.environment')">
             <Texture :acceptCubeTexture="true" :title="$t('component.sceneSetting.environmentTexture')" :object="scene"
-                property="environmentTexture" @change="force" />
+                property="environmentTexture" @change="onSelectEnvTex" />
             <Slider :label="$t('component.sceneSetting.iblIntensity')" :object="scene" property="iblIntensity"
                 @change="force" :min="0" :max="5" />
         </SectionField>
@@ -323,12 +323,14 @@ import { Editor } from "@/3d/Editor";
 import Field from "@/component/common/Field.vue";
 import Slider from "@/component/base/Slider.vue";
 import { onMounted } from "vue";
-import { closeEnv, load360ImageBG, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { closeEnv, load360ImageBG, loadEnv, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary";
 
 
 // const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
 
 const force = () => {
+    console.log(Editor.Instance.Scene.environmentTexture);
 
 };
 
@@ -552,8 +554,10 @@ const toggleVLS = () => {
 //     }
 // };
 
+// ----- 背景
 const onSelectBgTexture = async (tex:BJS_Texture) => {
     await loadSkyBox(Editor.Instance.Scene, tex.name, tex.sourceUUID);
+    Editor.Instance.Scene.bgTexture.url = tex.url;
     saveBgType(1);
 }
 
@@ -577,8 +581,12 @@ const saveBgType = (v: number) => {
     bgType.value = v;
 }
 
-
-const onBgTypeChange = (v: number) => {
+// ----- 环境
+const onSelectEnvTex = async (tex:BJS_Texture) => {
+    const envTex = await loadEnv(Editor.Instance.Scene, tex.name, tex.sourceUUID);
+    envTex.name = tex.name;
+    envTex.url = tex.url;
+    Editor.Instance.Scene.environmentTexture = envTex;
 }
 
 const onFogModeChange = (v: number) => {

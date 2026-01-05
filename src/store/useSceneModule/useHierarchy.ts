@@ -28,27 +28,38 @@ export function useHierarchyModule() {
   const hierarchy = ref<HierarchyNode[]>([]);
   // uuid -> HeirarchyNode 映射
   const hierarchyMap = ref<Map<string, HierarchyNode>>(new Map());
+  // uuid -> BJS.Node 映射
+  const nodeMap:Map<string, Node> = new Map();
 
   // 递归构建映射
-  function buildMap(nodes: HierarchyNode[], map: Map<string, HierarchyNode>) {
+  function buildMap(nodes: HierarchyNode[]) {
     for (const node of nodes) {
-      map.set(node.id, node);
+      hierarchyMap.value.set(node.id, node);
       if (node.children) {
-        buildMap(node.children, map);
+        buildMap(node.children);
       }
+    }
+  }
+
+  function buildBJSNodeMap(nodes: Node[]) {
+    for (const node of nodes) {
+      nodeMap.set(node.uuid, node);
+      buildBJSNodeMap(node.getChildren());
     }
   }
 
   function setHierarchy(rootNodes: Node[]) {
     hierarchy.value = rootNodes.map(buildHierarchy);
     hierarchyMap.value.clear();
+    nodeMap.clear();
     rootNodes.forEach((x) => {
       if (x.name == 'SubemitterSystemEmitter') {
         x.isIgnore = true;
       }
     });
     hierarchy.value = rootNodes.filter((node) => !node.isIgnore).map(buildHierarchy);
-    buildMap(hierarchy.value, hierarchyMap.value);
+    buildMap(hierarchy.value);
+    buildBJSNodeMap(rootNodes);
   }
 
   function addHierarchy(node: Node, parent: Node | null) {
@@ -85,6 +96,13 @@ export function useHierarchyModule() {
     hierarchyMap.value.delete(node.uuid);
   }
 
+  /**
+   * 根据传入的uuid返回BJS.Node
+   */
+  function getNode(nodeUuid:string):Node {
+    return nodeMap.get(nodeUuid);
+  }
+
   return {
     // state
     hierarchy,
@@ -94,5 +112,6 @@ export function useHierarchyModule() {
     setHierarchy,
     addHierarchy,
     removeHierarchy,
+    getNode,
   }
 }
