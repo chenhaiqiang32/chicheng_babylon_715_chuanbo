@@ -27,7 +27,8 @@ async function handleDrop(ev: DragEvent) {
     } else if (data.type === "material") {
         await createMaterial(ev, data.uuid)
     } else if (data.type === "envTexture") {
-        await loadSkyBox(Editor.Instance.Scene, data.name, data.sourceUUID);
+        const url = await RuntimeLibrary.Instance.getTextureURL(data.sourceUUID);
+        await loadSkyBox(Editor.Instance.Scene, data.name, url, data.sourceUUID);
     } else{
         console.log(data);
     }

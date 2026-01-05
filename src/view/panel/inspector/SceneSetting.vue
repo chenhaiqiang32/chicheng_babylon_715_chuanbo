@@ -556,7 +556,8 @@ const toggleVLS = () => {
 
 // ----- 背景
 const onSelectBgTexture = async (tex:BJS_Texture) => {
-    await loadSkyBox(Editor.Instance.Scene, tex.name, tex.sourceUUID);
+    const url = await RuntimeLibrary.Instance.getTextureURL(tex.sourceUUID);
+    await loadSkyBox(Editor.Instance.Scene, tex.name, url, tex.sourceUUID);
     Editor.Instance.Scene.bgTexture.url = tex.url;
     saveBgType(1);
 }

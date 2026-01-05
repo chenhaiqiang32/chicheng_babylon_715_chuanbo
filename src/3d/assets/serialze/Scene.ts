@@ -60,7 +60,7 @@ export async function serializeScene(
   };
   // 用策略模式根据背景类型不同，执行不同的序列化
   console.log(scene?.bgType);
-  result.background = await BackgroundEnvFactory.createFromScene(scene?.bgType).serialize(scene);
+  result.background = await BackgroundEnvFactory.createFromScene(scene?.bgType).serialize(scene, assets);
   result.iblIntensity = scene.iblIntensity;
   result.nodes = [];
   for (let index = 0; index < scene.rootNodes.length; index++) {
@@ -133,7 +133,7 @@ export function deserializeScene(
   }
   if(sceneData.background) {
     scene.bgType = sceneData.background.type;
-    BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene, sceneData);
+    BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene, sceneData, assets);
   }
   if (sceneData.defaultRenderingPipeline) {
     parseDefaultRenderingPipeline(sceneData.defaultRenderingPipeline, scene);

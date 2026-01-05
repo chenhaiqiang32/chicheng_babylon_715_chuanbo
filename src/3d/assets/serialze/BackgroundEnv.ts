@@ -1,30 +1,31 @@
 import { Color4, Scene, Texture } from "@babylonjs/core";
 import { CC } from "../BaseRes";
-import { RuntimeLibrary } from "../RuntimeLibrary";
 import { load360ImageBG, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { ICollectAssets, ILoaderAssets } from "../AssetsManager";
 
 /**
  * 背景环境序列化
  */
 export interface BackgroundEnv {
-    serialize(scene: Scene) : Promise<CC.Scene['background']>;
-    deserialize(scene: Scene, data: CC.Scene): void;
+    serialize(scene: Scene, assetsManager: ICollectAssets) : Promise<CC.Scene['background']>;
+    deserialize(scene: Scene, data: CC.Scene, assetsManager: ILoaderAssets): void;
 }
 
 export class NoneBgEnv implements BackgroundEnv {
-    serialize(scene: Scene): Promise<CC.Scene['background']> {
+    serialize(scene: Scene, assetsManager: ICollectAssets): Promise<CC.Scene['background']> {
         return Promise.resolve({
             type: 0,
             texture: null,
             clearColor: [],
         })
     }
-    deserialize(scene: Scene, sceneData: CC.Scene){
+    deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets){
     }
 }
 
+// 环境贴图
 export class TextureBgEnv implements BackgroundEnv {
-    serialize(scene: Scene): Promise<CC.Scene['background']> {
+    serialize(scene: Scene, assetsManager: ICollectAssets): Promise<CC.Scene['background']> {
         return Promise.resolve({
             type: 1,
             texture: {
@@ -35,17 +36,20 @@ export class TextureBgEnv implements BackgroundEnv {
             clearColor: [],
         })
     }
-    deserialize(scene: Scene, sceneData: CC.Scene){
+    deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets){
         if(sceneData.background.texture){
-            console.log(sceneData.background.texture);
-            loadSkyBox(scene, sceneData.background.texture.name, sceneData.background.texture.sourceUUID);
+            const texture = sceneData.background.texture;
+            assetsManager.getTextureURL(texture.sourceUUID).then((url) => {
+                loadSkyBox(scene, sceneData.background.texture.name, url, texture.sourceUUID);
+            })
         }
     }
 }
 
+// 纯图片
 export class ImageBgEnv implements BackgroundEnv {
-    async serialize(scene: Scene): Promise<CC.Scene["background"]> {
-        const data = await RuntimeLibrary.Instance.addTexture(scene.bgTexture);
+    async serialize(scene: Scene, assetsManager: ICollectAssets): Promise<CC.Scene["background"]> {
+        const data:any = await assetsManager.addTexture(scene.bgTexture);
         return {
             type: 2,
             texture: {
@@ -56,19 +60,20 @@ export class ImageBgEnv implements BackgroundEnv {
             clearColor: [],
         }
     }
-    deserialize(scene: Scene, sceneData: CC.Scene){
+    deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets){
         const uuid = sceneData.background.texture.uuid;
         if(uuid){
-            RuntimeLibrary.Instance.getTexture(uuid).then((texture) => {
+            assetsManager.getTexture(uuid).then((texture) => {
                 loadImageBG(texture as Texture, scene);
             })
         }
     }
 }
 
+// 全景图
 export class Image360BgEnv implements BackgroundEnv {
-    async serialize(scene: Scene) : Promise<CC.Scene["background"]> {
-        const data = await RuntimeLibrary.Instance.addTexture(scene.bgTexture);
+    async serialize(scene: Scene, assetsManager: ICollectAssets) : Promise<CC.Scene["background"]> {
+        const data:any = await assetsManager.addTexture(scene.bgTexture);
         return {
             type: 3,
             texture: {
@@ -79,18 +84,19 @@ export class Image360BgEnv implements BackgroundEnv {
             clearColor: [],
         }
     }
-    deserialize(scene: Scene, sceneData: CC.Scene): void {
+    deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets): void {
         const uuid = sceneData.background.texture.uuid;
         if(uuid){
-            RuntimeLibrary.Instance.getTexture(uuid).then((texture) => {
+            assetsManager.getTexture(uuid).then((texture) => {
                 load360ImageBG(texture as Texture, scene);
             })
         }
     }
 }
 
+// 纯颜色
 export class ColorBgEnv implements BackgroundEnv {
-    serialize(scene: Scene): Promise<CC.Scene['background']> {
+    serialize(scene: Scene, assetsManager: ICollectAssets): Promise<CC.Scene['background']> {
         return Promise.resolve({
             type: 4,
             texture: null,

@@ -16,17 +16,15 @@ export async function importSkyboxTexture(){
     for(let i=0; i<fileList.length; i++){
         const item = fileList[i];
         await RuntimeLibrary.Instance.importTexture(item);
-        RuntimeLibrary.Instance.addTexture
     }
 }
 
 /**
  * 环境贴图只需要将贴图文件解析为对应的BaseTexture即可
  */
-export async function loadEnv(scene:Scene, name:string, sourceUUID: string):Promise<BaseTexture> {
-    if(name == undefined || sourceUUID == undefined) return;
+export async function loadEnv(scene:Scene, name:string, url: string):Promise<BaseTexture> {
+    if(name == undefined || url == undefined) return;
     const ext = name.toLowerCase().split('.').pop();
-    const url = await RuntimeLibrary.Instance.getTextureURL(sourceUUID);
     let ret = null;
     switch(ext){
         case 'hdr':
@@ -48,12 +46,10 @@ export async function loadEnv(scene:Scene, name:string, sourceUUID: string):Prom
 /**
  * 将环境贴图应用到当前场景的天空盒上
  * @param name 环境贴图的名字，需要根据其后缀判断贴图类型
- * @param sourceUUID 环境贴图资源在RuntimeLibrary里面的uuid
  */
-export async function loadSkyBox(scene:Scene, name:string, sourceUUID:string){
-    if(name == undefined || sourceUUID == undefined) return;
+export async function loadSkyBox(scene:Scene, name:string, url:string, sourceUUID: string){
+    if(name == undefined || url == undefined) return;
     const ext = name.toLowerCase().split('.').pop();
-    const url = await RuntimeLibrary.Instance.getTextureURL(sourceUUID);
     let skyBox;
     switch(ext){
         case 'hdr':
