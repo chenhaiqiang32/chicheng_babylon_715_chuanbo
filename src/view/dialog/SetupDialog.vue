@@ -53,6 +53,7 @@ const { loading } = storeToRefs(useEditor());
 
 async function createProject() {
     try {
+        await EditorFileSystem.Instance.check();
         const scene = await Editor.Instance.createNewScene('默认场景');
         await useScene().addScene(scene);
         Editor.Instance.setCurrentScene(scene.uuid);
@@ -64,7 +65,7 @@ async function createProject() {
 async function openLocalProject() {
     try {
         await EditorFileSystem.Instance.init(FileMode.LOCAL);
-        const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file, (v) => {
+        const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
             console.log(v);
         });
         if (sceneList.length > 0) {
@@ -84,7 +85,7 @@ async function openLocalProject() {
 async function openIndexDBProject(name: string) {
     try {
         await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, name);
-        const sceneList = await RuntimeLibrary.Instance.loadAssets(EditorFileSystem.Instance.file, (v) => {
+        const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
             loading.value = v;
         });
 

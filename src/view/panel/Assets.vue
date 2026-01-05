@@ -55,7 +55,7 @@ import SVG from '@/component/common/SVG.vue';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
 import { openContextMenu } from '@/component/content-menu';
-import { renderEnvTexture, renderMaterail } from '@/tools/preview/materialPreviewGenerator';
+import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 import {
     getAssetsHdrContextMenuCommands, getAssetsMaterialContextMenuCommands,
     getAssetsModelContextMenuCommands, getAssetsTextureContextMenuCommands
@@ -79,6 +79,7 @@ function handleDragStart(ev: DragEvent, data: any) {
 onMounted(() => {
     RuntimeLibrary.Instance.on('onChanged', onChange);
     RuntimeLibrary.Instance.on('onMaterialChanged', onMaterialChanged);
+    // onChange()
 })
 
 
@@ -109,18 +110,18 @@ async function onChange() {
     const envSet = new Set<string>();
     const textures = [];
     const envTextures = [];
-    
+
     // 分流普通贴图和环境贴图
-    for(const item of texstureArray) {
+    for (const item of texstureArray) {
         const ext = item.name.toLowerCase().split('.').pop();
         const isEnvTexture = ['hdr', 'env', 'exr'].includes(ext);
-        if(isEnvTexture){
-            if(!envSet.has(item.sourceUUID)){
+        if (isEnvTexture) {
+            if (!envSet.has(item.sourceUUID)) {
                 envSet.add(item.sourceUUID);
                 envTextures.push(item);
             }
         } else {
-            if(!set.has(item.sourceUUID)){
+            if (!set.has(item.sourceUUID)) {
                 set.add(item.sourceUUID);
                 textures.push(item);
             }
@@ -145,23 +146,23 @@ async function onChange() {
         }
     }
 
-    for (var i = 0; i < materialList.value.length; i++) {
-        const material = materialList.value[i];
-        const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
-        const prevUrl = await renderMaterail(mat, true);
-        material.previewUrl = prevUrl;
-    }
+    // for (var i = 0; i < materialList.value.length; i++) {
+    //     const material = materialList.value[i];
+    //     const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
+    //     const prevUrl = await renderMaterail(mat, true);
+    //     material.previewUrl = prevUrl;
+    // }
     Editor.Instance.Engine.resize()
 }
 
 // 当材质属性发生改变时
-async function onMaterialChanged(e: {useCache:boolean}) {
-    for (var i = 0; i < materialList.value.length; i++) {
-        const material = materialList.value[i];
-        const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
-        const prevUrl = await renderMaterail(mat, e.useCache);
-        material.previewUrl = prevUrl;
-    }
+async function onMaterialChanged(e: { useCache: boolean }) {
+    // for (var i = 0; i < materialList.value.length; i++) {
+    //     const material = materialList.value[i];
+    //     const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
+    //     const prevUrl = await renderMaterail(mat, e.useCache);
+    //     material.previewUrl = prevUrl;
+    // }
 }
 
 

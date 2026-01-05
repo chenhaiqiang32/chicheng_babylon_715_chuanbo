@@ -4,12 +4,17 @@ import { LocalFileSystem } from './LocalFileSystem';
 import { useDialog } from '@/view/dialog';
 import ChooseSaveModeDialog from '@/view/dialog/ChooseSaveModeDialog.vue';
 import { useIndexDBProject } from '@/store/useIndexDBProject';
+import { FSFileSystem } from './FSFileSystem';
 
 export interface IFile {
   name: string;
+  // 选择默认文件夹
   init(arg?: string): Promise<void>;
+  // 获取 二进制数据
   getFileArrayBuffer(name: string, dir?: string): Promise<Uint8Array>;
+  // 获取 文本数据
   getFileText(name: string, dir?: string): Promise<string>;
+  // 保存文件
   saveFile(name: string, data: FileSystemWriteChunkType, dir?: string): Promise<void>;
 }
 
@@ -17,6 +22,7 @@ export enum FileMode {
   NONE,
   LOCAL,
   INDEXEDDB,
+  UPLOAD,
   OSS,
 }
 
@@ -38,8 +44,11 @@ export class EditorFileSystem {
   async init(mode: FileMode, arg?: string) {
     switch (mode) {
       case FileMode.LOCAL:
-        this.file = new LocalFileSystem();
+        this.file = new FSFileSystem();
         break;
+      // case FileMode.UPLOAD:
+      //   this.file = new UploadFileSystem();
+      //   break;
       case FileMode.INDEXEDDB:
         this.file = new IndexDBFileSystem();
         break;

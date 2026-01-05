@@ -7,17 +7,15 @@ import {
   Scene,
   PBRMaterial,
   Texture,
-  Tools,
   SceneLoader,
-  StandardMaterial,
   HDRCubeTexture,
 } from '@babylonjs/core';
 import { Editor } from '../Editor';
 import { Dispatch } from '@/utils/dispatch';
 import { deserializeNode, serializeNode } from './serialze/node/Node';
 import { CC } from './BaseRes';
-import { readZip, readZipAsync, ZipFile, zipFiles } from '@/utils/Zip';
-import { IFile } from './file/IFile';
+import { ZipFile } from '@/utils/Zip';
+import { EditorFileSystem, IFile } from './file/IFile';
 import { ICollectAssets, ILoaderAssets } from './AssetsManager';
 import { Geometry, TransformNode } from '@babylonjs/core/Meshes';
 import { ID } from '@/utils/id';
@@ -26,7 +24,6 @@ import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import { deserializeScene } from './serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import '@babylonjs/loaders/SPLAT/splatFileLoader';
-import { Timer } from '@/utils/Time';
 import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 
 const TEXTURE = 'texture';
@@ -34,7 +31,7 @@ const GEOMETRY = 'geometry';
 
 interface RuntimeAssetsEventBus {
   onChanged: void;
-  onMaterialChanged: {useCache:boolean};
+  onMaterialChanged: { useCache: boolean };
 }
 
 export interface IGetBuffer {
@@ -53,19 +50,13 @@ export class RuntimeLibrary
       return '';
     }
 
-    let buffer = this.textureMap.get(sourceUUID);
-    if (!buffer) {
-      buffer = this.tempTextureFile.get(sourceUUID);
-    }
-    if (!buffer) {
-      buffer = await this.fileSystem.getFileArrayBuffer(sourceUUID, TEXTURE);
-    }
-    //@ts-ignore
+    let buffer = await this.fileSystem.getFileArrayBuffer(sourceUUID, TEXTURE);
+    ///@ts-ignore
     const url = URL.createObjectURL(new Blob([buffer]));
     return url;
   }
   // 环境贴图的缩略图url
-  async getEnvTextureURL(sourceUUID: string, uuid: string, ext: string, useCache=true) {
+  async getEnvTextureURL(sourceUUID: string, uuid: string, ext: string, useCache = true) {
     const url = await this.getTextureURL(sourceUUID);
     const texture = await this.getTexture(uuid);
     const envUrl = await renderEnvTexture(texture.uuid, url, ext, useCache, Editor.Instance.Engine);
@@ -77,7 +68,14 @@ export class RuntimeLibrary
 
   private resScene: Scene;
 
-  private fileSystem: IFile;
+  private _fileSystem: IFile;
+
+  get fileSystem() {
+    if (!this._fileSystem) {
+      this._fileSystem = EditorFileSystem.Instance.file;
+    }
+    return this._fileSystem;
+  }
 
   static get Instance() {
     if (!RuntimeLibrary.instance) {
@@ -85,6 +83,7 @@ export class RuntimeLibrary
     }
     return this.instance;
   }
+
   constructor() {
     super();
     Texture.UseSerializedUrlIfAny = true;
@@ -102,21 +101,9 @@ export class RuntimeLibrary
   }
 
   getGeoBuffer(uuid: string): Promise<Uint8Array> {
-    if (this.tempGeometryFile.has(uuid)) {
-      return Promise.resolve(this.tempGeometryFile.get(uuid));
-    }
-    if (this.geomertyFile.has(uuid)) {
-      return Promise.resolve(this.geomertyFile.get(uuid));
-    }
     return this.fileSystem.getFileArrayBuffer(uuid, GEOMETRY);
   }
   getTextureBuffer(uuid: string): Promise<Uint8Array> {
-    if (this.tempTextureFile.has(uuid)) {
-      return Promise.resolve(this.tempTextureFile.get(uuid));
-    }
-    if (this.textureMap.has(uuid)) {
-      return Promise.resolve(this.textureMap.get(uuid));
-    }
     return this.fileSystem.getFileArrayBuffer(uuid, TEXTURE);
   }
 
@@ -154,16 +141,15 @@ export class RuntimeLibrary
     texture.name = element.name;
     texture.sourceUUID = ID.generateUUID();
     const buffer = await element.arrayBuffer();
-    this.tempTextureFile.set(texture.sourceUUID, new Uint8Array(buffer));
+    this.fileSystem.saveFile(texture.sourceUUID, new Uint8Array(buffer), TEXTURE);
     const data = await this.addTexture(texture);
     data.url = url;
     return texture;
   }
 
-  async loadAssets(fileSystem: IFile, loading?: (v: number) => void) {
+  async loadAssets(loading?: (v: number) => void) {
     let progress = 0.1;
-    this.fileSystem = fileSystem;
-    const assetsText = await fileSystem.getFileText('assets.json');
+    const assetsText = await this.fileSystem.getFileText('assets.json');
     loading?.(progress);
     if (!assetsText) {
       progress = 1;
@@ -174,36 +160,6 @@ export class RuntimeLibrary
     this.texture = assets.texture;
     const ids = new Set<string>();
     const padding = new Set<Promise<any>>();
-
-    this.geomertyZips = assets.geomertyZips;
-    for (const zip of this.geomertyZips) {
-      const loadZip = new Promise(async (resolve, reject) => {
-        const blob = await fileSystem.getFileArrayBuffer(zip);
-        const zipFile = await readZipAsync(blob);
-        const keys = Object.keys(zipFile);
-        for (let index = 0; index < keys.length; index++) {
-          const buffer = zipFile[keys[index]];
-          this.geomertyFile.set(keys[index], buffer);
-        }
-        resolve(null);
-      });
-      padding.add(loadZip);
-    }
-
-    for (let index = 0; index < this.texture.length; index++) {
-      const element = this.texture[index];
-      delete element.url;
-      if (ids.has(element.sourceUUID)) {
-        continue;
-      }
-      ids.add(element.sourceUUID);
-      const loadFile = this.fileSystem.getFileArrayBuffer(element.sourceUUID, TEXTURE);
-      loadFile.then((file) => {
-        this.textureMap.set(element.sourceUUID, file);
-      });
-      padding.add(loadFile);
-    }
-
     this.material = assets.material;
     this.rootNodes = assets.rootNode;
 
@@ -212,7 +168,7 @@ export class RuntimeLibrary
     });
     await Promise.all(padding);
     progress = 1;
-    const sceneText = await fileSystem.getFileText('scene.json');
+    const sceneText = await this.fileSystem.getFileText('scene.json');
     const scene = JSON.parse(sceneText) as CC.Scene[];
     loading?.(progress);
     return scene.filter((x) => x);
@@ -220,23 +176,6 @@ export class RuntimeLibrary
 
   async saveAll() {
     const files: ZipFile[] = [];
-    if (this.tempGeometryFile.size > 0) {
-      const gepFiles: ZipFile[] = [];
-      for (const key of this.tempGeometryFile.keys()) {
-        const buffer = this.tempGeometryFile.get(key);
-        gepFiles.push([key, buffer]);
-      }
-      const blob = await zipFiles(gepFiles);
-      const uuid = ID.generateUUID();
-      this.geomertyZips.push(uuid);
-      files.push([uuid, blob]);
-    }
-    if (this.tempTextureFile.size > 0) {
-      for (const key of this.tempTextureFile.keys()) {
-        const buffer = this.tempTextureFile.get(key);
-        files.push([TEXTURE + '/' + key, buffer]);
-      }
-    }
     const data = {
       texture: this.texture,
       material: this.material,
@@ -254,14 +193,8 @@ export class RuntimeLibrary
   sceneMaterial: Map<string, Material> = new Map();
   sceneTexture: Map<string, BaseTexture> = new Map();
   currentScene: Scene;
-
-  textureMap: Map<string, Uint8Array> = new Map();
-  geomertyFile: Map<string, Uint8Array> = new Map();
-
-  tempGeometryFile: Map<string, Uint8Array> = new Map();
-  tempTextureFile: Map<string, Uint8Array> = new Map();
-
-  private scriptMap: Map<string, CC.ScriptData> = new Map();
+  geomertyIDs: Set<string> = new Set();
+  textureIds: Set<string> = new Set();
 
   private needUpdateScript: Map<string, CC.ScriptData> = new Map();
 
@@ -289,19 +222,19 @@ export class RuntimeLibrary
       }
       data.sourceUUID = texture.sourceUUID;
       this.texture.push(data);
-      if (!this.tempTextureFile.has(data.sourceUUID) && !this.textureMap.has(data.sourceUUID)) {
+      if (!this.textureIds.has(data.sourceUUID)) {
         const t = texture.getInternalTexture();
         if (t._buffer) {
           const buffer = await serializeTextureBuffer(t._buffer);
-          this.tempTextureFile.set(data.sourceUUID, buffer);
+          //@ts-ignore
+          this.fileSystem.saveFile(data.sourceUUID, buffer, TEXTURE);
         } else {
           if (t.url) {
             const buffer = await (await fetch(t.url)).arrayBuffer();
-            console.log(buffer);
-            this.tempTextureFile.set(data.sourceUUID, new Uint8Array(buffer));
-            console.log(this.tempTextureFile);
+            this.fileSystem.saveFile(data.sourceUUID, new Uint8Array(buffer), TEXTURE);
           }
         }
+        this.textureIds.add(data.sourceUUID);
       }
       return data;
     }
@@ -381,29 +314,30 @@ export class RuntimeLibrary
     if (!geometry.uuid) {
       geometry.uuid = ID.generateUUID();
     }
-    if (this.tempGeometryFile.has(geometry.uuid)) {
+    if (this.geomertyIDs.has(geometry.uuid)) {
       return;
     }
     const data = geometry.serializeVerticeData();
     const buffer = vertexToBuffer(data);
-    this.tempGeometryFile.set(geometry.uuid, buffer);
+    await this.fileSystem.saveFile(geometry.uuid, buffer, GEOMETRY);
+    this.geomertyIDs.add(geometry.uuid);
   }
 
   async getGeometry(uuid: string): Promise<Geometry> {
     if (this.sceneGeometry.has(uuid)) {
       return Promise.resolve(this.sceneGeometry.get(uuid) as Geometry);
     } else {
-      let buffer = this.geomertyFile.get(uuid);
+      let buffer = await this.fileSystem.getFileArrayBuffer(uuid, GEOMETRY);
       if (!buffer) {
-        buffer = this.tempGeometryFile.get(uuid);
+        return Promise.reject(`Failed to load geometry from ${uuid}`);
       }
       const geoInfo = bufferToVertex(buffer);
       const geo = Geometry.Parse(geoInfo, this.currentScene, null);
       this.sceneGeometry.set(uuid, geo);
+      buffer = null;
       return Promise.resolve(geo);
     }
   }
-
   async getMaterial(uuid: string): Promise<Material> {
     if (this.sceneMaterial.has(uuid)) {
       return Promise.resolve(this.sceneMaterial.get(uuid) as Material);
@@ -479,13 +413,7 @@ export class RuntimeLibrary
     this.sceneTexture.clear();
     return deserializeScene(rootNode, scene.getEngine() as Engine, this, scene, padding);
   }
-  saveComplate() {
-    this.tempGeometryFile.forEach((item, key) => {
-      this.geomertyFile.set(key, item);
-    });
-    this.tempGeometryFile.clear();
-    this.tempTextureFile.clear();
-  }
+  saveComplate() {}
 }
 
 export async function serializeTextureBuffer(
