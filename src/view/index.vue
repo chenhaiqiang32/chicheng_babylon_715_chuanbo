@@ -29,7 +29,6 @@
                                 <Animation v-else-if="activeTab === 'animation'" />
                             </div>
                         </div>
-
                     </ElSplitterPanel>
                 </ElSplitter>
             </ElSplitterPanel>

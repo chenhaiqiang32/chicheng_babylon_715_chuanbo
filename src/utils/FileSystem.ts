@@ -68,7 +68,8 @@ export class FileSystem {
       throw new Error('File System Access API is not supported in this browser');
     }
 
-    const directoryHandle = await (window as any).showDirectoryPicker();
+    const directoryHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+
     return directoryHandle;
   }
 

@@ -251,6 +251,7 @@ async function changeTexture() {
         choose: (res: any) => {
             if (res) {
                 const texture = new Texture(res.url, Editor.Instance.Scene, true, false);
+                texture.name = res.name;
                 texture.sourceUUID = res.sourceUUID;
                 const oldTexture = getObjectValue(props.object, props.property)
 

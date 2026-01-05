@@ -20,6 +20,7 @@ export namespace CC {
     children: ObjectNode[];
     visible?: boolean;
     metadata?: any;
+    isIgnore?: boolean;  // 对应 bjs.Node.isIgnore 自定义属性
   }
 
   export interface TransformNode extends ObjectNode {
@@ -120,6 +121,11 @@ export namespace CC {
       url: string;
       intensity: number;
     };
+    background: {
+      type: number;
+      texture: BgTexture;
+      clearColor: number[]
+    };
     iblIntensity: number;
     nodes: ObjectNode[];
     defaultRenderingPipeline: any;
@@ -145,5 +151,11 @@ export namespace CC {
     uuid: string;
     clips: Clip[];
     desc?: string;
+  }
+
+  export interface BgTexture {
+    name: string;
+    sourceUUID: string;
+    uuid: string;
   }
 }

@@ -1,3 +1,5 @@
+const textDecoder = new TextDecoder();
+
 export function vertexToBuffer(g: GeoData) {
   const attributes: AttributeInfo[] = [];
   const typedBuffers: { key: string; buffer: ArrayBuffer }[] = [];
@@ -50,21 +52,20 @@ export function bufferToVertex(buffer: Uint8Array): GeoData {
   const dv = new DataView(arrayBuffer);
   const headerLen = dv.getUint32(0, true);
   const headerBytes = new Uint8Array(arrayBuffer, 4, headerLen);
-  const headerStr = new TextDecoder().decode(headerBytes);
-  const info = JSON.parse(headerStr) as GeoInfo;
+  const info = JSON.parse(textDecoder.decode(headerBytes)) as GeoInfo;
   const headerPad = (4 - (headerLen % 4)) % 4;
   const dataStart = 4 + headerLen + headerPad;
   const out: any = { uuid: info.uuid };
+
   for (const attr of info.attributes) {
     const start = dataStart + attr.start;
     const count = attr.byteLength >>> 2;
-    if (attr.key.toLowerCase().includes('indices')) {
-      const ta = new Uint32Array(arrayBuffer, start, count);
-      out[attr.key] = Array.from(ta);
-    } else {
-      const ta = new Float32Array(arrayBuffer, start, count);
-      out[attr.key] = Array.from(ta);
-    }
+    const isIndices = attr.key.toLowerCase().includes('indices');
+    const ta = isIndices
+      ? new Uint32Array(arrayBuffer, start, count)
+      : new Float32Array(arrayBuffer, start, count);
+    out[attr.key] = ta;
   }
+
   return out;
 }

@@ -141,13 +141,15 @@ export const useScene = defineStore('scene', () => {
         ccNode,
         padding,
       );
-      const groupPadding = groupArray(padding, 20);
+
+      const groupPadding = groupArray(padding, Math.ceil(padding.length / 10));
       for (let index = 0; index < groupPadding.length; index++) {
         const group = groupPadding[index].map((f) => f());
-        // await Promise.all(group);
+        await Promise.all(group);
         await Timer.sleep(0);
         progressCallback((index + 1) / groupPadding.length);
       }
+      progressCallback(1);
       return scene;
     }
   }

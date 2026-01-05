@@ -13,7 +13,6 @@ import { undo, redo } from './tools/undoredo';
 import { registerKeyDown } from './utils/ShortcutKey';
 
 const app = createApp(App);
-
 app.use(i18n);
 app.use(createPinia());
 app.use(router);

@@ -126,6 +126,8 @@ export class Editor extends Dispatch<EditorEvent> {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
           this.toggleMeshMask(item, false);
+        } else if(item instanceof Light) {
+          item.gizmo.scaleRatio = 0;  // 关掉灯的gizmo
         }
       });
     }
@@ -138,8 +140,9 @@ export class Editor extends Dispatch<EditorEvent> {
     if (v[0] instanceof AbstractMesh) {
       this.gizmoManager.attachToMesh(v[0]);
     } else if (v[0] instanceof Light) {
-      //@ts-ignore 灯光作用于其父节点 transformNode
-      this.gizmoManager.attachToMesh(v[0]);
+      //this.gizmoManager.attachToMesh(v[0]);
+      this.gizmoManager.attachToMesh(v[0].gizmo.attachedMesh);
+      v[0].gizmo.scaleRatio = 2;
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
       if (v[0].getChildMeshes().length > 0) this.gizmoManager.attachToNode(v[0]);
@@ -178,19 +181,19 @@ export class Editor extends Dispatch<EditorEvent> {
           this.focusTransformNode();
           break;
         }
-        case 'q': {
+        case '1': {
           useScene().currentControlMode = ControlMode.Select;
           break;
         }
-        case 'w': {
+        case '2': {
           useScene().currentControlMode = ControlMode.Move;
           break;
         }
-        case 'e': {
+        case '3': {
           useScene().currentControlMode = ControlMode.Rotate;
           break;
         }
-        case 'r': {
+        case '4': {
           useScene().currentControlMode = ControlMode.Scale;
           break;
         }
@@ -233,7 +236,7 @@ export class Editor extends Dispatch<EditorEvent> {
       scene.lights.forEach((light) => {
         const lightGizmo = new LightGizmo();
         lightGizmo.light = light;
-        lightGizmo.scaleRatio = 2;
+        lightGizmo.scaleRatio = 0;
         light.gizmo = lightGizmo;
       });
     }
@@ -375,7 +378,7 @@ export class Editor extends Dispatch<EditorEvent> {
       const layer = new UtilityLayerRenderer(scene);
       const lightGizmo = new LightGizmo(layer);
       lightGizmo.light = light;
-      lightGizmo.scaleRatio = 2;
+      lightGizmo.scaleRatio = 0;
       light.gizmo = lightGizmo;
     }
     return light;
@@ -680,6 +683,14 @@ export class Editor extends Dispatch<EditorEvent> {
     );
     camera.speed = 1;
     camera.inertia = 0;
+    camera.keysUp.push(87); // W (keyCode 87)
+    camera.keysDown.push(83); // S (83)
+    camera.keysLeft.push(65); // A (65)
+    camera.keysRight.push(68); // D (68)
+    this.scene.meshes.forEach(m=>m.createOrUpdateSubmeshesOctree());
+    // 设置 QE 为垂直升降（默认没有，需要手动添加）
+    camera.keysUpward.push(69); // E 上昇 (69)
+    camera.keysDownward.push(81); // Q 下降 (81)
 
     // 开启场景和摄像机碰撞
     camera.checkCollisions = true;

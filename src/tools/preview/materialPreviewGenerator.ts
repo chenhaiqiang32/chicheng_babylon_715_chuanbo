@@ -1,27 +1,31 @@
+import { loadSkyboxWithExt } from '@/3d/core/utils/EnvSkybox';
 import {
   AbstractEngine,
   Color4,
-  CubeTexture,
   DirectionalLight,
-  Engine,
+  Effect,
   FreeCamera,
   HemisphericLight,
   Material,
   Mesh,
   MeshBuilder,
-  RenderTargetTexture,
   Scene,
-  ScreenshotTools,
-  StandardMaterial,
+  ShaderMaterial,
   Tools,
   Vector3,
 } from '@babylonjs/core';
+import { envTextureVertexShader, envTextureFragmentShader } from '@/shaders/envTexture';
+import { Editor } from '@/3d/Editor';
 
 let scene: Scene;
 let camera: FreeCamera;
 let sphere: Mesh;
+let plane: Mesh;
 const size = 128;
 let cache: Map<string, string> = new Map();
+let envCache: Map<string, string> = new Map();
+
+
 function initScene(engine: AbstractEngine) {
   scene = new Scene(engine);
   scene.clearColor = new Color4(0, 0, 0, 0);
@@ -35,9 +39,11 @@ function initScene(engine: AbstractEngine) {
   dir.position = new Vector3(2, 4, 2);
   dir.intensity = 0.8;
   sphere = MeshBuilder.CreateSphere('sphere', { diameter: 1, segments: 32 }, scene);
+  plane = MeshBuilder.CreatePlane('plane', {width:2, height: 1});
+  scene.createDefaultEnvironment();
 }
 
-export function renderMaterail(material: Material, useCache = true, engine: AbstractEngine) {
+export function renderMaterail(material: Material, useCache = true, engine=Editor.Instance.Engine) {
   // 默认使用缓存
   if (useCache) {
     const url = cache.get(material.uuid);
@@ -49,6 +55,8 @@ export function renderMaterail(material: Material, useCache = true, engine: Abst
     initScene(engine);
   }
 
+  sphere.isVisible = true;
+  plane.isVisible = false;
   const mat = material.clone(material.name + 'preview');
   //@ts-ignore
   mat._scene = scene;
@@ -67,4 +75,58 @@ export function renderMaterail(material: Material, useCache = true, engine: Abst
       'image/png',
     );
   });
+}
+
+/**
+ * 生成环境贴图的缩略图 url
+ */
+export async function renderEnvTexture(uuid:string, url: string, ext:string, useCache = true, engine: AbstractEngine) {
+    if (useCache) {
+        const url = envCache.get(uuid);
+        if (url) 
+          return url;
+    }
+    if (!scene) {
+      initScene(engine);
+    }
+
+    sphere.isVisible = false;
+    plane.isVisible = true;
+    // 环境贴图不能直接作用于材质，要先将其转换为对应的CubeTexture才能使用
+    // todo:由于要加载，所以会导致加载性能下降
+    const env = await loadSkyboxWithExt(scene, url,ext, size);
+
+    const shaderMaterial = new ShaderMaterial("envTextureShader", scene,
+      {
+        vertex: "envTexture",
+        fragment: "envTexture",
+      },
+      {
+        attributes: ["position", "uv"],
+        uniforms: ["worldViewProjection", "cubeTexture"],
+        samplers: ["cubeTexture"]
+      }
+    );
+
+    if(!Effect.ShadersStore["envTextureVertexShader"]) {
+      Effect.ShadersStore["envTextureVertexShader"] = envTextureVertexShader;
+      Effect.ShadersStore["envTextureFragmentShader"] = envTextureFragmentShader;
+    }
+
+    shaderMaterial.setTexture("cubeTexture", env);
+    plane.material = shaderMaterial;
+
+    return new Promise((resolve) => {
+        Tools.CreateScreenshotUsingRenderTarget(
+          engine,
+          camera,
+          size,
+          (data) => {
+            shaderMaterial.dispose();
+            envCache.set(uuid, data);
+            resolve(data);
+          },
+          'image/png',
+        )
+    })
 }

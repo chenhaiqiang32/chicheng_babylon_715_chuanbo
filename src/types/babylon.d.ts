@@ -6,6 +6,7 @@ import type {
   BaseTexture,
   Light,
   LightGizmo,
+  Texture,
 } from '@babylonjs/core';
 import type { Scene, Node, Geometry, Material, BaseTexture, TransformNode, ParticleSystem, GPUParticleSystem, ThinParticleSystem, IParticleSystem, ParticleSystemSet } from '@babylonjs/core';
 
@@ -14,6 +15,8 @@ declare module '@babylonjs/core' {
     name: string;
     uuid: string;
     runtimeAnimation: any[];
+    bgType: number;
+    bgTexture: Texture;
   }
   interface Node {
     uuid: string;

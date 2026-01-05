@@ -9,10 +9,10 @@ import {
   TransformNode,
 } from '@babylonjs/core';
 import { nextTick } from 'vue';
-import { EnvFileHelper } from '../../3d/core/utils/EnvFileHelper';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Utils } from '@/utils';
 import { addParticleSystem } from '@/tools/particles/particles';
+import { importSkyboxTexture } from '@/3d/core/utils/EnvSkybox';
 
 /**
  * 获取层级面板的右键菜单配置
@@ -233,9 +233,7 @@ export function getAssetsHdrContextMenuCommands() {
     {
       name: '添加环境贴图',
       callback: async () => {
-        var helper = new EnvFileHelper();
-        //helper.loadSkyBox();
-        await helper.importSkyboxTexture();
+        await importSkyboxTexture();
         RuntimeLibrary.Instance.dispatch('onChanged');
       },
     },
