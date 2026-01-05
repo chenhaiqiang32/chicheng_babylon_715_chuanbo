@@ -14,6 +14,7 @@ import { bufferToVertex } from './utils/GeometryUtils';
 import { deserializeScene } from './serialze/Scene';
 import { IGetBuffer } from './RuntimeLibrary';
 import { strFromU8 } from 'fflate';
+import { IFile } from './file/IFile';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -199,6 +200,8 @@ export class AppAssets {
       }
     }
   }
+  setFileSystrem(fileSystem: IFile) {}
+
   async deserializeScene(scene: Scene, rootNode: CC.Scene, padding: Array<Padding> = []) {
     this.currentScene = scene;
     this.sceneMaterial.clear();

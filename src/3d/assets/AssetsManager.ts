@@ -1,23 +1,5 @@
-import {
-  BaseTexture,
-  CubeTexture,
-  Engine,
-  Geometry,
-  ImportMeshAsync,
-  InternalTexture,
-  Material,
-  Scene,
-  Texture,
-  Tools,
-  type Scene as BabylonScene,
-} from '@babylonjs/core';
-
-import { readZip, zipFiles } from '@/utils/Zip';
-import { deserializeScene, serializeScene } from './serialze/Scene';
-import { ID } from '@/utils/id';
-import { CC } from './BaseRes';
-import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
-import JSZip from 'jszip';
+import { BaseTexture, Geometry, Material, type Scene } from '@babylonjs/core';
+import { IFile } from './file/IFile';
 
 export interface ICollectAssets {
   addTexture(texture: BaseTexture): Promise<void>;

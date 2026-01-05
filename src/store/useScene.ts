@@ -9,10 +9,9 @@ import { serializeScene } from '@/3d/assets/serialze/Scene';
 import { Timer } from '@/utils/Time';
 import { useHierarchyModule } from './useSceneModule/useHierarchy';
 import { useControlModule } from './useSceneModule/useControl';
-
+import { ArrayUtils } from '@/utils/Array';
 
 export const useScene = defineStore('scene', () => {
-
   // 模块化
   const hierarchyModule = useHierarchyModule();
   const controlModule = useControlModule();
@@ -22,14 +21,15 @@ export const useScene = defineStore('scene', () => {
   const sceneInfoList = shallowRef<Partial<CC.Scene>[]>([]);
 
   const currentCopy = ref<CC.ObjectNode | null>(null);
-  
 
   function setSceneList(scenes: CC.Scene[]) {
     sceneInfoList.value = scenes;
   }
 
   async function saveScene(scene: Scene) {
-    const sceneData = await serializeScene(scene, RuntimeLibrary.Instance, false);
+    const padding = new Array<Padding>();
+    const sceneData = serializeScene(scene, RuntimeLibrary.Instance, padding);
+    await Promise.all(padding.map((x) => x()));
     sceneInfoList.value = sceneInfoList.value.map((x) => {
       if (x.uuid == scene.uuid) {
         return sceneData;
@@ -43,7 +43,9 @@ export const useScene = defineStore('scene', () => {
   }
 
   async function addScene(scene: Scene) {
-    const sceneData = await serializeScene(scene, RuntimeLibrary.Instance, true);
+    const padding = new Array<Padding>();
+    const sceneData = serializeScene(scene, RuntimeLibrary.Instance, padding);
+    await Promise.all(padding.map((x) => x()));
     sceneInfoList.value.push(sceneData);
     sceneInfoList.value = [...sceneInfoList.value];
   }
@@ -61,19 +63,20 @@ export const useScene = defineStore('scene', () => {
         ccNode,
         padding,
       );
-      const groupPadding = groupArray(padding, 20);
+
+      const groupPadding = ArrayUtils.groupArray(padding, Math.ceil(padding.length / 10));
       for (let index = 0; index < groupPadding.length; index++) {
         const group = groupPadding[index].map((f) => f());
-        // await Promise.all(group);
+        await Promise.all(group);
         await Timer.sleep(0);
         progressCallback((index + 1) / groupPadding.length);
       }
+      progressCallback(1);
       return scene;
     }
   }
 
   return {
-
     // 模块化(兼容以前代码所以没有直接导出 Module)
     // hierarchy
     hierarchy: hierarchyModule.hierarchy,
@@ -100,11 +103,3 @@ export const useScene = defineStore('scene', () => {
   };
 });
 export { ViewFlagsMode };
-
-function groupArray<T>(array: Array<T>, size: number): T[][] {
-  const result: T[][] = [];
-  for (let index = 0; index < array.length; index += size) {
-    result.push(array.slice(index, index + size));
-  }
-  return result;
-}

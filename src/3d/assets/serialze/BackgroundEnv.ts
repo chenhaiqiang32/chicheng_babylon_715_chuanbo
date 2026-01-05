@@ -108,25 +108,24 @@ export class ColorBgEnv implements BackgroundEnv {
     }
 }
 
-
 /** -----------工厂------------- */
 export class BackgroundEnvFactory {
-    private static strategies: Map<number, BackgroundEnv> = new Map([
-        [1, new TextureBgEnv()],
-        [2, new ImageBgEnv()],
-        [3, new Image360BgEnv()]
-        // todo: 添加其他类型
-    ]);
+  private static strategies: Map<number, BackgroundEnv> = new Map([
+    [1, new TextureBgEnv()],
+    [2, new ImageBgEnv()],
+    [3, new Image360BgEnv()],
+    // todo: 添加其他类型
+  ]);
 
-    static create(type: number): BackgroundEnv {
-        const strategy = this.strategies.get(type);
-        if(!strategy) {
-            return new NoneBgEnv();
-        }
-        return strategy;
+  static create(type: number): BackgroundEnv {
+    const strategy = this.strategies.get(type);
+    if (!strategy) {
+      return new NoneBgEnv();
     }
+    return strategy;
+  }
 
-    static createFromScene(type: number): BackgroundEnv {
-        return this.create(type);
-    }
+  static createFromScene(type: number): BackgroundEnv {
+    return this.create(type);
+  }
 }

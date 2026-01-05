@@ -6,10 +6,10 @@ export namespace ArrayUtils {
       arr.pop();
     }
   }
-  export function groupArray<T>(arr: T[], size: number) {
-    const result = [];
-    for (let i = 0; i < arr.length; i += size) {
-      result.push(arr.slice(i, i + size));
+  export function groupArray<T>(array: Array<T>, size: number): T[][] {
+    const result: T[][] = [];
+    for (let index = 0; index < array.length; index += size) {
+      result.push(array.slice(index, index + size));
     }
     return result;
   }

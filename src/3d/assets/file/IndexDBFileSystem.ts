@@ -10,7 +10,7 @@ export class IndexDBFileSystem implements IFile {
     await this.db.open();
   }
   async saveFile(name: string, data: FileSystemWriteChunkType, dir?: string) {
-    await this.db.saveData(name, data);
+    await this.db.saveData(dir ? `${dir}/${name}` : name, data);
   }
   getFileArrayBuffer(name: string, dir?: string): Promise<Uint8Array> {
     return this.db.loadData(dir ? `${dir}/${name}` : name);

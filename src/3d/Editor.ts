@@ -33,6 +33,7 @@ import {
   ParticleHelper,
   AreaLight,
   RectAreaLight,
+  HDRCubeTexture,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -124,8 +125,8 @@ export class Editor extends Dispatch<EditorEvent> {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
           this.toggleMeshMask(item, false);
-        } else if(item instanceof Light) {
-          item.gizmo.scaleRatio = 0;  // 关掉灯的gizmo
+        } else if (item instanceof Light) {
+          item.gizmo.scaleRatio = 0; // 关掉灯的gizmo
         }
       });
     }
@@ -179,19 +180,19 @@ export class Editor extends Dispatch<EditorEvent> {
           this.focusTransformNode();
           break;
         }
-        case 'q': {
+        case '1': {
           useScene().currentControlMode = ControlMode.Select;
           break;
         }
-        case 'w': {
+        case '2': {
           useScene().currentControlMode = ControlMode.Move;
           break;
         }
-        case 'e': {
+        case '3': {
           useScene().currentControlMode = ControlMode.Rotate;
           break;
         }
-        case 'r': {
+        case '4': {
           useScene().currentControlMode = ControlMode.Scale;
           break;
         }
@@ -240,6 +241,8 @@ export class Editor extends Dispatch<EditorEvent> {
     }
     this.scene = scene;
     this.scene.collisionsEnabled = true;
+    // this.scene.environmentTexture = new HDRCubeTexture('./studio005.hdr', scene, 128);
+    // this.scene.environmentTexture.gammaSpace = true;
     //this.scene.gravity = new Vector3(0, -0.9, 0);
     // 开启物理引擎
     //this.scene.enablePhysics(new Vector3(0, -0.9, 0), new CannonJSPlugin(true, 10, CANNON));
@@ -661,6 +664,14 @@ export class Editor extends Dispatch<EditorEvent> {
     );
     camera.speed = 1;
     camera.inertia = 0;
+    camera.keysUp.push(87); // W (keyCode 87)
+    camera.keysDown.push(83); // S (83)
+    camera.keysLeft.push(65); // A (65)
+    camera.keysRight.push(68); // D (68)
+    this.scene.meshes.forEach((m) => m.createOrUpdateSubmeshesOctree());
+    // 设置 QE 为垂直升降（默认没有，需要手动添加）
+    camera.keysUpward.push(69); // E 上昇 (69)
+    camera.keysDownward.push(81); // Q 下降 (81)
 
     // 开启场景和摄像机碰撞
     camera.checkCollisions = true;

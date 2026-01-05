@@ -21,11 +21,11 @@ import { parseSSAO2RenderingPipeline, serializeSSAO2RenderingPipeline } from '@/
 import { parseSSRRenderingPipeline, serializeSSRRenderingPipeline } from '@/3d/rendering/ssr';
 import { BackgroundEnvFactory } from './BackgroundEnv';
 
-export async function serializeScene(
+export function serializeScene(
   scene: Scene,
   assets: ICollectAssets,
-  serializeAssets: boolean = true,
-): Promise<CC.Scene> {
+  padding: Array<Padding> = [],
+): CC.Scene {
   const result: Partial<CC.Scene> = {};
   result.uuid = scene.uuid;
   result.type = 'scene';
@@ -58,14 +58,17 @@ export async function serializeScene(
     url: (scene.environmentTexture as CubeTexture).url,
     intensity: scene.environmentIntensity,
   };
-  // 用策略模式根据背景类型不同，执行不同的序列化
-  console.log(scene?.bgType);
-  result.background = await BackgroundEnvFactory.createFromScene(scene?.bgType).serialize(scene, assets);
+
+  const serializeBg = async () => {
+    const bg = await BackgroundEnvFactory.createFromScene(scene?.bgType).serialize(scene, assets);
+    result.background = bg;
+  };
+  padding.push(serializeBg);
   result.iblIntensity = scene.iblIntensity;
   result.nodes = [];
   for (let index = 0; index < scene.rootNodes.length; index++) {
     const element = scene.rootNodes[index];
-    const node = await serializeNode(element as TransformNode, assets, serializeAssets);
+    const node = serializeNode(element as TransformNode, assets, padding);
     result.nodes.push(node);
   }
   const defaultPipeline = scene.postProcessRenderPipelineManager.supportedPipelines.find(
@@ -131,7 +134,7 @@ export function deserializeScene(
     scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
     scene.environmentIntensity = sceneData.environment.intensity;
   }
-  if(sceneData.background) {
+  if (sceneData.background) {
     scene.bgType = sceneData.background.type;
     BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene, sceneData, assets);
   }
