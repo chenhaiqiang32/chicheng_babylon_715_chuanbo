@@ -1,6 +1,7 @@
 import { Quaternion, Node } from '@babylonjs/core';
 import { CC } from '../assets/BaseRes';
 import * as ObjectUtils from '@/tools/property';
+import { EasingFunc } from '@/timeLine/keyframe/Easing';
 interface RuntimeClip {
   object: any;
   clip: CC.Clip;
@@ -33,7 +34,10 @@ export class Animator {
       const keys = clip.clip.key;
       const startKey = keys[start];
       const endKey = keys[end];
-      const value = lerpValue(startKey.value, endKey.value, percent, clip.clip.type);
+      const easingIndex = typeof (startKey as any)?.easing === 'number' ? (startKey as any).easing : 0;
+      const easing = EasingFunc[easingIndex] || EasingFunc[0];
+      const easedPercent = easing ? easing(percent) : percent;
+      const value = lerpValue(startKey.value, endKey.value, easedPercent, clip.clip.type);
       switch (clip.clip.type) {
         case 'float':
         case 'boolean':
