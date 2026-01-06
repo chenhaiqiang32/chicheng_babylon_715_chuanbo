@@ -38,12 +38,12 @@ import { Utils } from '@/utils';
 import SVG from '@/component/common/SVG.vue';
 import { ElDialog } from 'element-plus';
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
-import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
+import { renderEnvTexture, renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 const visible = ref<boolean>(true);
 const props = defineProps<{
     close: () => void,
     choose: (res: any) => void,
-    type: 'material' | 'texture'
+    type: 'material' | 'texture' | 'envTexture'
 }>();
 const searchText = ref('')
 const selectedItem = shallowRef<any>(null);
@@ -71,7 +71,29 @@ async function getResList() {
             const mat = await RuntimeLibrary.Instance.getMaterial(element.uuid);
             element.url = await renderMaterail(mat, true);
         }
+    } else if(props.type == 'envTexture') {
+        // 环境贴图
+        const array = [...RuntimeLibrary.Instance.envTexture].map(x => {
+            return {
+                name: x.name,
+                sourceUUID: x.sourceUUID,
+            }
+        })
+        const set = new Set<string>();
+        data.value = array.filter(x => {
+            if(set.has(x.sourceUUID))
+                return false;
+            set.add(x.sourceUUID);
+            return true;
+        });
+        for(let index = 0; index < data.value.length; index++) {
+            const element = data.value[index];
+            if(!element.url) {
+                element.url = await renderEnvTexture(element.sourceUUID);
+            }
+        }
     } else {
+        // 普通贴图
         const array = [...RuntimeLibrary.Instance.texture].map(x => {
             return {
                 name: x.name,
@@ -91,16 +113,9 @@ async function getResList() {
         for (let index = 0; index < data.value.length; index++) {
             const element = data.value[index];
             if (!element.url) {
-                const ext = element.name.toLowerCase().split('.').pop();
-                // 环境贴图
-                if(['hdr','exr','env'].includes(ext)){
-                    element.url = await RuntimeLibrary.Instance.getEnvTextureURL(element.sourceUUID, element.uuid, ext);
-                } else {
-                    // 普通贴图
-                    RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
-                        element.url = url
-                    })
-                }
+                RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
+                    element.url = url
+                })
             }
         }
     }

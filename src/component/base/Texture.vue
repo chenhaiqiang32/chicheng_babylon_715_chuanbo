@@ -63,6 +63,7 @@ import { getObjectValue, setObjectValue } from "../../tools/property"
 import { useDialog } from "@/view/dialog"
 import { Editor } from "@/3d/Editor"
 import { ElMessageBox } from "element-plus"
+import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary"
 
 const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')
 
@@ -106,6 +107,7 @@ const props = defineProps<{
     hideInvert?: boolean
     noPopover?: boolean
     scene?: any
+    type?: string
 }>()
 const emit = defineEmits<{ (e: "change", t?: any): void }>()
 
@@ -245,11 +247,17 @@ onMounted(() => {
 })
 
 async function changeTexture() {
+    const type = props.type ? props.type : "texture";
     const ChooseResDialog = (await import('@/view/dialog/ChooseResDialog.vue')).default
     useDialog(ChooseResDialog, {
-        choose: (res: any) => {
+        choose: async (res: any) => {
             if (res) {
-                const texture = new Texture(res.url, Editor.Instance.Scene, true, false);
+                let texture;
+                if(type == 'envTexture')
+                    texture = await RuntimeLibrary.Instance.getEnvTexture(res.sourceUUID);
+                else 
+                    texture = new Texture(res.url, Editor.Instance.Scene, true, false);
+
                 texture.name = res.name;
                 texture.sourceUUID = res.sourceUUID;
                 const oldTexture = getObjectValue(props.object, props.property)
@@ -273,7 +281,7 @@ async function changeTexture() {
             }
 
         },
-        type: 'texture'
+        type: type
     })
 }
 </script>

@@ -55,7 +55,7 @@ import SVG from '@/component/common/SVG.vue';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
 import { openContextMenu } from '@/component/content-menu';
-import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
+import { renderEnvTexture, renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 import {
     getAssetsHdrContextMenuCommands, getAssetsMaterialContextMenuCommands,
     getAssetsModelContextMenuCommands, getAssetsTextureContextMenuCommands
@@ -100,49 +100,45 @@ async function onChange() {
     });
     const texstureArray = RuntimeLibrary.Instance.texture.map(x => {
         return {
-            type: 'envTexture',
+            type: 'texture',
             name: x.name,
             sourceUUID: x.sourceUUID,
             uuid: x.uuid
         }
     });
+    envTextureList.value = RuntimeLibrary.Instance.envTexture.map(x => {
+        return {
+            type: 'envTexture',
+            name: x.name,
+            sourceUUID: x.sourceUUID,
+        }
+    });
     const set = new Set<string>();
-    const envSet = new Set<string>();
     const textures = [];
-    const envTextures = [];
 
     // 分流普通贴图和环境贴图
     for (const item of texstureArray) {
-        const ext = item.name.toLowerCase().split('.').pop();
-        const isEnvTexture = ['hdr', 'env', 'exr'].includes(ext);
-        if (isEnvTexture) {
-            if (!envSet.has(item.sourceUUID)) {
-                envSet.add(item.sourceUUID);
-                envTextures.push(item);
-            }
-        } else {
-            if (!set.has(item.sourceUUID)) {
-                set.add(item.sourceUUID);
-                textures.push(item);
-            }
+        if (!set.has(item.sourceUUID)) {
+            set.add(item.sourceUUID);
+            textures.push(item);
         }
     }
     textureList.value = textures;
-    envTextureList.value = envTextures;
 
     for (let index = 0; index < textureList.value.length; index++) {
         const element = textureList.value[index];
         if (!element.url) {
             RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
                 element.url = url
+                RuntimeLibrary.Instance.setEnvTextureURL(element.sourceUUID, url);
             })
         }
     }
     for (let index = 0; index < envTextureList.value.length; index++) {
         const element = envTextureList.value[index];
         if (!element.url) {
-            const ext = element.name.toLowerCase().split('.').pop();
-            element.url = await RuntimeLibrary.Instance.getEnvTextureURL(element.sourceUUID, element.uuid, ext);
+            const prevUrl = await renderEnvTexture(element.sourceUUID);
+            element.url = prevUrl;
         }
     }
 

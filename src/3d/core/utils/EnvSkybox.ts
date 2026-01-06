@@ -1,5 +1,6 @@
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
+import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 import { Utils } from '@/utils';
 import {
   BaseTexture,
@@ -30,8 +31,7 @@ export async function importSkyboxTexture(){
     const scene = Editor.Instance.Scene;
     const fileList = await Utils.chooseFile(".hdr,.exr,.env", true);
     for(let i=0; i<fileList.length; i++){
-        const item = fileList[i];
-        await RuntimeLibrary.Instance.importTexture(item);
+      await RuntimeLibrary.Instance.addEnvTexture(fileList[0]);
     }
 }
 
@@ -63,33 +63,17 @@ export async function loadEnv(scene:Scene, name:string, url: string):Promise<Bas
  * 将环境贴图应用到当前场景的天空盒上
  * @param name 环境贴图的名字，需要根据其后缀判断贴图类型
  */
-export async function loadSkyBox(scene:Scene, name:string, url:string, sourceUUID: string){
-    if(name == undefined || url == undefined) return;
-    const ext = name.toLowerCase().split('.').pop();
-    let skyBox;
-    switch(ext){
-        case 'hdr':
-            const hdr = await loadHdrSkybox(scene, url, 1024);
-            skyBox = createSkybox(hdr, scene);
-            break;
-        case 'exr':
-            const exr = await loadExrSkybox(scene, url, 1024);
-            skyBox = createSkybox(exr, scene);
-            break;
-        case 'env':
-            const env = await loadEnvSkybox(scene, url);
-            skyBox = createSkybox(env, scene);
-            break;
+export async function loadSkyBox(scene:Scene, texture:BaseTexture){
+    if(!texture) return;
+    const skyBox = createSkybox(texture, scene);
 
-    default:
-      console.error(`Unsupported file extension: ${ext}`);
-      break;
-  }
   // 有时候虽然加载了环境图，但是scene.bgTexture没有赋值，所以构造一个，环境贴图只关心 name 和 sourceUUID
   let bgTexture = new Texture('');
-  bgTexture.name = name;
-  bgTexture.sourceUUID = sourceUUID;
+  bgTexture.name = texture.name;
+  bgTexture.url = await renderEnvTexture(texture.sourceUUID); // url用缩略图的url
+  bgTexture.sourceUUID = texture.sourceUUID;
   scene.bgTexture = bgTexture;
+  scene.bgType = 1;
 }
 
 export function loadSkyboxWithExt(

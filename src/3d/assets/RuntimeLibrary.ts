@@ -24,11 +24,12 @@ import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
 import { deserializeScene } from './serialze/Scene';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import '@babylonjs/loaders/SPLAT/splatFileLoader';
-import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 import { Timer } from '@/utils/Time';
+import { loadSkyboxWithExt } from '../core/utils/EnvSkybox';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
+const ENVPIXEL = 1024;    // 环境贴图缩略图的分辨率，越大加载越久
 
 interface RuntimeAssetsEventBus {
   onChanged: void;
@@ -55,13 +56,6 @@ export class RuntimeLibrary
     ///@ts-ignore
     const url = URL.createObjectURL(new Blob([buffer]));
     return url;
-  }
-  // 环境贴图的缩略图url
-  async getEnvTextureURL(sourceUUID: string, uuid: string, ext: string, useCache = true) {
-    const url = await this.getTextureURL(sourceUUID);
-    const texture = await this.getTexture(uuid);
-    const envUrl = await renderEnvTexture(texture.uuid, url, ext, useCache, Editor.Instance.Engine);
-    return envUrl;
   }
   private sceneList: CC.Scene[] = [];
   private static instance: RuntimeLibrary;
@@ -106,6 +100,9 @@ export class RuntimeLibrary
   }
   getTextureBuffer(uuid: string): Promise<Uint8Array> {
     return this.fileSystem.getFileArrayBuffer(uuid, TEXTURE);
+  }
+  getEnvTextureBuffer(sourceUUID: string) {
+    return this.fileSystem.getFileArrayBuffer(sourceUUID, "EnvTexture");
   }
 
   async importMesh(file: File, progressCallback?: (v: number) => void) {
@@ -172,6 +169,7 @@ export class RuntimeLibrary
     }
     const assets = JSON.parse(assetsText) as any;
     this.texture = assets.texture;
+    this.envTexture = assets.envTexture;
     const padding = new Set<Promise<any>>();
     this.material = assets.material;
     this.rootNodes = assets.rootNode;
@@ -194,17 +192,20 @@ export class RuntimeLibrary
       material: this.material,
       rootNode: this.rootNodes,
       geomertyZips: this.geomertyZips,
+      envTexture: this.envTexture,
     };
     files.push(['assets.json', JSON.stringify(data)]);
     return files;
   }
 
   texture: any[] = [];
+  envTexture: any[] = [];
   material: any[] = [];
   rootNodes: CC.ObjectNode[] = [];
   sceneGeometry: Map<string, Geometry> = new Map();
   sceneMaterial: Map<string, Material> = new Map();
   sceneTexture: Map<string, BaseTexture> = new Map();
+  sceneEnvTexture: Map<string, BaseTexture> = new Map();
   currentScene: Scene;
   geomertyIDs: Set<string> = new Set();
   textureIds: Set<string> = new Set();
@@ -252,6 +253,61 @@ export class RuntimeLibrary
       return data;
     }
   }
+
+  // ----- envTexture
+  async addEnvTexture(file: File, force: boolean = true): Promise<any> {
+    const url = URL.createObjectURL(file);
+    const ext = file.name.toLocaleLowerCase().split('.').pop();
+    const texture = await loadSkyboxWithExt(this.resScene, url, ext, ENVPIXEL);
+    texture.name = file.name;
+
+    if(!texture.sourceUUID)
+      texture.sourceUUID = ID.generateUUID();
+    const old = this.envTexture.find((item) => item.sourceUUID === texture.sourceUUID);
+    if(!old || force) {
+      const data = texture.serialize();
+      data.uuid = texture.sourceUUID;
+      data.sourceUUID = texture.sourceUUID;
+      delete data.url;
+      if(old)
+        ArrayUtils.remove(old, this.envTexture);
+      this.envTexture.push(data);
+      this.sceneEnvTexture.set(data.sourceUUID, texture);
+      const buffer = await file.arrayBuffer();
+      this.fileSystem.saveFile(texture.sourceUUID, new Uint8Array(buffer), "EnvTexture");
+    }
+    return texture;
+  }
+
+  async getEnvTexture(sourceUUID: string): Promise<BaseTexture> {
+    if(this.sceneEnvTexture.has(sourceUUID)) {
+      return Promise.resolve(this.sceneEnvTexture.get(sourceUUID) as BaseTexture);
+    } else {
+      const data = this.envTexture.find((x) => x.sourceUUID == sourceUUID);
+      // envTexture保存的是原始文件的file
+      if(data) {
+        const buffer = await this.getEnvTextureBuffer(sourceUUID);
+        const blob = new Blob([buffer]);
+        const url = URL.createObjectURL(blob);
+        const ext = data.name.toLocaleLowerCase().split('.').pop();
+        const texture = await loadSkyboxWithExt(this.resScene, url, ext, ENVPIXEL);
+        texture.sourceUUID = sourceUUID;
+        texture.name = data.name;
+        this.sceneEnvTexture.set(sourceUUID, texture);
+        return Promise.resolve(texture);
+      }
+    }
+  }
+  // 设置envTexutre的缩略图url
+  setEnvTextureURL(sourceUUID: string, url: string) {
+    const env = this.sceneEnvTexture.get(sourceUUID);
+    if(env)
+      env.url = url;
+    else 
+      console.error(`don't have envTexture with sourceUUID:${sourceUUID}`);
+  }
+
+
   InitResIntoLibrary(scene: Scene) {
     const texturePaths = [
       '/particle/textures/default/flare.png',
@@ -410,6 +466,7 @@ export class RuntimeLibrary
       this.sceneMaterial.clear();
       this.sceneGeometry.clear();
       this.sceneTexture.clear();
+      this.sceneEnvTexture.clear();
     }
     const node: CC.ObjectNode =
       typeof rootNode === 'string'
@@ -430,6 +487,7 @@ export class RuntimeLibrary
     this.sceneMaterial.clear();
     this.sceneGeometry.clear();
     this.sceneTexture.clear();
+    this.sceneEnvTexture.clear();
     return deserializeScene(rootNode, scene.getEngine() as Engine, this, scene, padding);
   }
   saveComplate() {}
