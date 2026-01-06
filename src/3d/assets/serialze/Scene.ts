@@ -136,7 +136,11 @@ export function deserializeScene(
   }
   if (sceneData.background) {
     scene.bgType = sceneData.background.type;
-    BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene, sceneData, assets);
+    BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(
+      scene,
+      sceneData,
+      assets,
+    );
   }
   if (sceneData.defaultRenderingPipeline) {
     parseDefaultRenderingPipeline(sceneData.defaultRenderingPipeline, scene);

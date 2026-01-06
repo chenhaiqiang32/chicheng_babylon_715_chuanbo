@@ -1,13 +1,13 @@
 <template>
     <div class="editor-container">
-        <Header></Header>
+        <Header v-show="running"></Header>
         <ElSplitter :lazy="true" style="height: 0 ; flex: 1;">
             <ElSplitterPanel min="600px">
                 <ElSplitter :lazy="true" layout="vertical">
                     <ElSplitterPanel>
                         <ElSplitter :lazy="true">
                             <ElSplitterPanel min="280px" :size="editorLayout.left + 'px'" collapsible
-                                @update:size="e => sizeChange(e, 'left')">
+                                @update:size="e => sizeChange(e, 'left')" v-if="running">
                                 <Hierarchy />
                             </ElSplitterPanel>
                             <ElSplitterPanel min="280px">
@@ -16,7 +16,7 @@
                         </ElSplitter>
                     </ElSplitterPanel>
                     <ElSplitterPanel min="280px" :size="editorLayout.bottom + 'px'" collapsible
-                        @update:size="e => sizeChange(e, 'bottom')">
+                        @update:size="e => sizeChange(e, 'bottom')" v-if="running">
                         <div class="tab-container-panel">
                             <div class="tab-title">
                                 <div class="item" :class="{ 'active': activeTab === 'assets' }"
@@ -33,7 +33,7 @@
                 </ElSplitter>
             </ElSplitterPanel>
             <ElSplitterPanel min="280px" :size="editorLayout.right + 'px'" collapsible
-                @update:size="e => sizeChange(e, 'right')">
+                @update:size="e => sizeChange(e, 'right')" v-if="running">
                 <Inspector />
             </ElSplitterPanel>
         </ElSplitter>
@@ -60,7 +60,7 @@ const activeTab = ref('assets')
 
 const { editorLayout } = storeToRefs(useEditor());
 
-const { loading } = storeToRefs(useEditor());
+const { loading, running } = storeToRefs(useEditor());
 
 
 function sizeChange(size: number, type: 'left' | 'bottom' | 'right') {

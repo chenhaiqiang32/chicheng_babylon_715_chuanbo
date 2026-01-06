@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 
 export const useEditor = defineStore('editor', () => {
   const loading = ref(0);
+  const running = ref(false);
   const setLoading = (v: number) => {
     loading.value = Math.floor(v * 100) * 0.01;
   };
@@ -28,6 +29,7 @@ export const useEditor = defineStore('editor', () => {
     },
   );
   return {
+    running,
     loading,
     setLoading,
     editorLayout,

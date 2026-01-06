@@ -17,7 +17,7 @@ import { CC } from './BaseRes';
 import { ZipFile } from '@/utils/Zip';
 import { EditorFileSystem, IFile } from './file/IFile';
 import { ICollectAssets, ILoaderAssets } from './AssetsManager';
-import { Geometry, TransformNode } from '@babylonjs/core/Meshes';
+import { DracoCompression, Geometry, TransformNode } from '@babylonjs/core/Meshes';
 import { ID } from '@/utils/id';
 import { ArrayUtils } from '@/utils/Array';
 import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
@@ -27,6 +27,13 @@ import '@babylonjs/loaders/SPLAT/splatFileLoader';
 import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 import { Timer } from '@/utils/Time';
 
+DracoCompression.Configuration = {
+  decoder: {
+    wasmUrl: './lib/draco/draco_wasm_wrapper_gltf.js', // WASM 包装器 JS
+    wasmBinaryUrl: './lib/draco/draco_decoder_gltf.wasm', // WASM 二进制文件
+    fallbackUrl: './lib/draco/draco_decoder_gltf.js', // JS 回退（可选，老浏览器）
+  },
+};
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
 
@@ -105,7 +112,8 @@ export class RuntimeLibrary
     return this.fileSystem.getFileArrayBuffer(uuid, GEOMETRY);
   }
   getTextureBuffer(uuid: string): Promise<Uint8Array> {
-    return this.fileSystem.getFileArrayBuffer(uuid, TEXTURE);
+    const buffer = this.fileSystem.getFileArrayBuffer(uuid, TEXTURE);
+    return buffer;
   }
 
   async importMesh(file: File, progressCallback?: (v: number) => void) {

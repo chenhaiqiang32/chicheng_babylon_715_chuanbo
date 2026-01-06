@@ -35,6 +35,7 @@ function changeProperty(property: string, newValue: any, oldValue: any, type: st
 function setVisible(visible: boolean) {
     props.object.isVisible = visible;
     Editor.Instance.switchNodeActive(props.object.uuid, props.object.isVisible);
+    changeProperty('isVisible', visible, !visible, 'boolean');
 }
 
 function onNameChanged(newName: string) {

@@ -11,6 +11,7 @@ import 'virtual:svg-icons-register';
 import { i18n } from './i18n';
 import { undo, redo } from './tools/undoredo';
 import { registerKeyDown } from './utils/ShortcutKey';
+import { useEditor } from './store/useEditor';
 
 const app = createApp(App);
 app.use(i18n);
@@ -27,5 +28,8 @@ registerKeyDown((event) => {
     redo();
   } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === 'z') {
     redo();
+  }
+  if (event.ctrlKey && key == '5') {
+    useEditor().running = !useEditor().running;
   }
 });

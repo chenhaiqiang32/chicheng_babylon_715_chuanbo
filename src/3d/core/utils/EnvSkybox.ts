@@ -26,60 +26,60 @@ let dome: PhotoDome;
 /**
  * 将环境贴图导入为贴图资产
  */
-export async function importSkyboxTexture(){
-    const scene = Editor.Instance.Scene;
-    const fileList = await Utils.chooseFile(".hdr,.exr,.env", true);
-    for(let i=0; i<fileList.length; i++){
-        const item = fileList[i];
-        await RuntimeLibrary.Instance.importTexture(item);
-    }
+export async function importSkyboxTexture() {
+  const scene = Editor.Instance.Scene;
+  const fileList = await Utils.chooseFile('.hdr,.exr,.env', true);
+  for (let i = 0; i < fileList.length; i++) {
+    const item = fileList[i];
+    await RuntimeLibrary.Instance.importTexture(item);
+  }
 }
 
 /**
  * 环境贴图只需要将贴图文件解析为对应的BaseTexture即可
  */
-export async function loadEnv(scene:Scene, name:string, url: string):Promise<BaseTexture> {
-    if(name == undefined || url == undefined) return;
-    const ext = name.toLowerCase().split('.').pop();
-    let ret = null;
-    switch(ext){
-        case 'hdr':
-            ret = await loadHdrSkybox(scene, url, 1024);
-            break;
-        case 'exr':
-            ret = await loadExrSkybox(scene, url, 1024);
-            break;
-        case 'env':
-            ret = await loadEnvSkybox(scene, url);
-            break;
-        default:
-            console.error(`Unsupported file extension: ${ext}`);
-            break;
-    }
-    return ret;
+export async function loadEnv(scene: Scene, name: string, url: string): Promise<BaseTexture> {
+  if (name == undefined || url == undefined) return;
+  const ext = name.toLowerCase().split('.').pop();
+  let ret = null;
+  switch (ext) {
+    case 'hdr':
+      ret = await loadHdrSkybox(scene, url, 1024);
+      break;
+    case 'exr':
+      ret = await loadExrSkybox(scene, url, 1024);
+      break;
+    case 'env':
+      ret = await loadEnvSkybox(scene, url);
+      break;
+    default:
+      console.error(`Unsupported file extension: ${ext}`);
+      break;
+  }
+  return ret;
 }
 
 /**
  * 将环境贴图应用到当前场景的天空盒上
  * @param name 环境贴图的名字，需要根据其后缀判断贴图类型
  */
-export async function loadSkyBox(scene:Scene, name:string, url:string, sourceUUID: string){
-    if(name == undefined || url == undefined) return;
-    const ext = name.toLowerCase().split('.').pop();
-    let skyBox;
-    switch(ext){
-        case 'hdr':
-            const hdr = await loadHdrSkybox(scene, url, 1024);
-            skyBox = createSkybox(hdr, scene);
-            break;
-        case 'exr':
-            const exr = await loadExrSkybox(scene, url, 1024);
-            skyBox = createSkybox(exr, scene);
-            break;
-        case 'env':
-            const env = await loadEnvSkybox(scene, url);
-            skyBox = createSkybox(env, scene);
-            break;
+export async function loadSkyBox(scene: Scene, name: string, url: string, sourceUUID: string) {
+  if (name == undefined || url == undefined) return;
+  const ext = name.toLowerCase().split('.').pop();
+  let skyBox;
+  switch (ext) {
+    case 'hdr':
+      const hdr = await loadHdrSkybox(scene, url, 1024);
+      skyBox = createSkybox(hdr, scene);
+      break;
+    case 'exr':
+      const exr = await loadExrSkybox(scene, url, 1024);
+      skyBox = createSkybox(exr, scene);
+      break;
+    case 'env':
+      const env = await loadEnvSkybox(scene, url);
+      skyBox = createSkybox(env, scene);
+      break;
 
     default:
       console.error(`Unsupported file extension: ${ext}`);
@@ -188,12 +188,12 @@ export function loadImageBG(tex: Texture, scene: Scene) {
   scene.bgTexture = tex;
 }
 
-export function load360ImageBG(tex: Texture, scene: Scene) {
+export function load360ImageBG(tex: string, scene: Scene) {
   closeEnv();
-  dome = new PhotoDome('360ImageBG', tex.url, { resolution: 128, size: 1000 }, scene);
+  dome = new PhotoDome('360ImageBG', tex, { resolution: 128, size: 1000 }, scene);
   setIgnoreForAllChildren(dome);
   dome.mesh.material.backFaceCulling = false;
-  scene.bgTexture = tex;
+  // scene.bgTexture = tex;
 }
 
 export function closeEnv() {

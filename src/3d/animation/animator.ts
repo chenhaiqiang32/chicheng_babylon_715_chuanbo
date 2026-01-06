@@ -99,12 +99,16 @@ export class Animator {
     }
   }
 
-  restoreDefault() {
+  reset() {
     this.objectInfos.forEach((x) => {
       x.values.forEach((v) => {
         setObjectValue(x.target, v.property, v.type, v.value);
       });
     });
+  }
+
+  restoreDefault() {
+    this.reset();
     this.objectInfos.length = 0;
     this.clips.length = 0;
     this.animation = null;
@@ -145,6 +149,17 @@ function getPercent(time: number, keys: { time: number; value: any }[]) {
   let start = 0;
   let end = 1;
   let find = false;
+  if (keys.length == 1) {
+    if (time >= keys[0].time) {
+      percent = 0;
+      start = 0;
+      end = 0;
+      find = true;
+      return { percent, start, end };
+    } else {
+      return { percent: 0, start: -1, end: -1 };
+    }
+  }
   for (let index = 0; index < keys.length - 1; index++) {
     const cur = keys[index].time;
     const next = keys[index + 1].time;
@@ -177,7 +192,6 @@ function setV3Value(object: any, property: string, value: any) {
   ObjectUtils.setObjectValue(object, property + '.x', value[0]);
   ObjectUtils.setObjectValue(object, property + '.y', value[1]);
   ObjectUtils.setObjectValue(object, property + '.z', value[2]);
-  console.log(object);
 }
 
 function setQuaternionValue(object: any, property: string, value: any) {

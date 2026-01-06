@@ -1,7 +1,7 @@
 <template>
     <div class="scene-panel">
         <canvas ref="canvasRef" @drop="handleDrop" @dragover="e => e.preventDefault()"></canvas>
-        <ToolBar />
+        <ToolBar v-if="running" />
     </div>
 </template>
 <script setup lang='ts'>
@@ -13,6 +13,8 @@ import { useScene } from '@/store/useScene';
 import { TransformNode } from '@babylonjs/core';
 import { loadSkyBox } from '@/3d/core/utils/EnvSkybox';
 import { useEditor } from '@/store/useEditor';
+import { storeToRefs } from 'pinia';
+const { running } = storeToRefs(useEditor());
 
 const canvasRef = ref<HTMLCanvasElement>()
 onMounted(async () => {
@@ -29,7 +31,7 @@ async function handleDrop(ev: DragEvent) {
     } else if (data.type === "envTexture") {
         const url = await RuntimeLibrary.Instance.getTextureURL(data.sourceUUID);
         await loadSkyBox(Editor.Instance.Scene, data.name, url, data.sourceUUID);
-    } else{
+    } else {
         console.log(data);
     }
 }
