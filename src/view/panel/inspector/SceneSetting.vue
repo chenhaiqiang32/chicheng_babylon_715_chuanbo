@@ -4,15 +4,15 @@
             <!-- <Color :label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor" /> -->
             <Color :label="$t('component.sceneSetting.ambientColor')" :object="scene" property="ambientColor" />
             <Field :title="$t('component.sceneSetting.backgroundType')">
-                <el-select v-model="bgType" style="margin-left: auto; width: 100px;">
-                    <el-option :label="'背景贴图'"      :value = 1 />
+                <el-select v-model="bgType" @change="onBgTypeChange" style="margin-left: auto; width: 100px;">
+                    <el-option :label="'同步环境'"      :value = 1 />
                     <el-option :label="'图片'"          :value= 2 />
                     <el-option :label="'全景图'"        :value= 3 />
                     <el-option :label="'颜色'"          :value= 4 />
                 </el-select>
             </Field>
-            <Texture v-if="bgType == 1" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundTexture')" :object="scene" type="envTexture"
-                property="bgTexture" @change="onSelectBgTexture" />
+            <!-- <Texture v-if="bgType == 1" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundTexture')" :object="scene" type="envTexture"
+                property="bgTexture" @change="onSelectBgTexture" /> -->
             <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')" :object="scene"
                 property="bgTexture" @change="onSelectBgImage" />
             <Texture v-if="bgType == 3" :acceptCubeTexture="true" :title="$t('component.sceneSetting.background360Image')" :object="scene"
@@ -573,6 +573,10 @@ const onSelect360BGImage = async (tex:BJS_Texture) => {
 const onSelectClearColor = () => {
     closeEnv();
     saveBgType(4);
+}
+
+const onBgTypeChange = (v:number) => {
+    console.log(v);
 }
 
 const saveBgType = (v: number) => {

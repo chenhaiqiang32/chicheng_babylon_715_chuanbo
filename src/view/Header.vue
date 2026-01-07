@@ -142,9 +142,20 @@ async function saveProject() {
 }
 
 function importModel() {
-    Utils.chooseFile('.glb,.fbx').then(async (fileList) => {
+    const ext = ".x_t,.rvm,.dgn,.rvt,.ifc,.xyz,.vtk,.vtp,.ply,.wrl,.dae,.amf,.3mf,.3dm,.obj,.3ds,.usdz,.stl";
+    const extList = ["x_t","rvm","dgn","rvt","ifc","xyz","vtk","vtp","ply","wrl","dae","amf","3mf","3dm","obj","3ds","usdz","stl"];
+    Utils.chooseFile('.glb,.fbx' + "," + ext).then(async (fileList) => {
         if (fileList[0]) {
-            const node = await RuntimeLibrary.Instance.importMesh(fileList[0], (v) => {
+            const originFile = fileList[0];
+            const fileExt = originFile.name.toLocaleLowerCase().split('.').pop();
+
+            let fileName = originFile.name;
+            if(extList.includes(fileExt)){
+                fileName = originFile.name.toLocaleLowerCase().split('.')[0] + ".glb";
+            }
+            const file = new File([originFile], fileName);
+            //const node = await RuntimeLibrary.Instance.importMesh(fileList[0], (v) => {
+            const node = await RuntimeLibrary.Instance.importMesh(file, (v) => {
                 useEditor().setLoading(v);
             });
             RuntimeLibrary.Instance.addToScene(Editor.Instance.Scene, node, (v) => {

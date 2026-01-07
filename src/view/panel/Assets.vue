@@ -106,6 +106,7 @@ async function onChange() {
             uuid: x.uuid
         }
     });
+    // 环境贴图
     envTextureList.value = RuntimeLibrary.Instance.envTexture.map(x => {
         return {
             type: 'envTexture',
@@ -116,7 +117,6 @@ async function onChange() {
     const set = new Set<string>();
     const textures = [];
 
-    // 分流普通贴图和环境贴图
     for (const item of texstureArray) {
         if (!set.has(item.sourceUUID)) {
             set.add(item.sourceUUID);
@@ -136,7 +136,6 @@ async function onChange() {
     for (let index = 0; index < envTextureList.value.length; index++) {
         const element = envTextureList.value[index];
         if (!element.url) {
-            //const prevUrl = await renderEnvTexture(element.sourceUUID);
             const tex = await RuntimeLibrary.Instance.getEnvTexture(element.sourceUUID);
             element.url = tex.prevUrl;
         }
