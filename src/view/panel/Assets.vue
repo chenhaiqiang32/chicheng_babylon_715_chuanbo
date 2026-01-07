@@ -79,7 +79,7 @@ function handleDragStart(ev: DragEvent, data: any) {
 onMounted(() => {
     RuntimeLibrary.Instance.on('onChanged', onChange);
     RuntimeLibrary.Instance.on('onMaterialChanged', onMaterialChanged);
-    // onChange()
+    onChange()
 })
 
 

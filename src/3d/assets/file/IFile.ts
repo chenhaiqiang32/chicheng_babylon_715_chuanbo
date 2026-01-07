@@ -5,6 +5,7 @@ import { useDialog } from '@/view/dialog';
 import ChooseSaveModeDialog from '@/view/dialog/ChooseSaveModeDialog.vue';
 import { useIndexDBProject } from '@/store/useIndexDBProject';
 import { FSFileSystem } from './FSFileSystem';
+import { UploadFileSystem } from './UploadFileSystem';
 
 export interface IFile {
   name: string;
@@ -22,7 +23,7 @@ export enum FileMode {
   NONE,
   LOCAL,
   INDEXEDDB,
-  UPLOAD,
+  NET,
   OSS,
 }
 
@@ -46,9 +47,9 @@ export class EditorFileSystem {
       case FileMode.LOCAL:
         this.file = new FSFileSystem();
         break;
-      // case FileMode.UPLOAD:
-      //   this.file = new UploadFileSystem();
-      //   break;
+      case FileMode.NET:
+        this.file = new UploadFileSystem();
+        break;
       case FileMode.INDEXEDDB:
         this.file = new IndexDBFileSystem();
         break;

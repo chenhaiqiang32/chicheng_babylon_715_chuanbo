@@ -9,19 +9,26 @@
                 <div class="title">
                     <div>
                         <div class="brand">编辑器</div>
-                        <div class="desc">创建或打开你的项目</div>
                     </div>
-                    <div class="actions">
-                        <ElButton type="primary" @click="createProject">新建项目</ElButton>
-                        <ElButton type="primary" @click="openLocalProject">打开本地项目</ElButton>
-                    </div>
+
                 </div>
                 <div class="recent" v-if="projects.length > 0">
-                    <div class="recent-title">最近项目</div>
+                    <div class="recent-title">
+                        最近项目
+                        <div class="actions">
+                            <ElButton size="small" type="primary" @click="openProject(FileMode.INDEXEDDB)">本地项目
+                            </ElButton>
+                            <ElButton size="small" type="primary" @click="openProject(FileMode.NET)">网络项目</ElButton>
+                            <!-- <ElButton type="primary" @click="openLocalProject">打开本地项目</ElButton> -->
+                        </div>
+                    </div>
                     <ElScrollbar class="recent-list">
-                        <div class="recent-item" v-for="p in projects" :key="p.name">
+                        <div class="recent-item" v-for="p in projects" :key="p.time">
+                            <ElTag size="small" type="success" style="margin-right: 8px;">{{ p.type === 'net' ? '网络' :
+                                '本地' }}
+                            </ElTag>
                             <span class="name">{{ p.name }}</span>
-                            <ElButton text size="small" @click="openIndexDBProject(p.name)">打开</ElButton>
+                            <ElButton text size="small" @click="openIndexDBProject(p)">打开</ElButton>
                             <SVG name="remove" @click="deleteProject(p.name)"></SVG>
                         </div>
                     </ElScrollbar>
@@ -31,7 +38,7 @@
     </ElDialog>
 </template>
 <script setup lang='ts'>
-import { ElDialog, ElScrollbar, ElButton } from 'element-plus';
+import { ElDialog, ElScrollbar, ElButton, ElMessageBox, ElTag } from 'element-plus';
 import SVG from '@/component/common/SVG.vue';
 import { onMounted, ref } from 'vue';
 import { useScene } from '@/store/useScene';
@@ -62,6 +69,36 @@ async function createProject() {
     }
 }
 
+
+async function openProject(mode: FileMode) {
+    try {
+        const { value: name } = await ElMessageBox.prompt('请输入项目名称', '新建项目', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            inputValue: '默认项目',
+        });
+        if (!name) {
+            return;
+        }
+        await EditorFileSystem.Instance.init(mode, name);
+        const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
+
+        });
+        if (sceneList.length > 0) {
+            useScene().setSceneList(sceneList);
+            Editor.Instance.setCurrentScene(sceneList[0].uuid);
+        } else {
+            const scene = await Editor.Instance.createNewScene('默认场景');
+            await useScene().addScene(scene);
+            Editor.Instance.setCurrentScene(scene.uuid);
+        }
+        props.close();
+    } catch (error) {
+        console.error(error);
+    } finally {
+    }
+}
+
 async function openLocalProject() {
     try {
         await EditorFileSystem.Instance.init(FileMode.LOCAL);
@@ -82,9 +119,13 @@ async function openLocalProject() {
     } finally {
     }
 }
-async function openIndexDBProject(name: string) {
+async function openIndexDBProject(p: { name: string; time: string; type: string }) {
     try {
-        await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, name);
+        if (p.type === 'net') {
+            await EditorFileSystem.Instance.init(FileMode.NET, p.name);
+        } else {
+            await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, p.name);
+        }
         const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
             loading.value = v;
         });
@@ -190,6 +231,10 @@ function deleteProject(name: string) {
                 font-size: 12px;
                 color: #bdbdbd;
                 margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
             }
 
 

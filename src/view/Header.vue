@@ -16,11 +16,14 @@ import { useScene } from '@/store/useScene';
 import { Utils } from '@/utils';
 import { useDark, useToggle } from '@vueuse/core'
 import { ElMessage } from 'element-plus';
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile';
 import { useIndexDBProject } from '@/store/useIndexDBProject';
 import { useDialog } from './dialog';
 import { useEditor } from '@/store/useEditor';
+import { registerKeyDown, unregisterKeyDown } from '@/utils/ShortcutKey';
+
+
 
 const isDark = useDark({
     valueDark: 'dark',
@@ -90,6 +93,17 @@ const menuItems: MenuItem[] = [
                 ]
 
             },
+            {
+                name: 'menu.setting.layout.title',
+                children: [
+                    {
+                        name: 'menu.setting.layout.default',
+                        callback: setLayoutDefault
+                    },
+
+                ]
+
+            },
 
         ]
     },
@@ -108,6 +122,25 @@ const menuItems: MenuItem[] = [
         ]
     },
 ]
+
+onMounted(() => {
+    registerKeyDown(keyDonw);
+});
+
+function setLayoutDefault() {
+    useEditor().setLayoutDefault();
+}
+
+function keyDonw(event: KeyboardEvent) {
+    const key = event.key.toLowerCase();
+    if (event.ctrlKey && key == 's') {
+        saveProject()
+        event.preventDefault();
+    }
+}
+onUnmounted(() => {
+    unregisterKeyDown(keyDonw);
+});
 
 async function saveProject() {
     try {
@@ -131,6 +164,13 @@ async function saveProject() {
             useIndexDBProject().addProject({
                 name: EditorFileSystem.Instance.name,
                 time: new Date().toLocaleString(),
+                type: 'local',
+            })
+        } else if (EditorFileSystem.Instance.mode === FileMode.NET) {
+            useIndexDBProject().addProject({
+                name: EditorFileSystem.Instance.name,
+                time: new Date().toLocaleString(),
+                type: 'net',
             })
         }
         RuntimeLibrary.Instance.saveComplate();
@@ -167,13 +207,6 @@ function importModel() {
             }, 1000);
         }
     })
-    // Utils.chooseFile('.ply').then(async (fileList) => {
-    //     if (fileList[0]) {
-    //         const mesh = new GaussianSplattingMesh('a');
-    //         const url = URL.createObjectURL(fileList[0]);
-    //         mesh.loadFileAsync(url)
-    //     }
-    // })
 }
 
 async function publish() {

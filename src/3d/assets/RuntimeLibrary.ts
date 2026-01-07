@@ -17,7 +17,7 @@ import { CC } from './BaseRes';
 import { ZipFile } from '@/utils/Zip';
 import { EditorFileSystem, IFile } from './file/IFile';
 import { ICollectAssets, ILoaderAssets } from './AssetsManager';
-import { Geometry, TransformNode } from '@babylonjs/core/Meshes';
+import { DracoCompression, Geometry, TransformNode } from '@babylonjs/core/Meshes';
 import { ID } from '@/utils/id';
 import { ArrayUtils } from '@/utils/Array';
 import { bufferToVertex, vertexToBuffer } from './utils/GeometryUtils';
@@ -28,9 +28,16 @@ import { Timer } from '@/utils/Time';
 import { loadSkyboxWithExt } from '../core/utils/EnvSkybox';
 import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 
+DracoCompression.Configuration = {
+  decoder: {
+    wasmUrl: './lib/draco/draco_wasm_wrapper_gltf.js', // WASM 包装器 JS
+    wasmBinaryUrl: './lib/draco/draco_decoder_gltf.wasm', // WASM 二进制文件
+    fallbackUrl: './lib/draco/draco_decoder_gltf.js', // JS 回退（可选，老浏览器）
+  },
+};
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
-const ENVPIXEL = 512;    // 环境贴图缩略图的分辨率，越大加载越久
+const ENVPIXEL = 512; // 环境贴图缩略图的分辨率，越大加载越久
 
 interface RuntimeAssetsEventBus {
   onChanged: void;
@@ -54,6 +61,7 @@ export class RuntimeLibrary
     }
 
     let buffer = await this.fileSystem.getFileArrayBuffer(sourceUUID, TEXTURE);
+    this.textureIds.add(sourceUUID);
     ///@ts-ignore
     const url = URL.createObjectURL(new Blob([buffer]));
     return url;
@@ -100,10 +108,11 @@ export class RuntimeLibrary
     return this.fileSystem.getFileArrayBuffer(uuid, GEOMETRY);
   }
   getTextureBuffer(uuid: string): Promise<Uint8Array> {
-    return this.fileSystem.getFileArrayBuffer(uuid, TEXTURE);
+    const buffer = this.fileSystem.getFileArrayBuffer(uuid, TEXTURE);
+    return buffer;
   }
   getEnvTextureBuffer(sourceUUID: string) {
-    return this.fileSystem.getFileArrayBuffer(sourceUUID, "EnvTexture");
+    return this.fileSystem.getFileArrayBuffer(sourceUUID, 'EnvTexture');
   }
 
   async importMesh(file: File, progressCallback?: (v: number) => void) {
@@ -170,7 +179,7 @@ export class RuntimeLibrary
     }
     const assets = JSON.parse(assetsText) as any;
     this.texture = assets.texture;
-    this.envTexture = assets.envTexture;
+    this.envTexture = assets.envTexture ?? [];
     const padding = new Set<Promise<any>>();
     this.material = assets.material;
     this.rootNodes = assets.rootNode;
@@ -261,21 +270,18 @@ export class RuntimeLibrary
     const ext = file.name.toLocaleLowerCase().split('.').pop();
     const texture = await loadSkyboxWithExt(this.resScene, url, ext, ENVPIXEL);
     texture.name = file.name;
-
-    if(!texture.sourceUUID)
-      texture.sourceUUID = ID.generateUUID();
+    texture.sourceUUID = texture.sourceUUID ?? ID.generateUUID();
     const old = this.envTexture.find((item) => item.sourceUUID === texture.sourceUUID);
-    if(!old || force) {
+    if (!old || force) {
       const data = texture.serialize();
       data.uuid = texture.sourceUUID;
       data.sourceUUID = texture.sourceUUID;
       delete data.url;
-      if(old)
-        ArrayUtils.remove(old, this.envTexture);
+      if (old) ArrayUtils.remove(old, this.envTexture);
       this.envTexture.push(data);
       this.sceneEnvTexture.set(data.sourceUUID, texture);
       const buffer = await file.arrayBuffer();
-      this.fileSystem.saveFile(texture.sourceUUID, new Uint8Array(buffer), "EnvTexture");
+      this.fileSystem.saveFile(texture.sourceUUID, new Uint8Array(buffer), 'EnvTexture');
     }
     texture.prevUrl = await renderEnvTexture(texture.sourceUUID);
     return texture;
@@ -283,23 +289,23 @@ export class RuntimeLibrary
 
   /**
    * 获取环境贴图对象
-   * @param sourceUUID 
+   * @param sourceUUID
    * @param withPrevUrl 是否需要携带预览图的url，如果需要，则会调用离屏渲染或缓存
-   * @returns 
+   * @returns
    */
-  async getEnvTexture(sourceUUID: string, withPrevUrl=true): Promise<BaseTexture> {
-    if(this.sceneEnvTexture.has(sourceUUID)) {
+  async getEnvTexture(sourceUUID: string, withPrevUrl = true): Promise<BaseTexture> {
+    if (this.sceneEnvTexture.has(sourceUUID)) {
       const oriTex = this.sceneEnvTexture.get(sourceUUID);
       const texture = oriTex.clone();
       texture.sourceUUID = sourceUUID;
-      if(withPrevUrl)
-        texture.prevUrl = await renderEnvTexture(sourceUUID);
+      if (withPrevUrl) texture.prevUrl = await renderEnvTexture(sourceUUID);
       return Promise.resolve(texture);
     } else {
       const data = this.envTexture.find((x) => x.sourceUUID == sourceUUID);
       // envTexture保存的是原始文件的file
-      if(data) {
+      if (data) {
         const buffer = await this.getEnvTextureBuffer(sourceUUID);
+        //@ts-ignore
         const blob = new Blob([buffer]);
         const url = URL.createObjectURL(blob);
         const ext = data.name.toLocaleLowerCase().split('.').pop();
@@ -309,13 +315,11 @@ export class RuntimeLibrary
         this.sceneEnvTexture.set(sourceUUID, texture);
         const retTex = texture.clone();
         retTex.sourceUUID = sourceUUID;
-        if(withPrevUrl)
-          retTex.prevUrl = await renderEnvTexture(sourceUUID)
+        if (withPrevUrl) retTex.prevUrl = await renderEnvTexture(sourceUUID);
         return Promise.resolve(retTex);
       }
     }
   }
-
 
   InitResIntoLibrary(scene: Scene) {
     const texturePaths = [
@@ -418,6 +422,7 @@ export class RuntimeLibrary
       const geoInfo = bufferToVertex(buffer);
       const geo = Geometry.Parse(geoInfo, this.currentScene, null);
       this.sceneGeometry.set(uuid, geo);
+      this.geomertyIDs.add(uuid);
       buffer = null;
       return Promise.resolve(geo);
     }

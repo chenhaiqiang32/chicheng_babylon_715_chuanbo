@@ -26,21 +26,21 @@ let dome: PhotoDome;
 /**
  * 将环境贴图导入为贴图资产
  */
-export async function importSkyboxTexture(){
-    const scene = Editor.Instance.Scene;
-    const fileList = await Utils.chooseFile(".hdr,.exr,.env", true);
-    for(let i=0; i<fileList.length; i++){
-      await RuntimeLibrary.Instance.addEnvTexture(fileList[0]);
-    }
+export async function importSkyboxTexture() {
+  const scene = Editor.Instance.Scene;
+  const fileList = await Utils.chooseFile('.hdr,.exr,.env', true);
+  for (let i = 0; i < fileList.length; i++) {
+    await RuntimeLibrary.Instance.addEnvTexture(fileList[0]);
+  }
 }
 
 /**
  * 将环境贴图应用到当前场景的天空盒上
  * @param name 环境贴图的名字，需要根据其后缀判断贴图类型
  */
-export async function loadSkyBox(scene:Scene, texture:BaseTexture){
-    if(!texture) return;
-    const skyBox = createSkybox(texture, scene);
+export async function loadSkyBox(scene: Scene, texture: BaseTexture) {
+  if (!texture) return;
+  const skyBox = createSkybox(texture, scene);
 
   // 有时候虽然加载了环境图，但是scene.bgTexture没有赋值，所以构造一个，环境贴图只关心 name 和 sourceUUID
   let bgTexture = new Texture('');
@@ -147,12 +147,12 @@ export function loadImageBG(tex: Texture, scene: Scene) {
   scene.bgTexture = tex;
 }
 
-export function load360ImageBG(tex: Texture, scene: Scene) {
+export function load360ImageBG(tex: string, scene: Scene) {
   closeEnv();
-  dome = new PhotoDome('360ImageBG', tex.url, { resolution: 128, size: 1000 }, scene);
+  dome = new PhotoDome('360ImageBG', tex, { resolution: 128, size: 1000 }, scene);
   setIgnoreForAllChildren(dome);
   dome.mesh.material.backFaceCulling = false;
-  scene.bgTexture = tex;
+  // scene.bgTexture = tex;
 }
 
 export function closeEnv() {

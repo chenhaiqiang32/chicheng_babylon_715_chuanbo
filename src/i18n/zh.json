@@ -61,6 +61,10 @@
         "title": "主题",
         "dark": "暗黑",
         "light": "亮色"
+      },
+      "layout": {
+        "title": "布局",
+        "default": "默认"
       }
     },
     "help": {

@@ -5,6 +5,10 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      props: (route) => ({
+        edit: route.query.runtime ? false : true,
+        projectId: route.query.projectId as string,
+      }),
       component: () => import('@/view/index.vue'),
     },
     {

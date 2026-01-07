@@ -3,6 +3,7 @@ import { ref, shallowRef, toRaw } from 'vue';
 interface Project {
   name: string;
   time: string;
+  type: 'local' | 'net';
 }
 export const useIndexDBProject = defineStore('indexDBProject', () => {
   const projects = ref<Project[]>([]);
@@ -16,7 +17,7 @@ export const useIndexDBProject = defineStore('indexDBProject', () => {
   });
 
   async function addProject(project: Project) {
-    const find = projects.value.find((p) => p.name === project.name);
+    const find = projects.value.find((p) => p.name === project.name && p.type === project.type);
     if (find) {
       find.time = project.time;
     } else {
