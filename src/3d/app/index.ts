@@ -1,6 +1,8 @@
 import {
   AbstractEngine,
   ActionManager,
+  Color3,
+  Color4,
   Engine,
   ExecuteCodeAction,
   Mesh,
@@ -14,7 +16,7 @@ export class App {
   private engine: AbstractEngine;
   private static instance: App;
   private assets: AppAssets;
-  private scene: Scene;
+  scene: Scene;
   private canvas: HTMLCanvasElement;
   static get Instance(): App {
     if (!this.instance) {
@@ -28,10 +30,7 @@ export class App {
   async init(canvas: HTMLCanvasElement, gpu: boolean) {
     this.canvas = canvas;
     if (gpu) {
-      this.engine = new WebGPUEngine(canvas, {
-        adaptToDeviceRatio: true,
-        limitDeviceRatio: 2,
-      });
+      this.engine = new Engine(canvas, true);
       if (this.engine instanceof WebGPUEngine) {
         await this.engine.initAsync();
       }
@@ -66,8 +65,11 @@ export class App {
     }
     const sceneNode = this.assets.scene[0];
     const scene = new Scene(this.engine);
-    await this.assets.deserializeScene(scene, sceneNode);
+    const padding = new Array<Padding>();
+    this.assets.deserializeScene(scene, sceneNode, padding);
+    await Promise.all(padding.map((p) => p()));
     this.scene = scene;
+    scene.clearColor = new Color4(1, 1, 1, 1);
     scene.activeCamera.attachControl(this.canvas, true);
     this.registerAction();
   }

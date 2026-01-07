@@ -6,25 +6,28 @@ export function serializeMeshNode(
   mesh: Mesh,
   meshData: CC.MeshNode,
   assetsManager: ICollectAssets,
-  serializeAssets: boolean = true,
+  padding: Array<Padding> = [],
 ) {
   // 天空盒会创建一个skybox的mesh，过滤掉
   if (mesh instanceof GaussianSplattingMesh || mesh.isIgnore) {
     return;
   }
-
   meshData.type = 'mesh';
   meshData.checkCollisions = mesh.checkCollisions;
   meshData.material = mesh.material?.uuid || '';
   if (mesh.geometry) {
-    if (serializeAssets) {
-      assetsManager.addGeometry(mesh.geometry);
-    }
-    meshData.geometry = mesh.geometry?.uuid;
+    const getGeometry = async () => {
+      await assetsManager.addGeometry(mesh.geometry);
+      meshData.geometry = mesh.geometry?.uuid || '';
+    };
+    padding.push(getGeometry);
   }
   if (mesh.material) {
-    assetsManager.addMaterial(mesh.material);
-    meshData.material = mesh.material?.uuid || '';
+    const getMaterial = async () => {
+      await assetsManager.addMaterial(mesh.material);
+      meshData.material = mesh.material?.uuid || '';
+    };
+    padding.push(getMaterial);
   }
 }
 

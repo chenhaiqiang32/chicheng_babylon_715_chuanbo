@@ -33,6 +33,7 @@
                     <div style="height: 0;flex: 1;">
                         <ElScrollbar style="height: 100%;">
                             <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
+                                draggable @node-drop="handleNodeDrop"
                                 :data="hierarchy" highlight-current :props="treeProps" node-key="id"
                                 :default-expanded="true" :default-active="true" @node-click="handleNodeClick">
                                 <!-- 节点类型图标 + 节点名 -->
@@ -60,11 +61,9 @@
 <script setup lang='ts'>
 import BasePanel from '@/component/common/BasePanel.vue'
 import { useScene } from '@/store/useScene';
-import { ElInput, ElMessageBox, type ElTree, type TreeNodeData } from 'element-plus';
+import { ElInput, ElMessageBox, NodeDropType, type ElTree, type TreeNodeData } from 'element-plus';
 import { Search } from '@element-plus/icons-vue'
-
-
-
+import Node from 'element-plus/es/components/tree/src/model/node.mjs';
 import { storeToRefs } from 'pinia';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { Editor } from '@/3d/Editor';
@@ -72,7 +71,9 @@ import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
 import { getHierarchyContextMenuCommands } from '@/view/panel/ContextMenuCommands';
-import { Node } from '@babylonjs/core';
+import { Node as BJS_Node } from '@babylonjs/core';
+import { registerKeyDown, unregisterKeyDown } from '@/utils/ShortcutKey';
+import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
 const searchText = ref('');
 const treeProps = {
     label: 'name',
@@ -97,6 +98,8 @@ onMounted(() => {
     Editor.Instance.on('nameChanged', onNameChanged)
     Editor.Instance.on('onActiveCameraChanged', onActiveCameraChanged);
     Editor.Instance.on('onNodeActiveChanged', onNodeActiveChanged)
+
+    registerKeyDown(onKeydown);
 })
 
 function contextMenu(e: MouseEvent, nodeData?: HierarchyNode) {
@@ -104,7 +107,7 @@ function contextMenu(e: MouseEvent, nodeData?: HierarchyNode) {
     e.preventDefault();
 
     // parent 优先为选中的节点；如果没有，则获取鼠标当前选中的节点
-    let parentNode: Node | null = null;
+    let parentNode: BJS_Node | null = null;
     if (currentSelected.value.length > 0) {
         parentNode = Editor.Instance.getNodeById(currentSelected.value[0]);
     }
@@ -220,9 +223,51 @@ const toggleSceneSetting = async () => {
     useDialog(SceneSettingDialog)
 }
 
+// 拖拽释放节点，修改该节点的层级
+const handleNodeDrop = (
+  draggingNode: Node,
+  dropNode: Node,
+  dropType: Exclude<NodeDropType, 'none'>,
+  ev: DragEvent
+) => {
+    if(!draggingNode || !dropNode)  return;
+
+    const node = useScene().getNode(draggingNode.data.id);
+    const drop = useScene().getNode(dropNode.data.id);
+    nodeCRUD().updateNodeHierarchy(node, drop, dropType);
+    // todo:无法保证顺序
+}
+
+async function onKeydown(e: KeyboardEvent) {
+    const key = e.key.toLowerCase();
+    // 拷贝节点
+    if (e.ctrlKey && key === 'c') {
+        if(Editor.Instance.selectNodes.length > 0){
+            const node = Editor.Instance.selectNodes[0];
+            const serializedNode = await nodeCRUD().copyNode(node);
+            useScene().currentCopy = serializedNode;
+        }
+    } 
+    // 粘贴节点
+    else if (e.ctrlKey && key === 'v') {
+        if(useScene().currentCopy) {
+            let parent = Editor.Instance.selectNodes.length > 0 ? Editor.Instance.selectNodes[0] : null;
+            // 非shift则粘贴在同层级，shift则粘贴为子节点
+            if(!e.shiftKey && parent)
+                parent = parent.parent;
+            const clone  = await nodeCRUD().pasteNode(useScene().currentCopy, parent);
+        }
+    }
+    // 删除节点
+    else if(key == 'delete'){
+        if(Editor.Instance.selectNodes.length > 0){
+            nodeCRUD().deleteNode(Editor.Instance.selectNodes[0]);
+        }
+    }
+}
 
 onUnmounted(() => {
-
+    unregisterKeyDown(onkeydown);
 })
 
 

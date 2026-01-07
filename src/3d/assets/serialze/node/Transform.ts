@@ -2,11 +2,11 @@ import { Mesh, ParticleSystemSet, Quaternion, type TransformNode } from '@babylo
 import type { CC } from '../../BaseRes';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 
-export async function serializeTransformNode(
+export function serializeTransformNode(
   trans: TransformNode,
   node: CC.TransformNode,
   assetsManager: ICollectAssets,
-): Promise<Partial<CC.TransformNode>> {
+): CC.TransformNode {
   try {
     node.position = trans.position.asArray();
     node.rotation = trans.rotationQuaternion?.asArray() || trans.rotation?.asArray() || [];
@@ -14,7 +14,7 @@ export async function serializeTransformNode(
     return node;
   } catch (error) {
     console.error('序列化变换节点时出错:', node);
-    return {};
+    return null;
   }
 }
 export function deserializeTransformNode(

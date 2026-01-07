@@ -1,31 +1,28 @@
 <template>
     <div>
         <SectionField :title="$t('component.sceneSetting.backgroundcolor')">
-            <Color :label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor" />
+            <!-- <Color :label="$t('component.sceneSetting.clearColor')" :object="scene" property="clearColor" /> -->
             <Color :label="$t('component.sceneSetting.ambientColor')" :object="scene" property="ambientColor" />
             <Field :title="$t('component.sceneSetting.backgroundType')">
-                <el-select v-model="bgType" @change="onBgTypeChange" style="margin-left: auto; width: 100px;">
-                    <el-option :label="'背景贴图'" :value=1 />
-                    <el-option :label="'图片'" :value=2 />
-                    <el-option :label="'全景图'" :value=3 />
-                    <el-option :label="'颜色'" :value=4 />
+                <el-select v-model="bgType" style="margin-left: auto; width: 100px;">
+                    <el-option :label="'背景贴图'"      :value = 1 />
+                    <el-option :label="'图片'"          :value= 2 />
+                    <el-option :label="'全景图'"        :value= 3 />
+                    <el-option :label="'颜色'"          :value= 4 />
                 </el-select>
             </Field>
-            <Texture v-if="bgType == 1" :acceptCubeTexture="true"
-                :title="$t('component.sceneSetting.backgroundTexture')" :object="scene" property="bgTexture"
-                @change="onSelectBgTexture" />
-            <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')"
-                :object="scene" property="bgTexture" @change="onSelectBgImage" />
-            <Texture v-if="bgType == 3" :acceptCubeTexture="true"
-                :title="$t('component.sceneSetting.background360Image')" :object="scene" property="bgTexture"
-                @change="onSelect360BGImage" />
-            <Color v-if="bgType == 4" :label="$t('component.sceneSetting.clearColor')" :object="scene"
-                property="clearColor" />
+            <Texture v-if="bgType == 1" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundTexture')" :object="scene"
+                property="bgTexture" @change="onSelectBgTexture" />
+            <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')" :object="scene"
+                property="bgTexture" @change="onSelectBgImage" />
+            <Texture v-if="bgType == 3" :acceptCubeTexture="true" :title="$t('component.sceneSetting.background360Image')" :object="scene"
+                property="bgTexture" @change="onSelect360BGImage" />
+            <Color v-if="bgType == 4":label="$t('component.sceneSetting.clearColor')" @change="onSelectClearColor" :object="scene" property="clearColor"/>
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.environment')">
             <Texture :acceptCubeTexture="true" :title="$t('component.sceneSetting.environmentTexture')" :object="scene"
-                property="environmentTexture" @change="force" />
+                property="environmentTexture" @change="onSelectEnvTex" />
             <Slider :label="$t('component.sceneSetting.iblIntensity')" :object="scene" property="iblIntensity"
                 @change="force" :min="0" :max="5" />
         </SectionField>
@@ -347,14 +344,14 @@ import { Editor } from "@/3d/Editor";
 import Field from "@/component/common/Field.vue";
 import Slider from "@/component/base/Slider.vue";
 import { onMounted } from "vue";
-
-import { ElSwitch } from "element-plus";
-import { load360ImageBG, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { closeEnv, load360ImageBG, loadEnv, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary";
 
 
 // const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
 
 const force = () => {
+    console.log(Editor.Instance.Scene.environmentTexture);
 
 };
 
@@ -384,9 +381,7 @@ const focusStep = ref<number>();
 const focusMax = ref<number>();
 const dofBlurLevel = ref<number>();
 onMounted(() => {
-    updateSceneSettings();
-});
-const updateSceneSettings = () => {
+    bgType.value = scene.value.bgType == 0 ? 4 : scene.value.bgType;
     fogMode.value = scene.value.fogMode;
     focusStep.value = (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) / 1000;
     focusMax.value = (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) * 1000;
@@ -402,10 +397,11 @@ const updateSceneSettings = () => {
 
     motionBlur.value = Editor.Instance.getMotionBlurPostProcess(false);
     motionBlurConfig.value.enabled = !!motionBlur.value;
-};
+})
+
 watch(() => Editor.Instance.Scene, () => {
     scene.value = Editor.Instance.Scene;
-    updateSceneSettings();
+    //updateSceneSettings();
 });
 const onToneMappingTypeChange = (v: number) => {
     if (renderingPipeline.value?.imageProcessing) {
@@ -586,21 +582,39 @@ const toggleVLS = () => {
 //     }
 // };
 
-const onSelectBgTexture = async (tex: BJS_Texture) => {
+// ----- 背景
+const onSelectBgTexture = async (tex:BJS_Texture) => {
     await loadSkyBox(Editor.Instance.Scene, tex.name, tex.sourceUUID);
+    Editor.Instance.Scene.bgTexture.url = tex.url;
+    saveBgType(1);
 }
 
 const onSelectBgImage = async (tex: BJS_Texture) => {
     loadImageBG(tex, Editor.Instance.Scene);
+    saveBgType(2);
 }
 
 const onSelect360BGImage = async (tex: BJS_Texture) => {
     load360ImageBG(tex, Editor.Instance.Scene);
+    saveBgType(3);
 }
 
+const onSelectClearColor = () => {
+    closeEnv();
+    saveBgType(4);
+}
 
-const onBgTypeChange = (v: number) => {
+const saveBgType = (v: number) => {
     Editor.Instance.Scene.bgType = v;
+    bgType.value = v;
+}
+
+// ----- 环境
+const onSelectEnvTex = async (tex:BJS_Texture) => {
+    const envTex = await loadEnv(Editor.Instance.Scene, tex.name, tex.sourceUUID);
+    envTex.name = tex.name;
+    envTex.url = tex.url;
+    Editor.Instance.Scene.environmentTexture = envTex;
 }
 
 const onFogModeChange = (v: number) => {

@@ -35,9 +35,10 @@
 <script setup lang='ts'>
 import SVG from '@/component/common/SVG.vue';
 import { ViewFlagsMode, hasViewFlag, toggleViewFlag } from '@/3d/core/utils/viewFlagsMode';
-import { ControlMode, useScene } from '@/store/useScene';
+import { useScene } from '@/store/useScene';
 import { storeToRefs } from 'pinia';
 import { onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import { ControlMode } from '@/store/useSceneModule/useControl';
 
 const iconSize: string = "20px";
 const selectedControlMode = storeToRefs(useScene()).currentControlMode;

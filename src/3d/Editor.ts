@@ -1,4 +1,4 @@
-import { ControlMode, ViewFlagsMode, useScene } from '@/store/useScene';
+import { ViewFlagsMode, useScene } from '@/store/useScene';
 import {
   ArcRotateCamera,
   CubeTexture,
@@ -33,9 +33,7 @@ import {
   ParticleHelper,
   AreaLight,
   RectAreaLight,
-  ShadowLight,
-  ShadowGenerator,
-  CascadedShadowGenerator,
+  HDRCubeTexture,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -56,6 +54,8 @@ import { isAbstractMesh } from '@/tools/guards/nodes';
 import { isVector3 } from '@/tools/guards/math';
 import { ParticleContainer } from './core/Extension/ParticleContainer';
 import { useEditor } from '@/store/useEditor';
+import { ControlMode } from '@/store/useSceneModule/useControl';
+import { nodeCRUD } from './core/utils/nodeCRUD';
 import { ChangeGpuParticleEmitterMesh } from '@/tools/particles/particles';
 
 interface EditorEvent {
@@ -123,7 +123,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
   private weakMap = new Map<string, Node>();
   get selectNodes() {
-    return this.selectNodes;
+    return this._selectNodes;
   }
   set selectNodes(v: Node[]) {
     if (this._selectNodes?.length > 0) {
@@ -131,7 +131,7 @@ export class Editor extends Dispatch<EditorEvent> {
         if (item instanceof Mesh) {
           this.toggleMeshMask(item, false);
         } else if (item instanceof Light) {
-          item.gizmo.scaleRatio = 0;  // 关掉灯的gizmo
+          item.gizmo.scaleRatio = 0; // 关掉灯的gizmo
         }
       });
     }
@@ -243,7 +243,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const scene = new Scene(this.engine);
     useScene().getScene(
       uuid,
-      (percent) => {
+      (percent: number) => {
         useEditor().setLoading(percent);
       },
       scene,
@@ -278,6 +278,8 @@ export class Editor extends Dispatch<EditorEvent> {
     }
     this.scene = scene;
     this.scene.collisionsEnabled = true;
+    // this.scene.environmentTexture = new HDRCubeTexture('./studio005.hdr', scene, 128);
+    // this.scene.environmentTexture.gammaSpace = true;
     //this.scene.gravity = new Vector3(0, -0.9, 0);
     // 开启物理引擎
     //this.scene.enablePhysics(new Vector3(0, -0.9, 0), new CannonJSPlugin(true, 10, CANNON));
@@ -347,7 +349,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const selectWatcher = watch(
       () => useScene().currentSelected,
       (v) => {
-        this.selectNodes = v?.map((x) => this.getNodeById(x)) ?? [];
+        this.selectNodes = v?.map((x: string) => this.getNodeById(x)) ?? [];
       },
     );
     const controlModeWatcher = watch(
@@ -735,7 +737,7 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.keysDown.push(83); // S (83)
     camera.keysLeft.push(65); // A (65)
     camera.keysRight.push(68); // D (68)
-    this.scene.meshes.forEach(m => m.createOrUpdateSubmeshesOctree());
+    this.scene.meshes.forEach((m) => m.createOrUpdateSubmeshesOctree());
     // 设置 QE 为垂直升降（默认没有，需要手动添加）
     camera.keysUpward.push(69); // E 上昇 (69)
     camera.keysDownward.push(81); // Q 下降 (81)
