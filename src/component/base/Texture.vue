@@ -64,6 +64,7 @@ import { useDialog } from "@/view/dialog"
 import { Editor } from "@/3d/Editor"
 import { ElMessageBox } from "element-plus"
 import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary"
+import { renderEnvTexture } from "@/tools/preview/materialPreviewGenerator"
 
 const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')
 
@@ -230,10 +231,19 @@ const handleDrop = (ev: DragEvent) => {
 }
 
 const computeTemporaryPreview = async () => {
-    const texture: any = getObjectValue(props.object, props.property)
-    if (!texture?.url) return
-    previewError.value = false;
-    previewTemporaryUrl.value = props.type == 'envTexture' ? texture.prevUrl :  texture.url;
+    const texture: any = getObjectValue(props.object, props.property);
+    if(props.type == 'envTexture'){
+        if(!texture.prevUrl){
+            texture.prevUrl = await renderEnvTexture(texture.sourceUUID);
+        }
+        previewError.value = false;
+        previewTemporaryUrl.value = texture.prevUrl;
+    }
+    else {
+        if (!texture?.url) return
+        previewError.value = false;
+        previewTemporaryUrl.value = texture.url;
+    }
 }
 
 

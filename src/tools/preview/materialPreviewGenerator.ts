@@ -78,7 +78,6 @@ export function renderMaterail(material: Material, useCache = true, engine=Edito
   });
 }
 
-let isRendering = false;
 /**
  * 生成环境贴图的缩略图 url
  */
@@ -91,10 +90,7 @@ export async function renderEnvTexture(sourceUUID:string, useCache = true, engin
     if (!scene) {
       initScene(engine);
     }
-    if(isRendering)
-      return;
 
-    isRendering = true;
     sphere.isVisible = false;
     plane.isVisible = true;
 
@@ -126,7 +122,6 @@ export async function renderEnvTexture(sourceUUID:string, useCache = true, engin
           camera,
           size,
           (data) => {
-            isRendering = false;
             shaderMaterial.dispose();
             envCache.set(sourceUUID, data);
             resolve(data);
