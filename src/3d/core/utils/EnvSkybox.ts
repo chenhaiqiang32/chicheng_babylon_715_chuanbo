@@ -48,7 +48,6 @@ export async function loadSkyBox(scene: Scene, texture: BaseTexture) {
   bgTexture.sourceUUID = texture.sourceUUID;
   bgTexture.prevUrl = texture.prevUrl;
   scene.bgTexture = bgTexture;
-  scene.bgType = 1;
 }
 
 export function loadSkyboxWithExt(
