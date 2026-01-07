@@ -582,11 +582,7 @@ const saveBgType = (v: number) => {
 
 // ----- 环境
 const onSelectEnvTex = async (tex:BJS_Texture) => {
-    //const envTex = await loadEnv(Editor.Instance.Scene, tex.name, tex.sourceUUID);
-    //envTex.name = tex.name;
-    //envTex.url = tex.url;
     const envTex = await RuntimeLibrary.Instance.getEnvTexture(tex.sourceUUID);
-    console.log(envTex);
     Editor.Instance.Scene.environmentTexture = envTex;
 }
 
