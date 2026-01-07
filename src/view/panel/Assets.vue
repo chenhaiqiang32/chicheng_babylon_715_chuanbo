@@ -55,11 +55,11 @@ import SVG from '@/component/common/SVG.vue';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { Editor } from '@/3d/Editor';
 import { openContextMenu } from '@/component/content-menu';
-import { renderEnvTexture, renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 import {
     getAssetsHdrContextMenuCommands, getAssetsMaterialContextMenuCommands,
     getAssetsModelContextMenuCommands, getAssetsTextureContextMenuCommands
 } from '@/view/panel/ContextMenuCommands';
+import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 
 const minWidth = 70
 const rowHeight = 70

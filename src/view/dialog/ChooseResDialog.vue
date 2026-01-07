@@ -38,7 +38,7 @@ import { Utils } from '@/utils';
 import SVG from '@/component/common/SVG.vue';
 import { ElDialog } from 'element-plus';
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
-import { renderEnvTexture, renderMaterail } from '@/tools/preview/materialPreviewGenerator';
+import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
 const visible = ref<boolean>(true);
 const props = defineProps<{
     close: () => void,
@@ -89,7 +89,8 @@ async function getResList() {
         for(let index = 0; index < data.value.length; index++) {
             const element = data.value[index];
             if(!element.url) {
-                element.url = await renderEnvTexture(element.sourceUUID);
+                const tex = await RuntimeLibrary.Instance.getEnvTexture(element.sourceUUID);
+                element.url = tex.prevUrl;
             }
         }
     } else {

@@ -1,6 +1,5 @@
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
-import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 import { Utils } from '@/utils';
 import {
   BaseTexture,

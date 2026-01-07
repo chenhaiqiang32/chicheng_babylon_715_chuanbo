@@ -54,7 +54,7 @@ export function serializeScene(
   result.activeCamera = scene.activeCamera?.uuid;
   result.reflectionProbes = scene.reflectionProbes?.map((item) => item.serialize());
   result.environment = {
-    texture: scene.environmentTexture?.uniqueId,
+    sourceUUID: scene.environmentTexture.sourceUUID,
     url: (scene.environmentTexture as CubeTexture).url,
     intensity: scene.environmentIntensity,
   };
@@ -131,8 +131,16 @@ export function deserializeScene(
     deserializeNode(node, scene, assets, null, false, padding);
   }
   if (sceneData.environment) {
-    scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
-    scene.environmentIntensity = sceneData.environment.intensity;
+    // 如果有 sourceUUID， 说明用户修改了环境贴图，这时候需要加载环境贴图数据
+    if(sceneData.environment.sourceUUID) {
+      assets.getEnvTexture(sceneData.environment.sourceUUID, false).then((tex) => {
+        scene.environmentTexture = tex;
+      })
+    }
+    else {
+      scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
+      scene.environmentIntensity = sceneData.environment.intensity;
+    }
   }
   if (sceneData.background) {
     scene.bgType = sceneData.background.type;
