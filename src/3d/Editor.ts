@@ -33,6 +33,9 @@ import {
   ParticleHelper,
   AreaLight,
   RectAreaLight,
+  ShadowLight,
+  ShadowGenerator,
+  CascadedShadowGenerator,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -53,7 +56,7 @@ import { isAbstractMesh } from '@/tools/guards/nodes';
 import { isVector3 } from '@/tools/guards/math';
 import { ParticleContainer } from './core/Extension/ParticleContainer';
 import { useEditor } from '@/store/useEditor';
-
+import { ChangeGpuParticleEmitterMesh } from '@/tools/particles/particles';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -70,6 +73,7 @@ interface EditorEvent {
 }
 
 export class Editor extends Dispatch<EditorEvent> {
+  requestId: number;
   async createParticleSystem(arg0: string) {
     const particleSystem = await ParticleHelper.CreateAsync(arg0, this.scene);
     const transformNode = new TransformNode(arg0 + '-particle', this.scene);
@@ -126,7 +130,7 @@ export class Editor extends Dispatch<EditorEvent> {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
           this.toggleMeshMask(item, false);
-        } else if(item instanceof Light) {
+        } else if (item instanceof Light) {
           item.gizmo.scaleRatio = 0;  // 关掉灯的gizmo
         }
       });
@@ -145,7 +149,7 @@ export class Editor extends Dispatch<EditorEvent> {
       v[0].gizmo.scaleRatio = 2;
     } else {
       // 如果子节点没有 mesh，则不显示 gizmo
-      if (v[0].getChildMeshes().length > 0) this.gizmoManager.attachToNode(v[0]);
+      if (v[0].getChildMeshes()?.length > 0) this.gizmoManager.attachToNode(v[0]);
       else {
         this.gizmoManager.attachToNode(v[0]);
       }
@@ -197,6 +201,22 @@ export class Editor extends Dispatch<EditorEvent> {
           useScene().currentControlMode = ControlMode.Scale;
           break;
         }
+        case '5':
+          {
+            ChangeGpuParticleEmitterMesh('box');
+          }
+          case '6':
+          {
+            ChangeGpuParticleEmitterMesh('sphere');
+          }
+          case '7':
+          {
+            ChangeGpuParticleEmitterMesh('cylinder');
+          }
+          case '8':
+          {
+            ChangeGpuParticleEmitterMesh('polygon');
+          }
       }
     });
     this.engine.runRenderLoop(() => {
@@ -238,7 +258,23 @@ export class Editor extends Dispatch<EditorEvent> {
         lightGizmo.light = light;
         lightGizmo.scaleRatio = 0;
         light.gizmo = lightGizmo;
+
+
+        // const generator = new CascadedShadowGenerator(4096, light as DirectionalLight);
+        // generator.bias = 0.00268;
+        // generator.lambda = 1;
+        // generator.depthClamp = true;
+        // generator.autoCalcDepthBounds = true;
+        // generator.autoCalcDepthBoundsRefreshRate = 60;
+        // generator.transparencyShadow = true;
+        // generator.enableSoftTransparentShadow = true;
+        // generator.getShadowMap()?.renderList?.push(...generator.getLight().getScene().meshes);
+        // console.log(generator.getClassName?.());
+
       });
+      // scene.meshes.forEach((item) => {
+      //   item.receiveShadows = true;
+      // });
     }
     this.scene = scene;
     this.scene.collisionsEnabled = true;
@@ -248,7 +284,19 @@ export class Editor extends Dispatch<EditorEvent> {
     useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });
+    //this.update();
   }
+
+  // update = () => {
+  //   const parent = this.scene.getNodeByName('康方楼') as TransformNode;
+  //   if (!parent) {
+  //     return;
+  //   }
+  //   const angle = 0.001 * this.Scene.getAnimationRatio();
+  //   const rotationQuaternion = Quaternion.RotationAxis(Vector3.UpReadOnly, angle);
+  //   parent.rotationQuaternion = parent.rotationQuaternion ? parent.rotationQuaternion.multiply(rotationQuaternion) : rotationQuaternion;
+  //   this.requestId = requestAnimationFrame(this.update);
+  // };
 
   getRaycastPoint(x?: number, y?: number) {
     // 1. 创建拾取射线
@@ -321,7 +369,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
   newResScene() {
     const scene = new Scene(this.engine);
-    const env = new CubeTexture('./abandoned_factory_canteen_01.env', scene);
+    const env = new CubeTexture('./country.env', scene);
     scene.environmentTexture = env;
     scene.useRightHandedSystem = false;
     return scene;
@@ -342,7 +390,7 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.inertia = 0.4;
     camera.panningInertia = 0.5;
 
-    const env = new CubeTexture('./abandoned_factory_canteen_01.env', scene);
+    const env = new CubeTexture('./abandoned_factory_canteen_01', scene);
     scene.environmentTexture = env;
     this.createLight('directional', scene);
     return scene;
@@ -687,7 +735,7 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.keysDown.push(83); // S (83)
     camera.keysLeft.push(65); // A (65)
     camera.keysRight.push(68); // D (68)
-    this.scene.meshes.forEach(m=>m.createOrUpdateSubmeshesOctree());
+    this.scene.meshes.forEach(m => m.createOrUpdateSubmeshesOctree());
     // 设置 QE 为垂直升降（默认没有，需要手动添加）
     camera.keysUpward.push(69); // E 上昇 (69)
     camera.keysDownward.push(81); // Q 下降 (81)
