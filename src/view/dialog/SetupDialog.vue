@@ -12,7 +12,7 @@
                     </div>
 
                 </div>
-                <div class="recent" v-if="projects.length > 0">
+                <div class="recent">
                     <div class="recent-title">
                         最近项目
                         <div class="actions">
@@ -22,7 +22,7 @@
                             <!-- <ElButton type="primary" @click="openLocalProject">打开本地项目</ElButton> -->
                         </div>
                     </div>
-                    <ElScrollbar class="recent-list">
+                    <ElScrollbar class="recent-list" v-if="projects.length > 0">
                         <div class="recent-item" v-for="p in projects" :key="p.time">
                             <ElTag size="small" type="success" style="margin-right: 8px;">{{ p.type === 'net' ? '网络' :
                                 '本地' }}
