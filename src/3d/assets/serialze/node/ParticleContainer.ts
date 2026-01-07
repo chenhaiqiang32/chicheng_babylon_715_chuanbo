@@ -3,11 +3,12 @@ import type { CC } from '../../BaseRes';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 import { ParticleContainer } from '@/3d/core/Extension/ParticleContainer';
 
-export async function serializeParticleNode(
+export  function serializeParticleNode(
     trans: ParticleContainer,
     node: CC.ParticleContainer,
     assetsManager: ICollectAssets,
-): Promise<Partial<CC.ParticleContainer>> {
+    padding:Array<Padding> = [],
+): CC.ParticleContainer {
     try {
         node.position = trans.position.asArray();
         node.rotation = trans.rotationQuaternion?.asArray() || trans.rotation?.asArray() || [];
@@ -20,8 +21,11 @@ export async function serializeParticleNode(
             for (let index = 0; index < trans.particleSystems.systems.length; index++) {
                 const p = trans.particleSystems.systems[index];
                 if (p.particleTexture) {
-                    await assetsManager.addTexture(p.particleTexture);
-                    node.particleSet.systems[index].particleTextureMap = p.particleTexture?.uuid;
+                    const addTexture = async () => {
+                        await assetsManager.addTexture(p.particleTexture);
+                        node.particleSet.systems[index].particleTextureMap = p.particleTexture?.uuid;
+                      };
+                      padding.push(addTexture);
                     delete node.particleSet.systems[index].particleTexture;
                 }
 
@@ -30,7 +34,7 @@ export async function serializeParticleNode(
         return node;
     } catch (error) {
         console.error('序列化变换节点时出错:', node);
-        return {};
+        return null;
     }
 }
 export function deserializeParticleNode(

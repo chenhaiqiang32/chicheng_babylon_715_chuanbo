@@ -38,7 +38,7 @@ export function serializeNode(
       serializeTransformNode(node, reuslt as CC.TransformNode, assets);
     }
     if (node instanceof ParticleContainer) {
-      await serializeParticleNode(node, reuslt as CC.ParticleContainer, assets);
+       serializeParticleNode(node, reuslt as CC.ParticleContainer, assets,padding);
     }
     if (node.metadata) {
       reuslt.metadata = node.metadata;
