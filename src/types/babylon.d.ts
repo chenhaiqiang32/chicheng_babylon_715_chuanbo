@@ -32,6 +32,7 @@ declare module '@babylonjs/core' {
     uuid: string;
     sourceUUID: string;
     url: string;
+    prevUrl: string;
   }
   interface InternalTexture {
     uuid: string;

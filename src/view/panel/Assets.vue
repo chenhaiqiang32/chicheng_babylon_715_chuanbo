@@ -130,15 +130,15 @@ async function onChange() {
         if (!element.url) {
             RuntimeLibrary.Instance.getTextureURL(element.sourceUUID).then(url => {
                 element.url = url
-                RuntimeLibrary.Instance.setEnvTextureURL(element.sourceUUID, url);
             })
         }
     }
     for (let index = 0; index < envTextureList.value.length; index++) {
         const element = envTextureList.value[index];
         if (!element.url) {
-            const prevUrl = await renderEnvTexture(element.sourceUUID);
-            element.url = prevUrl;
+            //const prevUrl = await renderEnvTexture(element.sourceUUID);
+            const tex = await RuntimeLibrary.Instance.getEnvTexture(element.sourceUUID);
+            element.url = tex.prevUrl;
         }
     }
 

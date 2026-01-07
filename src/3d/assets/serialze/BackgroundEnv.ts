@@ -39,7 +39,7 @@ export class TextureBgEnv implements BackgroundEnv {
     deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets){
         if(sceneData.background.texture){
             const texture = sceneData.background.texture;
-            assetsManager.getEnvTexture(texture.sourceUUID).then((tex) => {
+            assetsManager.getEnvTexture(texture.sourceUUID, false).then((tex) => {
                 loadSkyBox(scene, tex);
             })
         }

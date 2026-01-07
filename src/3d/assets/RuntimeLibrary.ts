@@ -26,10 +26,11 @@ import { FBXLoader } from 'babylonjs-fbx-loader';
 import '@babylonjs/loaders/SPLAT/splatFileLoader';
 import { Timer } from '@/utils/Time';
 import { loadSkyboxWithExt } from '../core/utils/EnvSkybox';
+import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
-const ENVPIXEL = 1024;    // 环境贴图缩略图的分辨率，越大加载越久
+const ENVPIXEL = 512;    // 环境贴图缩略图的分辨率，越大加载越久
 
 interface RuntimeAssetsEventBus {
   onChanged: void;
@@ -255,7 +256,7 @@ export class RuntimeLibrary
   }
 
   // ----- envTexture
-  async addEnvTexture(file: File, force: boolean = true): Promise<any> {
+  async addEnvTexture(file: File, force: boolean = true): Promise<BaseTexture> {
     const url = URL.createObjectURL(file);
     const ext = file.name.toLocaleLowerCase().split('.').pop();
     const texture = await loadSkyboxWithExt(this.resScene, url, ext, ENVPIXEL);
@@ -276,12 +277,24 @@ export class RuntimeLibrary
       const buffer = await file.arrayBuffer();
       this.fileSystem.saveFile(texture.sourceUUID, new Uint8Array(buffer), "EnvTexture");
     }
+    texture.prevUrl = await renderEnvTexture(texture.sourceUUID);
     return texture;
   }
 
-  async getEnvTexture(sourceUUID: string): Promise<BaseTexture> {
+  /**
+   * 获取环境贴图对象
+   * @param sourceUUID 
+   * @param withPrevUrl 是否需要携带预览图的url，如果需要，则会调用离屏渲染或缓存
+   * @returns 
+   */
+  async getEnvTexture(sourceUUID: string, withPrevUrl=true): Promise<BaseTexture> {
     if(this.sceneEnvTexture.has(sourceUUID)) {
-      return Promise.resolve(this.sceneEnvTexture.get(sourceUUID) as BaseTexture);
+      const oriTex = this.sceneEnvTexture.get(sourceUUID);
+      const texture = oriTex.clone();
+      texture.sourceUUID = sourceUUID;
+      if(withPrevUrl)
+        texture.prevUrl = await renderEnvTexture(sourceUUID);
+      return Promise.resolve(texture);
     } else {
       const data = this.envTexture.find((x) => x.sourceUUID == sourceUUID);
       // envTexture保存的是原始文件的file
@@ -294,17 +307,13 @@ export class RuntimeLibrary
         texture.sourceUUID = sourceUUID;
         texture.name = data.name;
         this.sceneEnvTexture.set(sourceUUID, texture);
-        return Promise.resolve(texture);
+        const retTex = texture.clone();
+        retTex.sourceUUID = sourceUUID;
+        if(withPrevUrl)
+          retTex.prevUrl = await renderEnvTexture(sourceUUID)
+        return Promise.resolve(retTex);
       }
     }
-  }
-  // 设置envTexutre的缩略图url
-  setEnvTextureURL(sourceUUID: string, url: string) {
-    const env = this.sceneEnvTexture.get(sourceUUID);
-    if(env)
-      env.url = url;
-    else 
-      console.error(`don't have envTexture with sourceUUID:${sourceUUID}`);
   }
 
 

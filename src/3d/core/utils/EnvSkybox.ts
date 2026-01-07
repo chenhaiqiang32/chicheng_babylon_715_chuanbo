@@ -36,30 +36,6 @@ export async function importSkyboxTexture(){
 }
 
 /**
- * 环境贴图只需要将贴图文件解析为对应的BaseTexture即可
- */
-export async function loadEnv(scene:Scene, name:string, url: string):Promise<BaseTexture> {
-    if(name == undefined || url == undefined) return;
-    const ext = name.toLowerCase().split('.').pop();
-    let ret = null;
-    switch(ext){
-        case 'hdr':
-            ret = await loadHdrSkybox(scene, url, 1024);
-            break;
-        case 'exr':
-            ret = await loadExrSkybox(scene, url, 1024);
-            break;
-        case 'env':
-            ret = await loadEnvSkybox(scene, url);
-            break;
-        default:
-            console.error(`Unsupported file extension: ${ext}`);
-            break;
-    }
-    return ret;
-}
-
-/**
  * 将环境贴图应用到当前场景的天空盒上
  * @param name 环境贴图的名字，需要根据其后缀判断贴图类型
  */
@@ -70,8 +46,8 @@ export async function loadSkyBox(scene:Scene, texture:BaseTexture){
   // 有时候虽然加载了环境图，但是scene.bgTexture没有赋值，所以构造一个，环境贴图只关心 name 和 sourceUUID
   let bgTexture = new Texture('');
   bgTexture.name = texture.name;
-  bgTexture.url = await renderEnvTexture(texture.sourceUUID); // url用缩略图的url
   bgTexture.sourceUUID = texture.sourceUUID;
+  bgTexture.prevUrl = texture.prevUrl;
   scene.bgTexture = bgTexture;
   scene.bgType = 1;
 }

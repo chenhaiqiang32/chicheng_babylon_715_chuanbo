@@ -323,7 +323,8 @@ import { Editor } from "@/3d/Editor";
 import Field from "@/component/common/Field.vue";
 import Slider from "@/component/base/Slider.vue";
 import { onMounted } from "vue";
-import { closeEnv, load360ImageBG, loadEnv, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { closeEnv, load360ImageBG, loadImageBG, loadSkyBox } from "@/3d/core/utils/EnvSkybox";
+import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary";
 
 
 // const physicsEngine = computed(() => Editor.Instance.Scene.getPhysicsEngine?.());
@@ -581,9 +582,11 @@ const saveBgType = (v: number) => {
 
 // ----- 环境
 const onSelectEnvTex = async (tex:BJS_Texture) => {
-    const envTex = await loadEnv(Editor.Instance.Scene, tex.name, tex.sourceUUID);
-    envTex.name = tex.name;
-    envTex.url = tex.url;
+    //const envTex = await loadEnv(Editor.Instance.Scene, tex.name, tex.sourceUUID);
+    //envTex.name = tex.name;
+    //envTex.url = tex.url;
+    const envTex = await RuntimeLibrary.Instance.getEnvTexture(tex.sourceUUID);
+    console.log(envTex);
     Editor.Instance.Scene.environmentTexture = envTex;
 }
 

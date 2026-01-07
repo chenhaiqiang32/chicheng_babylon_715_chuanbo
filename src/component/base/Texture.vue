@@ -232,8 +232,8 @@ const handleDrop = (ev: DragEvent) => {
 const computeTemporaryPreview = async () => {
     const texture: any = getObjectValue(props.object, props.property)
     if (!texture?.url) return
-    previewError.value = false
-    previewTemporaryUrl.value = texture.url
+    previewError.value = false;
+    previewTemporaryUrl.value = props.type == 'envTexture' ? texture.prevUrl :  texture.url;
 }
 
 
@@ -253,8 +253,9 @@ async function changeTexture() {
         choose: async (res: any) => {
             if (res) {
                 let texture;
-                if(type == 'envTexture')
+                if(type == 'envTexture'){
                     texture = await RuntimeLibrary.Instance.getEnvTexture(res.sourceUUID);
+                }
                 else 
                     texture = new Texture(res.url, Editor.Instance.Scene, true, false);
 
