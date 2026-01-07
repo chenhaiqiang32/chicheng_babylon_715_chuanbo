@@ -12,6 +12,7 @@ export interface ILoaderAssets {
   getMaterial(uuid: string): Promise<Material>;
   getTexture(uuid: string): Promise<BaseTexture>;
   getTextureURL(sourceUUID: string): Promise<string>;
+  getEnvTexture(sourceUUID: string, withPrevUrl?: boolean): Promise<BaseTexture>;
 }
 
 // export class AssetsManager implements ICollectAssets, ILoaderAssets {

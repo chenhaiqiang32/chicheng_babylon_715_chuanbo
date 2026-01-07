@@ -16,6 +16,7 @@ import {
 } from '@babylonjs/core';
 import { envTextureVertexShader, envTextureFragmentShader } from '@/shaders/envTexture';
 import { Editor } from '@/3d/Editor';
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 
 let scene: Scene;
 let camera: FreeCamera;
@@ -80,9 +81,9 @@ export function renderMaterail(material: Material, useCache = true, engine=Edito
 /**
  * 生成环境贴图的缩略图 url
  */
-export async function renderEnvTexture(uuid:string, url: string, ext:string, useCache = true, engine: AbstractEngine) {
+export async function renderEnvTexture(sourceUUID:string, useCache = true, engine: AbstractEngine=Editor.Instance.Engine):Promise<string> {
     if (useCache) {
-        const url = envCache.get(uuid);
+        const url = envCache.get(sourceUUID);
         if (url) 
           return url;
     }
@@ -92,9 +93,8 @@ export async function renderEnvTexture(uuid:string, url: string, ext:string, use
 
     sphere.isVisible = false;
     plane.isVisible = true;
-    // 环境贴图不能直接作用于材质，要先将其转换为对应的CubeTexture才能使用
-    // todo:由于要加载，所以会导致加载性能下降
-    const env = await loadSkyboxWithExt(scene, url,ext, size);
+
+    const env = await RuntimeLibrary.Instance.getEnvTexture(sourceUUID, false);
 
     const shaderMaterial = new ShaderMaterial("envTextureShader", scene,
       {
@@ -123,7 +123,7 @@ export async function renderEnvTexture(uuid:string, url: string, ext:string, use
           size,
           (data) => {
             shaderMaterial.dispose();
-            envCache.set(uuid, data);
+            envCache.set(sourceUUID, data);
             resolve(data);
           },
           'image/png',
