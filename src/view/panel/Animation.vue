@@ -3,7 +3,12 @@
     <div class="timeline-container">
       <div class="timeline-header">
         <ElSelect v-model="currentSelect" style=" flex: 1;" @change="onSelectChange">
-          <ElOption v-for="item in runtimeAnimations" :key="item.uuid" :label="item.name" :value="item.uuid"></ElOption>
+          <ElOption v-for="item in runtimeAnimations" :key="item.uuid" :label="item.name" :value="item.uuid">
+            <template #label="{ label }">
+              {{ label }}
+              <SVG name="play" size="22px"></SVG>
+            </template>
+          </ElOption>
         </ElSelect>
         <ElButton size="small" @click="createAnimation">{{ $t('animation.new') }}</ElButton>
       </div>
@@ -68,6 +73,7 @@ import { Editor } from '@/3d/Editor';
 import { CC } from '@/3d/assets/BaseRes';
 import { Animator } from '@/3d/animation/animator';
 import { _EventBus } from '@/utils/dispatch';
+import { TimeController } from '@/utils/Time';
 
 const domRef = ref<HTMLDivElement | null>(null)
 
@@ -87,6 +93,9 @@ function getClipName(v: string) {
 const runtimeAnimations = shallowRef<CC.Animation[]>([])
 let currentRuntimeAction = shallowRef<CC.Animation>(null)
 let animator: Animator
+
+let timeController: TimeController
+
 function onSelectChange(uuid: string) {
   timeline.stop()
   timeline.seek(0)
@@ -96,9 +105,14 @@ function onSelectChange(uuid: string) {
     return
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
+
+
+
   animator = new Animator(currentRuntimeAction.value)
-  animator.updateClip(Editor.Instance.getNodeById)
+  animator.updateClip((x) => Editor.Instance.getNodeById(x))
   animator.collectInfo()
+
+
 }
 
 watch(speed, (val) => {
@@ -132,7 +146,11 @@ onMounted(() => {
   })
   if (domRef.value) {
     timeline.init({ maxTime: 60 * 10 }, domRef.value).then(() => {
+
       timeline.setTimeChanged((t: number) => {
+        if (t == 0) {
+          animator.reset()
+        }
         time.value = t
         if (animator) {
           animator.execute(t)
@@ -212,6 +230,10 @@ onBeforeUnmount(() => {
   if (resizeObserver && domRef.value) {
     resizeObserver.unobserve(domRef.value)
     resizeObserver.disconnect()
+  }
+  if (timeController) {
+    timeController.dispose()
+    timeController = null
   }
   timeline.seek(0)
   timeline.dispose()

@@ -54,13 +54,13 @@ export function serializeScene(
   result.activeCamera = scene.activeCamera?.uuid;
   result.reflectionProbes = scene.reflectionProbes?.map((item) => item.serialize());
   result.environment = {
-    texture: scene.environmentTexture?.uniqueId,
+    sourceUUID: scene.environmentTexture.sourceUUID,
     url: (scene.environmentTexture as CubeTexture).url,
     intensity: scene.environmentIntensity,
   };
 
   const serializeBg = async () => {
-    const bg = await BackgroundEnvFactory.createFromScene(scene?.bgType).serialize(scene);
+    const bg = await BackgroundEnvFactory.createFromScene(scene?.bgType).serialize(scene, assets);
     result.background = bg;
   };
   padding.push(serializeBg);
@@ -131,12 +131,23 @@ export function deserializeScene(
     deserializeNode(node, scene, assets, null, false, padding);
   }
   if (sceneData.environment) {
-    scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
-    scene.environmentIntensity = sceneData.environment.intensity;
+    console.log(sceneData.environment.sourceUUID);
+    if (sceneData.environment.sourceUUID) {
+      assets.getEnvTexture(sceneData.environment.sourceUUID, false).then((tex) => {
+        scene.environmentTexture = tex;
+      });
+    } else {
+      scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
+      scene.environmentIntensity = sceneData.environment.intensity;
+    }
   }
   if (sceneData.background) {
     scene.bgType = sceneData.background.type;
-    BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene, sceneData);
+    BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(
+      scene,
+      sceneData,
+      assets,
+    );
   }
   if (sceneData.defaultRenderingPipeline) {
     parseDefaultRenderingPipeline(sceneData.defaultRenderingPipeline, scene);

@@ -1,13 +1,13 @@
 <template>
     <div class="editor-container">
-        <Header></Header>
+        <Header v-show="edit"></Header>
         <ElSplitter :lazy="true" style="height: 0 ; flex: 1;">
             <ElSplitterPanel min="600px">
                 <ElSplitter :lazy="true" layout="vertical">
                     <ElSplitterPanel>
                         <ElSplitter :lazy="true">
                             <ElSplitterPanel min="280px" :size="editorLayout.left + 'px'" collapsible
-                                @update:size="e => sizeChange(e, 'left')">
+                                @update:size="e => sizeChange(e, 'left')" v-if="edit">
                                 <Hierarchy />
                             </ElSplitterPanel>
                             <ElSplitterPanel min="280px">
@@ -16,7 +16,7 @@
                         </ElSplitter>
                     </ElSplitterPanel>
                     <ElSplitterPanel min="280px" :size="editorLayout.bottom + 'px'" collapsible
-                        @update:size="e => sizeChange(e, 'bottom')">
+                        @update:size="e => sizeChange(e, 'bottom')" v-if="edit">
                         <div class="tab-container-panel">
                             <div class="tab-title">
                                 <div class="item" :class="{ 'active': activeTab === 'assets' }"
@@ -33,7 +33,7 @@
                 </ElSplitter>
             </ElSplitterPanel>
             <ElSplitterPanel min="280px" :size="editorLayout.right + 'px'" collapsible
-                @update:size="e => sizeChange(e, 'right')">
+                @update:size="e => sizeChange(e, 'right')" v-if="edit">
                 <Inspector />
             </ElSplitterPanel>
         </ElSplitter>
@@ -53,14 +53,43 @@ import { useDialog } from './dialog/index';
 import Loading from '@/component/common/Loading.vue'
 import SetupDialog from './dialog/SetupDialog.vue'
 import { onMounted, ref } from 'vue'
+import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile'
+import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary'
+import { Editor } from '@/3d/Editor'
+import { useScene } from '@/store/useScene'
+const props = defineProps<{
+    edit?: boolean,
+    projectId?: string,
+}>()
 onMounted(() => {
-    useDialog(SetupDialog)
+    useEditor().edit = props.edit;
+    if (!props.projectId) {
+        useDialog(SetupDialog)
+    } else {
+        loadProject(props.projectId)
+    }
 })
 const activeTab = ref('assets')
 
 const { editorLayout } = storeToRefs(useEditor());
 
-const { loading } = storeToRefs(useEditor());
+const { loading, edit } = storeToRefs(useEditor());
+
+
+async function loadProject(name: string) {
+    await EditorFileSystem.Instance.init(FileMode.NET, name);
+    const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
+
+    });
+    if (sceneList.length > 0) {
+        useScene().setSceneList(sceneList);
+        Editor.Instance.setCurrentScene(sceneList[0].uuid);
+    } else {
+        const scene = await Editor.Instance.createNewScene('默认场景');
+        await useScene().addScene(scene);
+        Editor.Instance.setCurrentScene(scene.uuid);
+    }
+}
 
 
 function sizeChange(size: number, type: 'left' | 'bottom' | 'right') {

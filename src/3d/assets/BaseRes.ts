@@ -117,8 +117,8 @@ export namespace CC {
     activeCamera: string;
     reflectionProbes: number[];
     environment: {
-      texture: number;
-      url: string;
+      sourceUUID: string; // 用户修改后的环境贴图需要使用
+      url: string;        // bjs默认环境贴图需要使用
       intensity: number;
     };
     background: {

@@ -69,6 +69,17 @@ export class PublishAssets {
         this.textureMap.set(element.sourceUUID, buffer);
       }
     }
+    for (const item of publishScenes) {
+      if (item.background.texture) {
+        const buffer = await this.getBufferSystem.getTextureBuffer(
+          item.background.texture.sourceUUID,
+        );
+        if (buffer) {
+          this.textureMap.set(item.background.texture.sourceUUID, buffer);
+        }
+      }
+    }
+
     const files: ZipFile[] = [];
     for (const geometry of this.geomertyFile) {
       geometry[0] += '.geo';

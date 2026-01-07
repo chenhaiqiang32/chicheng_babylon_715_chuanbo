@@ -11,6 +11,7 @@ import {
 } from '@babylonjs/core';
 import { AppAssets } from '../assets/PublishLibrary';
 import { Animator } from '../animation/animator';
+import { Timer } from '@/utils/Time';
 
 export class App {
   private engine: AbstractEngine;
@@ -30,7 +31,11 @@ export class App {
   async init(canvas: HTMLCanvasElement, gpu: boolean) {
     this.canvas = canvas;
     if (gpu) {
-      this.engine = new Engine(canvas, true);
+      // this.engine = new Engine(canvas, true);
+      this.engine = new WebGPUEngine(canvas, {
+        adaptToDeviceRatio: true,
+        limitDeviceRatio: 2,
+      });
       if (this.engine instanceof WebGPUEngine) {
         await this.engine.initAsync();
       }
@@ -67,11 +72,15 @@ export class App {
     const scene = new Scene(this.engine);
     const padding = new Array<Padding>();
     this.assets.deserializeScene(scene, sceneNode, padding);
-    await Promise.all(padding.map((p) => p()));
+
     this.scene = scene;
     scene.clearColor = new Color4(1, 1, 1, 1);
     scene.activeCamera.attachControl(this.canvas, true);
     this.registerAction();
+    for (const p of padding) {
+      await p();
+      await Timer.sleep(10);
+    }
   }
 
   registerAction() {
