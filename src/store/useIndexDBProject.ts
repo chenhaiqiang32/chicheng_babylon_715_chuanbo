@@ -3,6 +3,7 @@ import { ref, shallowRef, toRaw } from 'vue';
 interface Project {
   name: string;
   time: string;
+  type: 'local' | 'net';
 }
 export const useIndexDBProject = defineStore('indexDBProject', () => {
   const projects = ref<Project[]>([]);

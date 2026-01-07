@@ -6,6 +6,7 @@ interface RuntimeClip {
   clip: CC.Clip;
 }
 export class Animator {
+  maxTime = 1000;
   constructor(private animation: CC.Animation) {}
 
   private clips: RuntimeClip[];

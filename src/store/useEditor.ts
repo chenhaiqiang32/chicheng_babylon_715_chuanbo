@@ -3,7 +3,7 @@ import { ref, watch } from 'vue';
 
 export const useEditor = defineStore('editor', () => {
   const loading = ref(0);
-  const running = ref(false);
+  const edit = ref(true);
   const setLoading = (v: number) => {
     loading.value = Math.floor(v * 100) * 0.01;
   };
@@ -12,6 +12,13 @@ export const useEditor = defineStore('editor', () => {
     bottom: 280,
     right: 280,
   });
+  function setLayoutDefault() {
+    editorLayout.value = {
+      left: 280,
+      bottom: 280,
+      right: 280,
+    };
+  }
   function init() {
     const layoutJson = localStorage.getItem('editorLayout');
     if (layoutJson) {
@@ -29,8 +36,9 @@ export const useEditor = defineStore('editor', () => {
     },
   );
   return {
-    running,
+    edit,
     loading,
+    setLayoutDefault,
     setLoading,
     editorLayout,
   };

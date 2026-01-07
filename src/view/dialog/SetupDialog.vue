@@ -12,8 +12,8 @@
                         <div class="desc">创建或打开你的项目</div>
                     </div>
                     <div class="actions">
-                        <ElButton type="primary" @click="createProject">新建项目</ElButton>
-                        <ElButton type="primary" @click="openLocalProject">打开本地项目</ElButton>
+                        <ElButton type="primary" @click="openNetProject">新建项目</ElButton>
+                        <!-- <ElButton type="primary" @click="openLocalProject">打开本地项目</ElButton> -->
                     </div>
                 </div>
                 <div class="recent" v-if="projects.length > 0">
@@ -21,7 +21,7 @@
                     <ElScrollbar class="recent-list">
                         <div class="recent-item" v-for="p in projects" :key="p.name">
                             <span class="name">{{ p.name }}</span>
-                            <ElButton text size="small" @click="openIndexDBProject(p.name)">打开</ElButton>
+                            <ElButton text size="small" @click="openIndexDBProject(p)">打开</ElButton>
                             <SVG name="remove" @click="deleteProject(p.name)"></SVG>
                         </div>
                     </ElScrollbar>
@@ -31,7 +31,7 @@
     </ElDialog>
 </template>
 <script setup lang='ts'>
-import { ElDialog, ElScrollbar, ElButton } from 'element-plus';
+import { ElDialog, ElScrollbar, ElButton, ElMessageBox } from 'element-plus';
 import SVG from '@/component/common/SVG.vue';
 import { onMounted, ref } from 'vue';
 import { useScene } from '@/store/useScene';
@@ -62,6 +62,36 @@ async function createProject() {
     }
 }
 
+
+async function openNetProject() {
+    try {
+        const { value: name } = await ElMessageBox.prompt('请输入项目名称', '新建项目', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            inputValue: '默认项目',
+        });
+        if (!name) {
+            return;
+        }
+        await EditorFileSystem.Instance.init(FileMode.NET, name);
+        const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
+
+        });
+        if (sceneList.length > 0) {
+            useScene().setSceneList(sceneList);
+            Editor.Instance.setCurrentScene(sceneList[0].uuid);
+        } else {
+            const scene = await Editor.Instance.createNewScene('默认场景');
+            await useScene().addScene(scene);
+            Editor.Instance.setCurrentScene(scene.uuid);
+        }
+        props.close();
+    } catch (error) {
+        console.error(error);
+    } finally {
+    }
+}
+
 async function openLocalProject() {
     try {
         await EditorFileSystem.Instance.init(FileMode.LOCAL);
@@ -82,9 +112,13 @@ async function openLocalProject() {
     } finally {
     }
 }
-async function openIndexDBProject(name: string) {
+async function openIndexDBProject(p: { name: string; time: string; type: string }) {
     try {
-        await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, name);
+        if (p.type === 'net') {
+            await EditorFileSystem.Instance.init(FileMode.NET, p.name);
+        } else {
+            await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, p.name);
+        }
         const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
             loading.value = v;
         });

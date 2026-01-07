@@ -30,6 +30,6 @@ registerKeyDown((event) => {
     redo();
   }
   if (event.ctrlKey && key == '5') {
-    useEditor().running = !useEditor().running;
+    useEditor().edit = !useEditor().edit;
   }
 });

@@ -59,6 +59,7 @@ export class RuntimeLibrary
     }
 
     let buffer = await this.fileSystem.getFileArrayBuffer(sourceUUID, TEXTURE);
+    this.textureIds.add(sourceUUID);
     ///@ts-ignore
     const url = URL.createObjectURL(new Blob([buffer]));
     return url;
@@ -361,6 +362,7 @@ export class RuntimeLibrary
       const geoInfo = bufferToVertex(buffer);
       const geo = Geometry.Parse(geoInfo, this.currentScene, null);
       this.sceneGeometry.set(uuid, geo);
+      this.geomertyIDs.add(uuid);
       buffer = null;
       return Promise.resolve(geo);
     }
