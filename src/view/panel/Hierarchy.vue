@@ -51,11 +51,7 @@
 
                 </div>
             </ElSplitterPanel>
-
-
         </ElSplitter>
-
-
     </BasePanel>
 </template>
 <script setup lang='ts'>

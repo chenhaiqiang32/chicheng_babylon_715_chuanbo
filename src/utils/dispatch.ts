@@ -40,6 +40,7 @@ interface EventBus {
   onColorChanged: { key: string; object: any };
   onSliderChanged: { key: string; object: any };
   onBooleanChanged: { key: string; object: any };
+  onStringChanged: { key: string; object: any };
 
   onPropertyChanged: { object: any; property: string; type: string; newValue: any; oldValue: any };
 }
