@@ -164,6 +164,7 @@ onMounted(() => {
   Editor.Instance.on('onScaleChanged', onScaleChanged)
   Editor.Instance.on('onSceneChangeBefore', onSceneChangeBefore)
   Editor.Instance.on('onSceneChanged', onSceneChange)
+  _EventBus.on('onSceneSaveBefore', onSceneChangeBefore)
   _EventBus.on('onPropertyChanged', onPropertyChanged)
   onSceneChange()
 });
@@ -245,6 +246,7 @@ onBeforeUnmount(() => {
   Editor.Instance.off('onScaleChanged', onScaleChanged)
   Editor.Instance.off('onSceneChanged', onSceneChange)
   Editor.Instance.off('onSceneChangeBefore', onSceneChangeBefore)
+  _EventBus.off('onSceneSaveBefore', onSceneChangeBefore)
   _EventBus.off('onPropertyChanged', onPropertyChanged)
 })
 
