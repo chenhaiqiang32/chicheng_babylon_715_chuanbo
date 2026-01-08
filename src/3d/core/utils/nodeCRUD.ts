@@ -90,10 +90,7 @@ export function nodeCRUD() {
     newParent: Node | null,
     type: 'before' | 'after' | 'inner',
   ) {
-    if (type == 'before') {
-      // @ts-ignore
-      node.setParent(newParent.parent);
-    } else if (type == 'after') {
+    if (type == 'before' || type == 'after') {
       // @ts-ignore
       node.setParent(newParent.parent);
     } else if (type == 'inner') {

@@ -52,7 +52,6 @@ import { registerKeyDown } from '@/utils/ShortcutKey';
 import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
 import { useEditor } from '@/store/useEditor';
 import { ControlMode } from '@/store/useSceneModule/useControl';
-import { nodeCRUD } from './core/utils/nodeCRUD';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -332,6 +331,7 @@ export class Editor extends Dispatch<EditorEvent> {
     const scene = new Scene(this.engine);
     scene.useRightHandedSystem = false;
     const camera = new ArcRotateCamera('camera', 0, 0, 0, new Vector3(0, 0, 0), scene);
+    camera.setPosition(new Vector3(0, 2, -5));
     camera.minZ = 0.001;
     camera.maxZ = 5000;
     camera.attachControl();
@@ -527,8 +527,8 @@ export class Editor extends Dispatch<EditorEvent> {
     // 归一化得到纯方向
     const directionFromCameraToCenter = currentDirectionToCenter.normalize();
 
-    // 3. 目标距离 = 包围球半径 × multiplier（你觉得好看的倍数，3~5 都行）
-    const targetDistance = radius * 1.5;
+    // 3. 目标距离 = 包围球半径 × multiplier
+    const targetDistance = radius * 1;
 
     // 4. 新相机位置 = 中心 - 方向 × 目标距离
     //    也就是沿着「当前视线」往后退到合适距离

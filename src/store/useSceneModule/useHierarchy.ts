@@ -79,6 +79,7 @@ export function useHierarchyModule() {
       hierarchy.value.push(newNode);
     }
     hierarchyMap.value.set(newNode.id, newNode);
+    nodeMap.set(newNode.id, node);
   }
 
   function removeHierarchy(node: Node) {
