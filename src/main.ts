@@ -33,7 +33,5 @@ registerKeyDown((event) => {
   }
   if (event.ctrlKey && key == '5') {
     useEditor().edit = !useEditor().edit;
-    const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera;
-    camera.useAutoRotationBehavior = !useEditor().edit;
   }
 });

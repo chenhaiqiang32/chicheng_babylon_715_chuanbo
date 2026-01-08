@@ -57,6 +57,7 @@ import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile'
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary'
 import { Editor } from '@/3d/Editor'
 import { useScene } from '@/store/useScene'
+import { ArcRotateCamera } from '@babylonjs/core'
 const props = defineProps<{
     edit?: boolean,
     projectId?: string,
@@ -70,11 +71,8 @@ onMounted(() => {
     }
 })
 const activeTab = ref('assets')
-
 const { editorLayout } = storeToRefs(useEditor());
-
 const { loading, edit } = storeToRefs(useEditor());
-
 
 async function loadProject(name: string) {
     await EditorFileSystem.Instance.init(FileMode.NET, name);
@@ -88,6 +86,11 @@ async function loadProject(name: string) {
         const scene = await Editor.Instance.createNewScene('默认场景');
         await useScene().addScene(scene);
         Editor.Instance.setCurrentScene(scene.uuid);
+    }
+    if (!edit.value) {
+        const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera;
+        camera.useAutoRotationBehavior = true;
+        camera.autoRotationBehavior.idleRotationSpeed = -0.5;
     }
 }
 
