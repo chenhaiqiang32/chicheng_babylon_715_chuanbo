@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        border: none;
+      }
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+      }
+      #btn1,
+      #btn2 {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 99;
+        padding: 5px 10px;
+        background-color: #f0f0f0;
+        cursor: pointer;
+      }
+      #btn2 {
+        left: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe
+      id="iframe"
+      src="http://192.168.5.188:5174/?projectId=%E7%89%B9%E6%96%AF%E6%8B%89"
+    ></iframe>
+    <button id="btn1">发送消息</button>
+    <button id="btn2">发送消息</button>
+    <script>
+      btn1.addEventListener('click', () => {
+        iframe.contentWindow.postMessage(
+          { type: 'focus', params: { id: '', name: '减震模块' } },
+          '*',
+        );
+      });
+      btn2.addEventListener('click', () => {
+        iframe.contentWindow.postMessage(
+          { type: 'disassemble', params: { id: '', name: '减震模块' } },
+          '*',
+        );
+      });
+    </script>
+  </body>
+</html>

@@ -12,14 +12,12 @@ import { i18n } from './i18n';
 import { undo, redo } from './tools/undoredo';
 import { registerKeyDown } from './utils/ShortcutKey';
 import { useEditor } from './store/useEditor';
-import { Editor } from './3d/Editor';
-import { ArcRotateCamera } from '@babylonjs/core';
 
 const app = createApp(App);
 app.use(i18n);
 app.use(createPinia());
 app.use(router);
-
+import './ai';
 app.mount('#app');
 
 registerKeyDown((event) => {

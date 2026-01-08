@@ -4,10 +4,10 @@
       <div class="timeline-header">
         <ElSelect v-model="currentSelect" style=" flex: 1;" @change="onSelectChange">
           <ElOption v-for="item in runtimeAnimations" :key="item.uuid" :label="item.name" :value="item.uuid">
-            <template #label="{ label }">
-              {{ label }}
-              <SVG name="play" size="22px"></SVG>
-            </template>
+            <div class="animation-item" style="display: flex; align-items: center; justify-content: space-between;">
+              {{ item.name }}
+              <SVG name="delete" @click.stop="deleteAnimation(item.uuid)"></SVG>
+            </div>
           </ElOption>
         </ElSelect>
         <ElButton size="small" @click="createAnimation">{{ $t('animation.new') }}</ElButton>
@@ -66,7 +66,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, shallowRef, onUnmounted, toRaw } from 'vue'
 import { Timeline } from "@/timeLine/Timeline";
 import SVG from '@/component/common/SVG.vue';
-import { TransformNode, Vector3 } from '@babylonjs/core';
+import { TransformNode } from '@babylonjs/core';
 import { ID } from '@/utils/id';
 import { ElMessageBox } from 'element-plus';
 import { Editor } from '@/3d/Editor';
@@ -94,6 +94,23 @@ const runtimeAnimations = shallowRef<CC.Animation[]>([])
 let currentRuntimeAction = shallowRef<CC.Animation>(null)
 let animator: Animator
 
+function deleteAnimation(uuid: string) {
+  ElMessageBox.confirm('确认删除动画吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    runtimeAnimations.value = runtimeAnimations.value.filter(item => item.uuid != uuid)
+    Editor.Instance.Scene.runtimeAnimation = toRaw(runtimeAnimations.value)
+    Editor.Instance.dispatch('animationChange')
+    if (currentRuntimeAction.value?.uuid == uuid) {
+      currentRuntimeAction.value = null
+      currentSelect.value = ''
+      onSelectChange('')
+    }
+  })
+}
+
 let timeController: TimeController
 
 function onSelectChange(uuid: string) {
@@ -102,12 +119,11 @@ function onSelectChange(uuid: string) {
   animator?.restoreDefault()
   currentRuntimeAction.value = runtimeAnimations.value.find(item => item.uuid == uuid) || null
   if (!currentRuntimeAction.value) {
+    timeline.setKeyframes([])
+    animator = null
     return
   }
   timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
-
-
-
   animator = new Animator(currentRuntimeAction.value)
   animator.updateClip((x) => Editor.Instance.getNodeById(x))
   animator.collectInfo()
@@ -437,14 +453,17 @@ const createAnimation = async () => {
   if (!dbName) {
     return
   }
-  runtimeAnimations.value.push({
+  const ani: CC.Animation = {
     name: dbName.value,
     uuid: ID.generateUUID(),
     clips: []
-  })
+  }
+  runtimeAnimations.value.push(ani)
   runtimeAnimations.value = [...runtimeAnimations.value]
   Editor.Instance.Scene.runtimeAnimation = toRaw(runtimeAnimations.value)
   Editor.Instance.dispatch('animationChange')
+  onSelectChange(ani.uuid)
+  currentSelect.value = ani.uuid
 }
 
 
@@ -516,6 +535,12 @@ function refreshClipList() {
       gap: 5px;
       padding: 5px;
       border-bottom: 1px solid #404040;
+
+      .animation-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
     }
 
     .clip-list {
