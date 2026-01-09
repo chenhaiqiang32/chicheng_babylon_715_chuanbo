@@ -22,7 +22,7 @@
       #btn1,
       #btn2 {
         position: absolute;
-        top: 10px;
+        bottom: 150px;
         left: 10px;
         z-index: 99;
         padding: 5px 10px;
@@ -37,10 +37,10 @@
   <body>
     <iframe
       id="iframe"
-      src="http://192.168.5.188:5174/?projectId=%E7%89%B9%E6%96%AF%E6%8B%89"
+      src="http://192.168.5.188:5173/?projectId=%E7%89%B9%E6%96%AF%E6%8B%89&runtime=true"
     ></iframe>
-    <button id="btn1">发送消息</button>
-    <button id="btn2">发送消息</button>
+    <button id="btn1">聚焦</button>
+    <button id="btn2">拆分</button>
     <script>
       btn1.addEventListener('click', () => {
         iframe.contentWindow.postMessage(

@@ -28,8 +28,8 @@ import { UniversalCamera } from '@babylonjs/core';
 
 
 
-import { ArcRotateCamera, Camera } from '@babylonjs/core';
-import { FirstPersonJump } from '@/3d/core/utils/FirstPersonJump';
+import { Camera } from '@babylonjs/core';
+import { _EventBus } from '@/utils/dispatch';
 
 
 const props = defineProps<{
