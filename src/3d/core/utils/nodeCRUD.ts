@@ -4,7 +4,7 @@ import { deserializeNode, serializeNode } from '@/3d/assets/serialze/node/Node';
 import { Editor } from '@/3d/Editor';
 import { useScene } from '@/store/useScene';
 import { ArrayUtils } from '@/utils/Array';
-import { Node } from '@babylonjs/core';
+import { Node, TransformNode } from '@babylonjs/core';
 
 /**
  * BJS和Hierarchy中Node的增删改查
@@ -90,14 +90,45 @@ export function nodeCRUD() {
     newParent: Node | null,
     type: 'before' | 'after' | 'inner',
   ) {
-    if (type == 'before' || type == 'after') {
-      // @ts-ignore
-      node.setParent(newParent.parent);
-    } else if (type == 'inner') {
-      // inner 不需要考虑顺序
-      // @ts-ignore
-      node.setParent(newParent);
+    const nodeNewParent = ['before', 'after'].includes(type) ? newParent.parent : newParent;
+    if(node instanceof TransformNode){
+      node.setParent(nodeNewParent);
     }
+    else {
+      node.parent = nodeNewParent;
+    }
+    // 由于 ElTree的源数据是BJS结构树的映射，而不是结构树本身，所以还是需要手动修改BJS结构树来改变顺序
+    // 保证下次进来的顺序和 ElTree 一样
+    // @ts-ignore
+    const children = nodeNewParent ? nodeNewParent._children : Editor.Instance.Scene.rootNodes;
+    switchNodePosInParent(node, newParent, type, children);
+  }
+
+  function switchNodePosInParent(from: Node, to: Node, type: 'before' | 'after' | 'inner', children: Node[]) {
+    // inner 不需要改变顺序
+    if(type === 'inner') return;
+
+    // 遍历一次找到from和to的下标
+    let fromIndex, toIndex;
+    for(let i=0; i<children.length; i++) {
+      if(children[i].uuid == from.uuid)
+        fromIndex = i;
+      else if(children[i].uuid == to.uuid)
+        toIndex = i;
+    }
+
+    // 从数组中删除from
+    const item = children.splice(fromIndex, 1)[0];
+    // 从后往前插入
+    if(fromIndex > toIndex && type === 'after') {
+      toIndex += 1;
+    }
+    // 从前往后插入
+    else if(fromIndex < toIndex && type === 'before') {
+      toIndex -= 1;
+    }
+    // 插入元素
+    children.splice(toIndex, 0, item);
   }
 
   return {
