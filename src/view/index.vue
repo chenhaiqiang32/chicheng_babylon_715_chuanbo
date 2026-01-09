@@ -96,6 +96,7 @@ async function loadProject(name: string) {
 
 
 function sizeChange(size: number, type: 'left' | 'bottom' | 'right') {
+    if(size <= 0)   return;
     editorLayout.value[type] = size;
 
 }

@@ -94,7 +94,8 @@
       "farClipPlane": "远裁剪面",
       "speed": "移动速度",
       "collision": "碰撞检测",
-      "gravity": "重力"
+      "gravity": "重力",
+      "dragResistance": "拖拽阻力"
     },
     "light": {
       "title": "灯光",

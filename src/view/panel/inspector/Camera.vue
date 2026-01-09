@@ -4,6 +4,8 @@
             :max="Math.PI" />
         <Number :label="$t('component.camera.nearClipPlane')" :object="object" property="minZ" />
         <Number :label="$t('component.camera.farClipPlane')" :object="object" property="maxZ" />
+        <Slider :label="$t('component.camera.dragResistance')" :object="object" property="inputs.attached.pointers.panningSensibility"
+        :min="1" :max="1000"  />
         <Number v-if="object instanceof UniversalCamera" :label="$t('component.camera.speed')" :object="object"
             property="speed" />
         <Switch v-if="object instanceof UniversalCamera" :label="$t('component.camera.collision')" :object="object"

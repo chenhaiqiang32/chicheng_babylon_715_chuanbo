@@ -1,4 +1,4 @@
-import { Color4, Scene, Texture } from '@babylonjs/core';
+import { Color4, CubeTexture, Scene, Texture } from '@babylonjs/core';
 import { CC } from '../BaseRes';
 import { load360ImageBG, loadImageBG, loadSkyBox } from '@/3d/core/utils/EnvSkybox';
 import { ICollectAssets, ILoaderAssets } from '../AssetsManager';
@@ -22,7 +22,7 @@ export class NoneBgEnv implements BackgroundEnv {
   deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets) {}
 }
 
-// 环境贴图
+// 同步环境
 export class TextureBgEnv implements BackgroundEnv {
   serialize(scene: Scene, assetsManager: ICollectAssets): Promise<CC.Scene['background']> {
     return Promise.resolve({
@@ -36,11 +36,14 @@ export class TextureBgEnv implements BackgroundEnv {
     });
   }
   deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets) {
-    if (sceneData.background.texture) {
-      const texture = sceneData.background.texture;
-      assetsManager.getEnvTexture(texture.sourceUUID, false).then((tex) => {
+    // 从环境中拿取全景图数据
+    if(sceneData.environment.sourceUUID){
+      assetsManager.getEnvTexture(sceneData.environment.sourceUUID, false).then((tex) => {
         loadSkyBox(scene, tex);
       });
+    } else {
+      const tex = new CubeTexture(sceneData.environment.url, scene);
+      loadSkyBox(scene,tex);
     }
   }
 }
@@ -76,19 +79,19 @@ export class Image360BgEnv implements BackgroundEnv {
     return {
       type: 3,
       texture: {
-        name: data.name,
-        sourceUUID: data.sourceUUID,
-        uuid: data.uuid,
+        name: scene.bgTexture?.name || '',
+        sourceUUID: scene.bgTexture?.sourceUUID || '',
+        uuid: '',
       },
       clearColor: [],
     };
   }
   deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets): void {
-    const uuid = sceneData.background.texture.sourceUUID;
-    if (uuid) {
-      assetsManager.getTextureURL(uuid).then((texture) => {
-        load360ImageBG(texture, scene);
-      });
+    if(sceneData.background.texture) {
+      const texture = sceneData.background.texture;
+      assetsManager.getEnvTexture(texture.sourceUUID, false).then((tex) => {
+        loadSkyBox(scene, tex);
+      })
     }
   }
 }
