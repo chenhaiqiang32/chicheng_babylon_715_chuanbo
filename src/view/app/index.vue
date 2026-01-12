@@ -22,31 +22,10 @@ onMounted(async () => {
         await App.Instance.init(canvas.value, true);
     }
     const assets = new AppAssets();
-    await assets.loadFromUrl('publish (25).zip')
+    await assets.loadFromUrl('publish.zip')
     App.Instance.setAssetsLibrary(assets);
     App.Instance.setScene();
-    const camera = App.Instance.scene.activeCamera as ArcRotateCamera;
-    const plane = MeshBuilder.CreatePlane('plane', { size: 1000 }, App.Instance.scene);
-    plane.rotation.x = Math.PI / 2;
-    plane.position.y = -0.05;
-    plane.receiveShadows = true;
-    // const hdr = new HDRCubeTexture('./a1be8e929d1f7c940660bdfe2a448082 (2).hdr', App.Instance.scene, 1024);
-    // hdr.gammaSpace = true;
-    // App.Instance.scene.environmentTexture = hdr;
-    // App.Instance.scene.environmentIntensity = 0.5;
 
-    const mat = new PBRMaterial('plane-material', App.Instance.scene);
-    plane.material = mat
-    mat.metallic = 0;
-    mat.roughness = 1;
-    mat.specularIntensity = 0;
-    App.Instance.scene.clearColor = new Color4(221 / 255, 225 / 255, 221 / 255, 1);
-    const generator = new CascadedShadowGenerator(1024, App.Instance.scene.lights[0] as DirectionalLight, true, App.Instance.scene.activeCamera);
-    generator.bias = 0.001;
-    generator.lambda = 1;
-    generator.depthClamp = true;
-    const mesh = App.Instance.scene.meshes.filter(x => x.name.includes('Ke') || x.name.includes('Wheel') || x.name.includes('Door'))
-    generator.getShadowMap()?.renderList?.push(...mesh);
 });
 
 </script>

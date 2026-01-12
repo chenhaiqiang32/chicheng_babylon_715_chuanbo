@@ -17,6 +17,7 @@ import { strFromU8 } from 'fflate';
 import { IFile } from './file/IFile';
 import { loadSkyboxWithExt } from '../core/utils/EnvSkybox';
 import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
+import { sw } from 'element-plus/es/locale/index.mjs';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -35,7 +36,7 @@ export class PublishAssets {
   async addScene(
     publishScenes: Partial<CC.Scene>[],
     onProgress?: (v: number) => void,
-    meshCompress: boolean = true,
+    meshCompressLevel: number = 2,
   ) {
     await encoder.whenReadyAsync();
     const files: ZipFile[] = [];
@@ -48,12 +49,14 @@ export class PublishAssets {
     }
     const geometrySet = [...new Set(geometryList)];
     const materialSet = [...new Set(materialList)];
-    if (meshCompress) {
+    if (meshCompressLevel > 0) {
       for (let index = 0; index < geometrySet.length; index++) {
         const geometry = geometryList[index];
         const buffer = await this.getBufferSystem.getGeometry(geometry);
         if (buffer) {
-          const dracoBuffer = await encoder.encodeMeshAsync(buffer);
+          const dracoBuffer = await encoder.encodeMeshAsync(buffer, {
+            encodeSpeed: meshCompressLevel * 2,
+          });
           files.push([geometry + '.dmesh', dracoBuffer.data]);
         }
       }

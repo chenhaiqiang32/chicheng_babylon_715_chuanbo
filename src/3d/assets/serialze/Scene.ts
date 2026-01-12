@@ -132,9 +132,11 @@ export function deserializeScene(
   }
   if (sceneData.environment) {
     if (sceneData.environment.sourceUUID) {
-      assets.getEnvTexture?.(sceneData.environment.sourceUUID, false).then((tex) => {
+      const loadEnv = async () => {
+        const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false);
         scene.environmentTexture = tex;
-      });
+      };
+      padding.push(loadEnv);
     } else {
       scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
       scene.environmentIntensity = sceneData.environment.intensity;
