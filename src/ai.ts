@@ -308,10 +308,18 @@ const zhuliang: any = {
   loop: false,
 };
 
-window.addEventListener('message', (data) => {
-  const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera;
-  camera.useAutoRotationBehavior = false;
+window.addEventListener(
+  'click',
+  (data) => {
+    const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera;
+    camera.useAutoRotationBehavior = false;
+  },
+  {
+    once: true,
+  },
+);
 
+window.addEventListener('message', (data) => {
   if (data.data?.type === 'disassemble') {
     if (!Editor.Instance.Scene.runtimeAnimation) {
       Editor.Instance.Scene.runtimeAnimation = [];
