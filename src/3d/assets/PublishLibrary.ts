@@ -31,6 +31,7 @@ const encoder = DracoEncoder.Default;
 export class PublishAssets {
   textureMap: Map<string, Uint8Array> = new Map();
   texture: any[] = [];
+  envTexture: any[] = [];
   material: any[] = [];
   constructor(private getBufferSystem: IGetBuffer) {}
   async addScene(
@@ -101,17 +102,28 @@ export class PublishAssets {
           this.textureMap.set(item.background.texture.sourceUUID, buffer);
         }
       }
+      // 同步环境或环境贴图模式需要保存环境贴图文件
+      if(item.background.type == 1 || item.background.type == 3){
+        const env = this.getBufferSystem.getEnvTextureData(item.background.texture.sourceUUID);
+        this.envTexture.push(env);
+      }
     }
     for (const texture of this.textureMap) {
       texture[0] += '.tex';
       files.push(texture);
     }
+    for(const envTexture of this.envTexture) {
+      const buffer = await this.getBufferSystem.getEnvTextureBuffer(envTexture.sourceUUID);
+      files.push([envTexture.sourceUUID + ".envTex", buffer]);
+    }
     const materialJson = JSON.stringify(this.material);
     const textureJson = JSON.stringify(this.texture);
     const sceneJson = JSON.stringify(publishScenes);
+    const envTextureJson = JSON.stringify(this.envTexture);
     files.push(['scene.json', sceneJson]);
     files.push(['material.json', materialJson]);
     files.push(['texture.json', textureJson]);
+    files.push(['envTexture.json', envTextureJson]);
     return await zipFiles(files, (v) => {
       onProgress?.(v);
     });
@@ -130,6 +142,8 @@ export class AppAssets {
   sceneMaterial: Map<string, Material> = new Map();
   sceneTexture: Map<string, BaseTexture> = new Map();
   textureMap: Map<string, Uint8Array> = new Map();
+  sceneEnvTexture: Map<string, BaseTexture> = new Map();
+  envTextureMap: Map<string, Uint8Array> = new Map();
   geomertyFile: Map<string, Uint8Array> = new Map();
   envTexture: any[] = [];
   currentScene: Scene;
@@ -143,10 +157,12 @@ export class AppAssets {
     const buffer = new Uint8Array(arrayBuffer);
     const files = await readZip(buffer);
     const textureJson = strFromU8(files['texture.json']);
+    const envTextureJson = strFromU8(files['envTexture.json']);
     const materialJson = strFromU8(files['material.json']);
     const sceneJson = strFromU8(files['scene.json']);
     this.scene = JSON.parse(sceneJson);
     this.texture = JSON.parse(textureJson);
+    this.envTexture = JSON.parse(envTextureJson);
     this.material = JSON.parse(materialJson);
     for (const item in files) {
       if (item.endsWith('.mesh')) {
@@ -157,6 +173,9 @@ export class AppAssets {
       }
       if (item.endsWith('.tex')) {
         this.textureMap.set(item.replace('.tex', ''), files[item]);
+      }
+      if(item.endsWith('.envTex')) {
+        this.envTextureMap.set(item.replace('.envTex', ''), files[item]);
       }
     }
   }
@@ -237,7 +256,6 @@ export class AppAssets {
     }
   }
   setFileSystrem(fileSystem: IFile) {}
-  sceneEnvTexture: Map<string, BaseTexture> = new Map();
   async getEnvTexture(sourceUUID: string, withPrevUrl = true): Promise<BaseTexture> {
     if (this.sceneEnvTexture.has(sourceUUID)) {
       const oriTex = this.sceneEnvTexture.get(sourceUUID);
@@ -249,7 +267,9 @@ export class AppAssets {
       const data = this.envTexture.find((x) => x.sourceUUID == sourceUUID);
       // envTexture保存的是原始文件的file
       if (data) {
-        const url = await this.getTextureURL(data.sourceUUID);
+        const buffer = await this.envTextureMap.get(sourceUUID);
+        const blob = new Blob([buffer]);
+        const url = URL.createObjectURL(blob);
         const ext = data.name.toLocaleLowerCase().split('.').pop();
         const texture = await loadSkyboxWithExt(this.currentScene, url, ext, ENVPIXEL);
         texture.sourceUUID = sourceUUID;
@@ -257,7 +277,7 @@ export class AppAssets {
         this.sceneEnvTexture.set(sourceUUID, texture);
         const retTex = texture.clone();
         retTex.sourceUUID = sourceUUID;
-        if (withPrevUrl) retTex.prevUrl = await renderEnvTexture(sourceUUID);
+        if(withPrevUrl) retTex.prevUrl = await renderEnvTexture(sourceUUID);
         return Promise.resolve(retTex);
       }
     }
