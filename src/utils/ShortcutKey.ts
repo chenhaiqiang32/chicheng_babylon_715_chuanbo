@@ -2,6 +2,8 @@ type KeyEvent = (key: KeyboardEvent) => void;
 const keyset = new Set<string>();
 window.addEventListener('keydown', execute);
 window.addEventListener('keyup', executeUp);
+//避免因窗口失焦/输入框拦截导致 keyset 卡死
+window.addEventListener('blur', () => keyset.clear());
 const eventsDown: Set<KeyEvent> = new Set<KeyEvent>();
 const eventsUp: Set<KeyEvent> = new Set<KeyEvent>();
 function registerKeyDown(func: (key: KeyboardEvent) => void) {
@@ -20,16 +22,14 @@ function execute(key: KeyboardEvent) {
   if (key.target instanceof HTMLInputElement) {
     return;
   }
-  if (keyset.has(key.code)) {
+  if (keyset.has(key.code)) { 
     return;
   }
   keyset.add(key.code);
   eventsDown?.forEach((e) => e?.(key));
 }
 function executeUp(key: KeyboardEvent) {
-  if (key.target instanceof HTMLInputElement) {
-    return;
-  }
+  //无论焦点在哪，都必须清理 keyset；否则在 input 上触发 keyup 会导致快捷键永久失效
   keyset.delete(key.code);
   eventsUp?.forEach((e) => e?.(key));
 }

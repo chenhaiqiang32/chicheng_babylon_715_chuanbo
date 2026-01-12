@@ -49,6 +49,7 @@ export interface IGetBuffer {
   getTextureBuffer(uuid: string): any;
   getMaterialData(uuid: string): any;
   getTexturelData(uuid: string): any;
+  getGeometry(uuid: string): Promise<Geometry>;
 }
 
 export class RuntimeLibrary

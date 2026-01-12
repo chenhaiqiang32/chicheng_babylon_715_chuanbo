@@ -9,12 +9,14 @@ import {
 } from '@babylonjs/core';
 import { CC } from './BaseRes';
 import { readZip, ZipFile, zipFiles } from '@/utils/Zip';
-import { Geometry } from '@babylonjs/core/Meshes';
+import { DracoCompression, DracoEncoder, Geometry } from '@babylonjs/core/Meshes';
 import { bufferToVertex } from './utils/GeometryUtils';
 import { deserializeScene } from './serialze/Scene';
 import { IGetBuffer } from './RuntimeLibrary';
 import { strFromU8 } from 'fflate';
 import { IFile } from './file/IFile';
+import { loadSkyboxWithExt } from '../core/utils/EnvSkybox';
+import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -23,13 +25,20 @@ interface RuntimeAssetsEventBus {
   onChanged: void;
 }
 
+const encoder = DracoEncoder.Default;
+
 export class PublishAssets {
   textureMap: Map<string, Uint8Array> = new Map();
-  geomertyFile: Map<string, Uint8Array> = new Map();
   texture: any[] = [];
   material: any[] = [];
   constructor(private getBufferSystem: IGetBuffer) {}
-  async addScene(publishScenes: Partial<CC.Scene>[], onProgress?: (v: number) => void) {
+  async addScene(
+    publishScenes: Partial<CC.Scene>[],
+    onProgress?: (v: number) => void,
+    meshCompress: boolean = true,
+  ) {
+    await encoder.whenReadyAsync();
+    const files: ZipFile[] = [];
     const geometryList: string[] = [];
     const materialList: string[] = [];
     for (const item of publishScenes) {
@@ -39,11 +48,22 @@ export class PublishAssets {
     }
     const geometrySet = [...new Set(geometryList)];
     const materialSet = [...new Set(materialList)];
-    for (let index = 0; index < geometrySet.length; index++) {
-      const geometry = geometryList[index];
-      const buffer = await this.getBufferSystem.getGeoBuffer(geometry);
-      if (buffer) {
-        this.geomertyFile.set(geometry, buffer);
+    if (meshCompress) {
+      for (let index = 0; index < geometrySet.length; index++) {
+        const geometry = geometryList[index];
+        const buffer = await this.getBufferSystem.getGeometry(geometry);
+        if (buffer) {
+          const dracoBuffer = await encoder.encodeMeshAsync(buffer);
+          files.push([geometry + '.dmesh', dracoBuffer.data]);
+        }
+      }
+    } else {
+      for (let index = 0; index < geometrySet.length; index++) {
+        const geometry = geometryList[index];
+        const buffer = await this.getBufferSystem.getGeoBuffer(geometry);
+        if (buffer) {
+          files.push([geometry + '.mesh', buffer]);
+        }
       }
     }
     const textureSet = new Set<string>();
@@ -79,12 +99,6 @@ export class PublishAssets {
         }
       }
     }
-
-    const files: ZipFile[] = [];
-    for (const geometry of this.geomertyFile) {
-      geometry[0] += '.geo';
-      files.push(geometry);
-    }
     for (const texture of this.textureMap) {
       texture[0] += '.tex';
       files.push(texture);
@@ -101,6 +115,7 @@ export class PublishAssets {
   }
 }
 
+const ENVPIXEL = 512;
 export class AppAssets {
   constructor() {
     Texture.UseSerializedUrlIfAny = true;
@@ -113,6 +128,7 @@ export class AppAssets {
   sceneTexture: Map<string, BaseTexture> = new Map();
   textureMap: Map<string, Uint8Array> = new Map();
   geomertyFile: Map<string, Uint8Array> = new Map();
+  envTexture: any[] = [];
   currentScene: Scene;
   private texture: any[] = [];
   private material: any[] = [];
@@ -130,8 +146,11 @@ export class AppAssets {
     this.texture = JSON.parse(textureJson);
     this.material = JSON.parse(materialJson);
     for (const item in files) {
-      if (item.endsWith('.geo')) {
-        this.geomertyFile.set(item.replace('.geo', ''), files[item]);
+      if (item.endsWith('.mesh')) {
+        this.geomertyFile.set(item.replace('.mesh', ''), files[item]);
+      }
+      if (item.endsWith('.dmesh')) {
+        this.geomertyFile.set(item.replace('.dmesh', ''), files[item]);
       }
       if (item.endsWith('.tex')) {
         this.textureMap.set(item.replace('.tex', ''), files[item]);
@@ -159,8 +178,11 @@ export class AppAssets {
       if (!buffer) {
         buffer = this.geomertyFile.get(uuid);
       }
-      const geoInfo = bufferToVertex(buffer);
-      const geo = Geometry.Parse(geoInfo, this.currentScene, null);
+      const geo = await DracoCompression.Default.decodeMeshToGeometryAsync(
+        '',
+        this.currentScene,
+        buffer,
+      );
       this.sceneGeometry.set(uuid, geo);
       return Promise.resolve(geo);
     }
@@ -212,6 +234,31 @@ export class AppAssets {
     }
   }
   setFileSystrem(fileSystem: IFile) {}
+  sceneEnvTexture: Map<string, BaseTexture> = new Map();
+  async getEnvTexture(sourceUUID: string, withPrevUrl = true): Promise<BaseTexture> {
+    if (this.sceneEnvTexture.has(sourceUUID)) {
+      const oriTex = this.sceneEnvTexture.get(sourceUUID);
+      const texture = oriTex.clone();
+      texture.sourceUUID = sourceUUID;
+      if (withPrevUrl) texture.prevUrl = await renderEnvTexture(sourceUUID);
+      return Promise.resolve(texture);
+    } else {
+      const data = this.envTexture.find((x) => x.sourceUUID == sourceUUID);
+      // envTexture保存的是原始文件的file
+      if (data) {
+        const url = await this.getTextureURL(data.sourceUUID);
+        const ext = data.name.toLocaleLowerCase().split('.').pop();
+        const texture = await loadSkyboxWithExt(this.currentScene, url, ext, ENVPIXEL);
+        texture.sourceUUID = sourceUUID;
+        texture.name = data.name;
+        this.sceneEnvTexture.set(sourceUUID, texture);
+        const retTex = texture.clone();
+        retTex.sourceUUID = sourceUUID;
+        if (withPrevUrl) retTex.prevUrl = await renderEnvTexture(sourceUUID);
+        return Promise.resolve(retTex);
+      }
+    }
+  }
 
   async deserializeScene(scene: Scene, rootNode: CC.Scene, padding: Array<Padding> = []) {
     this.currentScene = scene;

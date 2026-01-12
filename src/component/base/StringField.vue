@@ -7,9 +7,10 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from "vue"
 import Field from "@/component/common/Field.vue"
-import { registerPropertyUndoRedo, onUndoObservable, onRedoObservable } from "../../tools/undoredo"
+import { registerPropertyUndoRedo, } from "../../tools/undoredo"
 import { getObjectValue, setObjectValue } from "../../tools/property"
 import { Editor } from "@/3d/Editor"
+import { _EventBus } from "@/utils/dispatch"
 const props = defineProps<{
   object: any;
   property: string;
@@ -41,20 +42,12 @@ const onEnter = () => {
   const newValue = value.value
 
   const object = props.object;
-  if (!props.noUndoRedo) {
-    console.log('onEnter', newValue, oldValue.value);
-
-    registerPropertyUndoRedo({
-      object: object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
-        Editor.Instance.dispatch('nameChanged', { newName: object.name, id: object.id })
-        syncFromObject()
-      }
-    })
-  } else {
-    setObjectValue(object, props.property, newValue)
-    Editor.Instance.dispatch('nameChanged', { newName: object.name, id: object.id })
-  }
-
+  registerPropertyUndoRedo({
+    object: object, property: props.property, oldValue: oldValue.value, newValue, executeRedo: true, action: () => {
+      _EventBus.dispatch('onStringChanged', { key: props.property, object: props.object })
+      syncFromObject()
+    }
+  })
   if (newValue !== oldValue.value) {
     oldValue.value = newValue
   }
@@ -62,14 +55,18 @@ const onEnter = () => {
   emit("change", newValue)
 
 }
-onMounted(() => {
-  Editor.Instance.on("UndoRedo", () => {
+
+function onStringChanged(data: { key: string; object: any }) {
+  if (data.key === props.property && data.object === props.object) {
     syncFromObject()
-  })
+  }
+}
+
+onMounted(() => {
+  _EventBus.on('onStringChanged', onStringChanged)
 })
 onUnmounted(() => {
-  Editor.Instance.off("UndoRedo", () => {
-  })
+  _EventBus.off('onStringChanged', onStringChanged)
 })
 
 

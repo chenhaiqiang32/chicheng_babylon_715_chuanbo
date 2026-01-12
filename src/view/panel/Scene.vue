@@ -2,14 +2,6 @@
     <div class="scene-panel">
         <canvas ref="canvasRef" @drop="handleDrop" @dragover="e => e.preventDefault()"></canvas>
         <ToolBar v-if="edit" />
-        <div class="clip-list" v-else>
-            <div class="header">
-                动画信息
-            </div>
-            <div v-for="item in clips" :key="item.uuid" class="clip-item" @click="playClip(item.uuid)">
-                {{ item.name }}
-            </div>
-        </div>
     </div>
 </template>
 <script setup lang='ts'>
@@ -53,21 +45,7 @@ function onAnimationChange() {
 onUnmounted(() => {
     Editor.Instance.off('animationChange', onAnimationChange)
 })
-let timeController: TimeController
 
-function playClip(uuid: string) {
-    const anim = Editor.Instance.Scene?.runtimeAnimation.find(x => x.uuid === uuid) as CC.Animation
-    const animator = new Animator(anim);
-    animator.updateClip((s) => Editor.Instance.getNodeById(s))
-    animator.collectInfo();
-    const times = anim.clips.flatMap((x) => x.key.map((v) => v.time));
-    const maxTime = Math.max(...times) + 0.5;
-    timeController = new TimeController(maxTime, (deltaTime) => {
-        animator.execute(deltaTime)
-    }, false, () => {
-        animator.dispose()
-    })
-}
 
 async function handleDrop(ev: DragEvent) {
     ev.preventDefault();
