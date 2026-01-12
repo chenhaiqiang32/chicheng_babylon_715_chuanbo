@@ -312,6 +312,7 @@ window.addEventListener(
   'click',
   (data) => {
     const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera;
+    if (!camera) return;
     camera.useAutoRotationBehavior = false;
   },
   {
