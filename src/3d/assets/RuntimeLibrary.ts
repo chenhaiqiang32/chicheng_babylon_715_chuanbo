@@ -47,8 +47,10 @@ interface RuntimeAssetsEventBus {
 export interface IGetBuffer {
   getGeoBuffer(uuid: string): any;
   getTextureBuffer(uuid: string): any;
+  getEnvTextureBuffer(sourceUUID: string): any;
   getMaterialData(uuid: string): any;
   getTexturelData(uuid: string): any;
+  getEnvTextureData(sourceUUID: string) : any;
   getGeometry(uuid: string): Promise<Geometry>;
 }
 
@@ -99,6 +101,10 @@ export class RuntimeLibrary
   getTexturelData(uuid: string) {
     const texture = this.texture.find((x) => x.uuid == uuid);
     return texture;
+  }
+  getEnvTextureData(sourceUUID: string) {
+    const env = this.envTexture.find((x) => x.sourceUUID == sourceUUID);
+    return env;
   }
   getMaterialData(uuid: string) {
     const material = this.material.find((x) => x.uuid == uuid);
