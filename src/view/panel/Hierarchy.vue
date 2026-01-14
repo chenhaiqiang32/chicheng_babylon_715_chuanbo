@@ -235,10 +235,9 @@ const handleNodeDrop = (
 ) => {
     if (!draggingNode || !dropNode) return;
 
-    const node = useScene().getNode(draggingNode.data.id);
-    const drop = useScene().getNode(dropNode.data.id);
+    const node = Editor.Instance.getNodeById(draggingNode.data.id);
+    const drop = Editor.Instance.getNodeById(dropNode.data.id);
     nodeCRUD().updateNodeHierarchy(node, drop, dropType);
-    // todo:无法保证顺序
 }
 
 async function onKeydown(e: KeyboardEvent) {
