@@ -1,4 +1,4 @@
-import { ParticleSystemSet } from "@babylonjs/core";
+import { ParticleSystemSet } from '@babylonjs/core';
 
 export namespace CC {
   export interface BaseRes {
@@ -20,7 +20,7 @@ export namespace CC {
     children: ObjectNode[];
     visible?: boolean;
     metadata?: any;
-    isIgnore?: boolean;  // 对应 bjs.Node.isIgnore 自定义属性
+    isIgnore?: boolean; // 对应 bjs.Node.isIgnore 自定义属性
   }
 
   export interface TransformNode extends ObjectNode {
@@ -118,13 +118,13 @@ export namespace CC {
     reflectionProbes: number[];
     environment: {
       sourceUUID: string; // 用户修改后的环境贴图需要使用
-      url: string;        // bjs默认环境贴图需要使用
+      url: string; // bjs默认环境贴图需要使用
       intensity: number;
     };
     background: {
       type: number;
       texture: BgTexture;
-      clearColor: number[]
+      clearColor: number[];
     };
     iblIntensity: number;
     nodes: ObjectNode[];
@@ -133,7 +133,7 @@ export namespace CC {
     ssrPostProcess: any;
     particleSystemSet: any;
   }
-  export type KeyType = 'float' | 'v3' | 'quaternion' | 'v2' | 'color3' | 'boolean';
+  export type KeyType = 'float' | 'v3' | 'quaternion' | 'v2' | 'color3' | 'boolean' | 'camera';
   export interface Clip {
     name: string;
     uuid: string;
@@ -143,6 +143,7 @@ export namespace CC {
     key: {
       time: number;
       value: any;
+      easing: number;
     }[];
   }
 

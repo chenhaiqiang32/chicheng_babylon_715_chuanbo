@@ -5,18 +5,16 @@
             <Color :label="$t('component.sceneSetting.ambientColor')" :object="scene" property="ambientColor" />
             <Field :title="$t('component.sceneSetting.backgroundType')">
                 <el-select v-model="bgType" style="margin-left: auto; width: 100px;">
-                    <el-option :label="'背景贴图'"      :value = 1 />
-                    <el-option :label="'图片'"          :value= 2 />
-                    <el-option :label="'全景图'"        :value= 3 />
-                    <el-option :label="'颜色'"          :value= 4 />
+                    <el-option @click="onSelectSyncEnv" :label="'同步环境'"      :value = bgTypeEnum.SyncEnv />
+                    <el-option :label="'图片'"          :value= bgTypeEnum.Texture />
+                    <el-option :label="'全景图'"        :value= bgTypeEnum.EnvTexture />
+                    <el-option :label="'颜色'"          :value= bgTypeEnum.Color />
                 </el-select>
             </Field>
-            <Texture v-if="bgType == 1" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundTexture')" :object="scene" type="envTexture"
-                property="bgTexture" @change="onSelectBgTexture" />
             <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')" :object="scene"
                 property="bgTexture" @change="onSelectBgImage" />
-            <Texture v-if="bgType == 3" :acceptCubeTexture="true" :title="$t('component.sceneSetting.background360Image')" :object="scene"
-                property="bgTexture" @change="onSelect360BGImage" />
+            <Texture v-if="bgType == 3" :acceptCubeTexture="true" :title="$t('component.sceneSetting.background360Image')" :object="scene" type="envTexture"
+                property="bgTexture" @change="onSelectEnvTexture" />
             <Color v-if="bgType == 4":label="$t('component.sceneSetting.clearColor')" @change="onSelectClearColor" :object="scene" property="clearColor"/>
         </SectionField>
 
@@ -380,8 +378,17 @@ const toneMappingType = ref<number>();
 const focusStep = ref<number>();
 const focusMax = ref<number>();
 const dofBlurLevel = ref<number>();
+
+enum bgTypeEnum {
+    None = 0,
+    SyncEnv,
+    Texture,
+    EnvTexture,
+    Color
+}
+
 onMounted(() => {
-    bgType.value = scene.value.bgType == 0 ? 4 : scene.value.bgType;
+    bgType.value = scene.value.bgType == bgTypeEnum.None ? bgTypeEnum.Color : scene.value.bgType;
     fogMode.value = scene.value.fogMode;
     focusStep.value = (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) / 1000;
     focusMax.value = (Editor.Instance.Scene.activeCamera?.maxZ ?? 0) * 1000;
@@ -583,25 +590,27 @@ const toggleVLS = () => {
 // };
 
 // ----- 背景
-const onSelectBgTexture = async (tex:BJS_Texture) => {
-    await loadSkyBox(Editor.Instance.Scene, tex);
-    saveBgType(1);
+// 同步环境背景的环境贴图到 skybox
+const onSelectSyncEnv = async () => {
+    await loadSkyBox(Editor.Instance.Scene, Editor.Instance.Scene.environmentTexture);
+    saveBgType(bgTypeEnum.SyncEnv);
 }
 
 const onSelectBgImage = async (tex: BJS_Texture) => {
     loadImageBG(tex, Editor.Instance.Scene);
-    saveBgType(2);
+    saveBgType(bgTypeEnum.Texture);
 }
 
-const onSelect360BGImage = async (tex: BJS_Texture) => {
-    load360ImageBG(tex, Editor.Instance.Scene);
-    saveBgType(3);
+const onSelectEnvTexture = async (tex:BJS_Texture) => {
+    await loadSkyBox(Editor.Instance.Scene, tex);
+    saveBgType(bgTypeEnum.EnvTexture);
 }
 
 const onSelectClearColor = () => {
     closeEnv();
-    saveBgType(4);
+    saveBgType(bgTypeEnum.Color);
 }
+
 
 const saveBgType = (v: number) => {
     Editor.Instance.Scene.bgType = v;
@@ -612,6 +621,10 @@ const saveBgType = (v: number) => {
 const onSelectEnvTex = async (tex:BJS_Texture) => {
     const envTex = await RuntimeLibrary.Instance.getEnvTexture(tex.sourceUUID);
     Editor.Instance.Scene.environmentTexture = envTex;
+    // 如果选择了同步环境，则需要同步修改天空盒
+    if(bgType.value == bgTypeEnum.SyncEnv){
+        loadSkyBox(Editor.Instance.Scene, envTex);
+    }
 }
 
 const onFogModeChange = (v: number) => {

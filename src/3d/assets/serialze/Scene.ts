@@ -131,9 +131,8 @@ export function deserializeScene(
     deserializeNode(node, scene, assets, null, false, padding);
   }
   if (sceneData.environment) {
-    console.log(sceneData.environment.sourceUUID);
     if (sceneData.environment.sourceUUID) {
-      assets.getEnvTexture(sceneData.environment.sourceUUID, false).then((tex) => {
+      assets.getEnvTexture?.(sceneData.environment.sourceUUID, false).then((tex) => {
         scene.environmentTexture = tex;
       });
     } else {

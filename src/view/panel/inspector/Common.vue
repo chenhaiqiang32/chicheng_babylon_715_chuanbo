@@ -39,7 +39,7 @@ function setVisible(visible: boolean) {
 
 function onNameChanged(newName: string) {
     if (!props.object) return;
-    Editor.Instance.dispatch('nameChanged', { newName, id: props.object.id })
+    Editor.Instance.dispatch('nameChanged', { newName, id: props.object.uuid })
 }
 
 

@@ -10,6 +10,7 @@ import { Timer } from '@/utils/Time';
 import { useHierarchyModule } from './useSceneModule/useHierarchy';
 import { useControlModule } from './useSceneModule/useControl';
 import { ArrayUtils } from '@/utils/Array';
+import { _EventBus } from '@/utils/dispatch';
 
 export const useScene = defineStore('scene', () => {
   // 模块化
@@ -28,6 +29,7 @@ export const useScene = defineStore('scene', () => {
   }
 
   async function saveScene(scene: Scene) {
+    _EventBus.dispatch('onSceneSaveBefore');
     const padding = new Array<Padding>();
     const sceneData = serializeScene(scene, RuntimeLibrary.Instance, padding);
     await Promise.all(padding.map((x) => x()));

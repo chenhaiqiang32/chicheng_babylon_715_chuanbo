@@ -24,5 +24,8 @@ const symbolId = computed(() => `#icon-${props.name}`);
   display: inline-block;
   cursor: pointer;
   fill: currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

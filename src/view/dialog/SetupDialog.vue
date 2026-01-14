@@ -38,7 +38,7 @@
     </ElDialog>
 </template>
 <script setup lang='ts'>
-import { ElDialog, ElScrollbar, ElButton, ElMessageBox, ElTag } from 'element-plus';
+import { ElDialog, ElScrollbar, ElButton, ElMessageBox, ElTag, ElMessage } from 'element-plus';
 import SVG from '@/component/common/SVG.vue';
 import { onMounted, ref } from 'vue';
 import { useScene } from '@/store/useScene';
@@ -79,6 +79,14 @@ async function openProject(mode: FileMode) {
         });
         if (!name) {
             return;
+        }
+        // 检查是否和数据库中的项目名重复
+        for(let i=0; i<projects.value.length; i++){
+            const item = projects.value[i];
+            if(item.name == name){
+                ElMessage.error('项目名重复');
+                throw "项目名重复"
+            }
         }
         await EditorFileSystem.Instance.init(mode, name);
         const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {

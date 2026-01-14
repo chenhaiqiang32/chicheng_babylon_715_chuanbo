@@ -31,11 +31,11 @@ export class App {
   async init(canvas: HTMLCanvasElement, gpu: boolean) {
     this.canvas = canvas;
     if (gpu) {
-      // this.engine = new Engine(canvas, true);
-      this.engine = new WebGPUEngine(canvas, {
-        adaptToDeviceRatio: true,
-        limitDeviceRatio: 2,
-      });
+      this.engine = new Engine(canvas, true);
+      // this.engine = new WebGPUEngine(canvas, {
+      //   adaptToDeviceRatio: true,
+      //   limitDeviceRatio: 2,
+      // });
       if (this.engine instanceof WebGPUEngine) {
         await this.engine.initAsync();
       }

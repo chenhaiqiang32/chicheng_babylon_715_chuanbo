@@ -1,4 +1,3 @@
-import { loadSkyboxWithExt } from '@/3d/core/utils/EnvSkybox';
 import {
   AbstractEngine,
   Color4,
@@ -25,6 +24,7 @@ let plane: Mesh;
 const size = 128;
 let cache: Map<string, string> = new Map();
 let envCache: Map<string, string> = new Map();
+let envRenderQueue: Promise<void> = Promise.resolve();    // 渲染缩略图队列
 
 
 function initScene(engine: AbstractEngine) {
@@ -78,15 +78,51 @@ export function renderMaterail(material: Material, useCache = true, engine=Edito
   });
 }
 
+// 环境图需要用渲染队列来保证每次只渲染一个目标，否则会导致viewport比例不对
+export function renderEnvTexture(sourceUUID:string, useCache = true, engine: AbstractEngine=Editor.Instance.Engine):Promise<string> {
+  if(!sourceUUID)
+    return;
+  if(useCache) {
+    const env = envCache.get(sourceUUID);
+    if(env) {
+      return Promise.resolve(env);
+    }
+  }
+
+  let resolveOut!: (value: string) => void;
+  let rejectOut!: (reason?: any) => void;
+
+  const taskPromise = new Promise<string>((resolve, reject) => {
+    resolveOut = resolve;
+    rejectOut = reject;
+  });
+
+  envRenderQueue = envRenderQueue.then(async () => {
+    if(useCache) {
+      const env = envCache.get(sourceUUID);
+      if(env) {
+        resolveOut(env);
+        return;
+      }
+    }
+
+    try {
+      const result = await renderEnvTextureInternal(sourceUUID, engine);
+      resolveOut(result);
+    } catch  (e) {
+      rejectOut(e);
+    }
+  })
+  .catch((e) => {
+    console.error(e);
+  });
+  return taskPromise;
+}
+
 /**
  * 生成环境贴图的缩略图 url
  */
-export async function renderEnvTexture(sourceUUID:string, useCache = true, engine: AbstractEngine=Editor.Instance.Engine):Promise<string> {
-    if (useCache) {
-        const url = envCache.get(sourceUUID);
-        if (url) 
-          return url;
-    }
+async function renderEnvTextureInternal(sourceUUID:string, engine: AbstractEngine=Editor.Instance.Engine):Promise<string> {
     if (!scene) {
       initScene(engine);
     }

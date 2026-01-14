@@ -4,7 +4,7 @@ import { zip, strToU8, AsyncZippable, unzip, strFromU8, unzipSync, Unzipped } fr
  * 文件条目类型
  * [文件名（包含路径，如 'folder/file.txt'）, 文件内容]
  */
-export type ZipFile = [string, Blob | ArrayBuffer | string | Uint8Array];
+export type ZipFile = [string, Blob | ArrayBuffer | string | Uint8Array | Int8Array];
 
 /**
  * 将一组文件压缩成 ZIP
@@ -22,7 +22,7 @@ export async function zipFiles(
   for (let i = 0; i < files.length; i++) {
     const [name, content] = files[i];
 
-    let data: Uint8Array;
+    let data: Uint8Array | Int8Array;
 
     if (typeof content === 'string') {
       // 字符串 → Uint8Array（UTF-8 编码）
@@ -31,12 +31,11 @@ export async function zipFiles(
       // Blob → ArrayBuffer → Uint8Array
       const arrayBuffer = await content.arrayBuffer();
       data = new Uint8Array(arrayBuffer);
-    } else if (content instanceof ArrayBuffer) {
+    } else if (content instanceof ArrayBuffer || content instanceof Int8Array) {
       data = new Uint8Array(content);
     } else if (content instanceof Uint8Array) {
       data = content;
     } else {
-      // 兜底（理论上不会走到这里）
       throw new Error(`Unsupported content type for file "${name}"`);
     }
 

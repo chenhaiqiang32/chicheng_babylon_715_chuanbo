@@ -1,6 +1,8 @@
-import { Quaternion, Node } from '@babylonjs/core';
+import { Quaternion, Node, ArcFollowCamera, ArcRotateCamera } from '@babylonjs/core';
 import { CC } from '../assets/BaseRes';
 import * as ObjectUtils from '@/tools/property';
+import { EasingFunc } from '@/timeLine/keyframe/Easing';
+import { Editor } from '../Editor';
 interface RuntimeClip {
   object: any;
   clip: CC.Clip;
@@ -15,6 +17,13 @@ export class Animator {
     this.clips = [];
     for (let index = 0; index < this.animation.clips.length; index++) {
       const clip = this.animation.clips[index];
+      if (clip.objectUuid == 'camera') {
+        this.clips.push({
+          object: null,
+          clip,
+        });
+        continue;
+      }
       const obj = getNode?.(clip.objectUuid);
       if (obj) {
         this.clips.push({
@@ -34,7 +43,11 @@ export class Animator {
       const keys = clip.clip.key;
       const startKey = keys[start];
       const endKey = keys[end];
-      const value = lerpValue(startKey.value, endKey.value, percent, clip.clip.type);
+      const easingIndex = startKey.easing || 0;
+      const easing = EasingFunc[easingIndex] || EasingFunc[0];
+      const easedPercent = easing ? easing(percent) : percent;
+      const value = lerpValue(startKey.value, endKey.value, easedPercent, clip.clip.type);
+
       switch (clip.clip.type) {
         case 'float':
         case 'boolean':
@@ -48,6 +61,9 @@ export class Animator {
           break;
         case 'color3':
           setColor3Value(clip.object, clip.clip.property, value);
+          break;
+        case 'camera':
+          setCameraValue(Editor.Instance.Scene.activeCamera as ArcRotateCamera, value);
           break;
       }
     }
@@ -138,7 +154,42 @@ function lerpValue(start: any, end: any, percent: number, type: string) {
     return [q3.x, q3.y, q3.z, q3.w];
   } else if (type == 'boolean') {
     return percent < 1 ? start : end;
+  } else if (type == 'camera') {
+    return lerpCameraValue(start, end, percent);
   }
+}
+interface CameraKey {
+  alpha: number;
+  beta: number;
+  radius: number;
+  targetX: number;
+  targetY: number;
+  targetZ: number;
+}
+function setCameraValue(object: ArcRotateCamera, value: CameraKey) {
+  object.alpha = value.alpha;
+  object.beta = value.beta;
+  object.radius = value.radius;
+  object.target.x = value.targetX;
+  object.target.y = value.targetY;
+  object.target.z = value.targetZ;
+}
+
+function lerpCameraValue(start: CameraKey, end: CameraKey, percent: number) {
+  const alpha = lerp(start.alpha, end.alpha, percent);
+  const beta = lerp(start.beta, end.beta, percent);
+  const radius = lerp(start.radius, end.radius, percent);
+  const targetX = lerp(start.targetX, end.targetX, percent);
+  const targetY = lerp(start.targetY, end.targetY, percent);
+  const targetZ = lerp(start.targetZ, end.targetZ, percent);
+  return {
+    alpha,
+    beta,
+    radius,
+    targetX,
+    targetY,
+    targetZ,
+  };
 }
 
 function lerp(start: number, end: number, percent: number) {
