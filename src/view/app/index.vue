@@ -22,9 +22,13 @@ onMounted(async () => {
         await App.Instance.init(canvas.value, true);
     }
     const assets = new AppAssets();
-    await assets.loadFromUrl('publish.zip')
+    await assets.loadFromUrl('publish.zip', (progress) => {
+        loading.value = progress * 0.4;
+    });
     App.Instance.setAssetsLibrary(assets);
-    App.Instance.setScene();
+    App.Instance.setScene((progress) => {
+        loading.value = progress * 0.6 + 0.4;
+    });
 
 });
 

@@ -22,6 +22,7 @@
     "@element-plus/icons-vue": "^2.3.2",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vueuse/core": "^14.0.0",
+    "axios": "^1.13.2",
     "babylonjs-fbx-loader": "^1.1.0",
     "cannon-es": "^0.20.0",
     "element-plus": "^2.11.8",

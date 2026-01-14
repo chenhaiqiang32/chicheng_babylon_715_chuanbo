@@ -13,18 +13,18 @@
             </Field>
             <Field :title="$t('dialog.publish.meshCompress')">
                 <ElRadioGroup v-model="meshCompress" type="button">
-                    <el-radio-button :label="$t('dialog.publish.noCompress')" :value="0" />
-                    <el-radio-button :label="$t('dialog.publish.lowCompress')" :value="2" />
-                    <el-radio-button :label="$t('dialog.publish.midCompress')" :value="3" />
-                    <el-radio-button :label="$t('dialog.publish.highCompress')" :value="5" />
+                    <el-radio-button :label="$t('dialog.publish.noCompress')" :value="-1" />
+                    <el-radio-button :label="$t('dialog.publish.lowCompress')" :value="0" />
+                    <el-radio-button :label="$t('dialog.publish.midCompress')" :value="1" />
+                    <el-radio-button :label="$t('dialog.publish.highCompress')" :value="2" />
                 </ElRadioGroup>
             </Field>
-            <Field :title="$t('dialog.publish.textureCompress')">
+            <!-- <Field :title="$t('dialog.publish.textureCompress')">
                 <ElSwitch v-model="textureCompress" active-value="true" inactive-value="false" />
             </Field>
             <Field :title="$t('dialog.publish.offline')">
                 <ElSwitch v-model="offline" active-value="true" inactive-value="false" />
-            </Field>
+            </Field> -->
             <Field title="">
                 <ElButton type="primary" style="width: 100%; " @click="onPublish">{{ $t('dialog.publish.title') }}
                 </ElButton>
@@ -47,7 +47,7 @@ import { storeToRefs } from 'pinia';
 import { ref } from 'vue';
 const model = ref(true);
 const { sceneInfoList } = storeToRefs(useScene())
-const meshCompress = ref(0);
+const meshCompress = ref(-1);
 const textureCompress = ref(false);
 const offline = ref(false);
 const { loading } = storeToRefs(useEditor());
@@ -73,6 +73,8 @@ async function onPublish() {
     const publish = new PublishAssets(RuntimeLibrary.Instance);
     const buffer = await publish.addScene(publishScenes, (v) => {
         loading.value = v;
+        console.log(v);
+
     }, meshCompress.value);
     //@ts-ignore
     Tools.Download(new Blob([buffer], { type: 'application/zip' }), 'publish.zip');

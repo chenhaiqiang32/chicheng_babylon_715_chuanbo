@@ -1,5 +1,5 @@
 <template>
-  <Field :title="label" :tooltip="tooltip">
+  <Field :title="label" :tooltip="tooltip" :text-width="textWidth">
     <input class="input-costum" v-model="value" @change="onEnter" />
   </Field>
 </template>
@@ -15,6 +15,7 @@ const props = defineProps<{
   object: any;
   property: string;
   label?: string;
+  textWidth?: number;
   tooltip?: string;
   noUndoRedo?: boolean
 }>()

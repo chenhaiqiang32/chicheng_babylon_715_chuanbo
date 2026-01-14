@@ -94,7 +94,6 @@ function get() {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-right: 8px;
 }
 
 .editor-section__label {

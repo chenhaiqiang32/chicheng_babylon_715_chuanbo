@@ -209,7 +209,7 @@ export class Editor extends Dispatch<EditorEvent> {
     this.initWatch();
   }
 
-  async setCurrentScene(uuid: string) {
+  async setCurrentScene(uuid: string, loading?: (v: number) => void) {
     this.weakMap.clear();
     if (this.scene) {
       this.scene.onPointerObservable.removeCallback(this.onPointerDonw);
@@ -222,7 +222,7 @@ export class Editor extends Dispatch<EditorEvent> {
     useScene().getScene(
       uuid,
       (percent) => {
-        useEditor().setLoading(percent);
+        loading?.(percent);
       },
       scene,
     );
@@ -239,12 +239,6 @@ export class Editor extends Dispatch<EditorEvent> {
       });
     }
     this.scene = scene;
-    this.scene.collisionsEnabled = true;
-    // this.scene.environmentTexture = new HDRCubeTexture('./studio005.hdr', scene, 128);
-    // this.scene.environmentTexture.gammaSpace = true;
-    //this.scene.gravity = new Vector3(0, -0.9, 0);
-    // 开启物理引擎
-    //this.scene.enablePhysics(new Vector3(0, -0.9, 0), new CannonJSPlugin(true, 10, CANNON));
     useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });

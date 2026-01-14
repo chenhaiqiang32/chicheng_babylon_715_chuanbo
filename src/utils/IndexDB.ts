@@ -8,7 +8,6 @@ export class IndexedDBClient {
     this.dbName = dbName;
     this.dbVersion = dbVersion;
     this.db = null;
-    this.open();
   }
 
   async open(): Promise<void> {
@@ -32,9 +31,6 @@ export class IndexedDBClient {
 
   // 保存数据
   async saveData(key: string, data: any): Promise<void> {
-    if (!this.db) {
-      await this.open();
-    }
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(storeName, 'readwrite');
       const store = transaction.objectStore(storeName);
@@ -46,9 +42,6 @@ export class IndexedDBClient {
 
   // 读取数据
   async loadData(key: any): Promise<any> {
-    if (!this.db) {
-      await this.open();
-    }
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(storeName, 'readonly');
       const store = transaction.objectStore(storeName);

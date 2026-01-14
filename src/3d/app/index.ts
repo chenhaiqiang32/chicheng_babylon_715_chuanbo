@@ -12,6 +12,7 @@ import {
 import { AppAssets } from '../assets/PublishLibrary';
 import { Animator } from '../animation/animator';
 import { Timer } from '@/utils/Time';
+import { ArrayUtils } from '@/utils/Array';
 
 export class App {
   private engine: AbstractEngine;
@@ -31,7 +32,11 @@ export class App {
   async init(canvas: HTMLCanvasElement, gpu: boolean) {
     this.canvas = canvas;
     if (gpu) {
-      this.engine = new Engine(canvas, true);
+      this.engine = new Engine(canvas, true, {
+        antialias: true,
+        adaptToDeviceRatio: true,
+        limitDeviceRatio: 2,
+      });
       // this.engine = new WebGPUEngine(canvas, {
       //   adaptToDeviceRatio: true,
       //   limitDeviceRatio: 2,
@@ -64,7 +69,7 @@ export class App {
     this.assets = assets;
   }
 
-  async setScene() {
+  async setScene(onProgress?: (progress: number) => void) {
     if (!this.assets) {
       return;
     }
@@ -77,9 +82,12 @@ export class App {
     scene.clearColor = new Color4(1, 1, 1, 1);
     scene.activeCamera.attachControl(this.canvas, true);
     this.registerAction();
-    for (const p of padding) {
-      await p();
+    const groupCount = Math.ceil(padding.length / 20);
+    const group = ArrayUtils.groupArray(padding, groupCount);
+    for (let index = 0; index < group.length; index++) {
+      await Promise.all(group[index].map((x) => x()));
       await Timer.sleep(10);
+      onProgress?.(index / (group.length - 1));
     }
   }
 

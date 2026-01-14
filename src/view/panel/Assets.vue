@@ -91,7 +91,7 @@ async function onChange() {
             uuid: x.uuid,
         }
     })
-    materialList.value = RuntimeLibrary.Instance.material.map(x => {
+    materialList.value = RuntimeLibrary.Instance.material.filter(x => x.share).map(x => {
         return {
             type: 'material',
             name: x.name,
@@ -141,23 +141,23 @@ async function onChange() {
         }
     }
 
-    // for (var i = 0; i < materialList.value.length; i++) {
-    //     const material = materialList.value[i];
-    //     const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
-    //     const prevUrl = await renderMaterail(mat, true);
-    //     material.previewUrl = prevUrl;
-    // }
+    for (var i = 0; i < materialList.value.length; i++) {
+        const material = materialList.value[i];
+        const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
+        const prevUrl = await renderMaterail(mat, true);
+        material.previewUrl = prevUrl;
+    }
     Editor.Instance.Engine.resize()
 }
 
 // 当材质属性发生改变时
 async function onMaterialChanged(e: { useCache: boolean }) {
-    // for (var i = 0; i < materialList.value.length; i++) {
-    //     const material = materialList.value[i];
-    //     const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
-    //     const prevUrl = await renderMaterail(mat, e.useCache);
-    //     material.previewUrl = prevUrl;
-    // }
+    for (var i = 0; i < materialList.value.length; i++) {
+        const material = materialList.value[i];
+        const mat = await RuntimeLibrary.Instance.getMaterial(material.uuid);
+        const prevUrl = await renderMaterail(mat, e.useCache);
+        material.previewUrl = prevUrl;
+    }
 }
 
 
