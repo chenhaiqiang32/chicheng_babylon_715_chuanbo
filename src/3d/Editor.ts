@@ -371,7 +371,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
   newResScene() {
     const scene = new Scene(this.engine);
-    const env = new CubeTexture('./country.env', scene);
+    const env = new CubeTexture('./abandoned_factory_canteen_01', scene);
     scene.environmentTexture = env;
     scene.useRightHandedSystem = false;
     return scene;
