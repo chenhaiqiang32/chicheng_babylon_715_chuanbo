@@ -1,7 +1,5 @@
 type KeyEvent = (key: KeyboardEvent) => void;
 const keyset = new Set<string>();
-window.addEventListener('keydown', execute);
-window.addEventListener('keyup', executeUp);
 //避免因窗口失焦/输入框拦截导致 keyset 卡死
 window.addEventListener('blur', () => keyset.clear());
 const eventsDown: Set<KeyEvent> = new Set<KeyEvent>();
@@ -22,7 +20,7 @@ function execute(key: KeyboardEvent) {
   if (key.target instanceof HTMLInputElement) {
     return;
   }
-  if (keyset.has(key.code)) { 
+  if (keyset.has(key.code)) {
     return;
   }
   keyset.add(key.code);
@@ -33,4 +31,17 @@ function executeUp(key: KeyboardEvent) {
   keyset.delete(key.code);
   eventsUp?.forEach((e) => e?.(key));
 }
-export { registerKeyDown, unregisterKeyDown, registerKeyUp, unregisterkeyUp };
+
+function stopRegisterKeyDown() {
+  window.removeEventListener('keydown', execute);
+  window.removeEventListener('keyup', executeUp);
+}
+
+function startRegisterKeyDown() {
+  window.addEventListener('keydown', execute);
+  window.addEventListener('keyup', executeUp);
+}
+startRegisterKeyDown()
+
+
+export { registerKeyDown, unregisterKeyDown, registerKeyUp, unregisterkeyUp, stopRegisterKeyDown, startRegisterKeyDown };

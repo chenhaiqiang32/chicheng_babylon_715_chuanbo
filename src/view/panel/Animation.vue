@@ -246,7 +246,9 @@ function onScroll(v: { scrollTop: number }) {
 
 
 function addCameraTrack() {
-
+  if (!currentRuntimeAction.value) {
+    return
+  }
   const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera
   const value = {
     alpha: camera.alpha,
@@ -255,6 +257,13 @@ function addCameraTrack() {
     targetX: camera.target.x,
     targetY: camera.target.y,
     targetZ: camera.target.z
+  }
+
+  const matched = selectedKeyframes.value.filter(s => s.clip && s.clip.objectUuid == 'camera');
+  if (matched.length > 0) {
+    matched.forEach(m => updateSelectedKeyValue(m.line, m.key, value))
+    animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
+    return
   }
   const clip = currentRuntimeAction.value.clips.find(x => x.objectUuid == 'camera');
   if (clip) {
@@ -292,7 +301,11 @@ function addCameraTrack() {
     refreshClipList()
     const sel = timeline.getSelectedKeyframeInfos()
     timeline.setKeyframes(currentRuntimeAction.value.clips.map(x => x.key))
-    if (sel && sel.length > 0) timeline.setSelectedKeyframes(sel)
+    if (sel && sel.length > 0) {
+      timeline.setSelectedKeyframes(sel)
+    }
+    animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
+
   }
 }
 
@@ -595,7 +608,6 @@ function batchUpdateSelectedKeyValues(updateValue: (sel: SelectedKey, oldValue: 
   }
 
   animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-  Editor.Instance.dispatch('animationChange')
   // 同步选中引用（防止外部依赖旧引用）
   selectedKeyframes.value.forEach(s => syncSelectionForKey(s.line, s.key.time))
   updateCurrentTransforms()
@@ -868,7 +880,6 @@ function updateSelectedKeyTime(line: number, key: KeyframeData, newTime: number)
   timeline.setSelectedKeyframes([selItem])
 
   animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-  Editor.Instance.dispatch('animationChange')
   updateCurrentTransforms()
 
   animDuration.value = computeDurationFromClips(currentRuntimeAction.value.clips) ?? 0
@@ -968,7 +979,6 @@ function deleteAnimation(uuid: string) {
   }).then(() => {
     runtimeAnimations.value = runtimeAnimations.value.filter(item => item.uuid != uuid)
     Editor.Instance.Scene.runtimeAnimation = toRaw(runtimeAnimations.value)
-    Editor.Instance.dispatch('animationChange')
     if (currentRuntimeAction.value?.uuid == uuid) {
       currentRuntimeAction.value = null
       currentSelect.value = ''
@@ -992,7 +1002,6 @@ function commitAnimationChange() {
   currentRuntimeAction.value.name = animName.value
   runtimeAnimations.value = [...runtimeAnimations.value]
   Editor.Instance.Scene.runtimeAnimation = toRaw(runtimeAnimations.value)
-  Editor.Instance.dispatch('animationChange')
 }
 
 watch(currentRuntimeAction, (v) => {
@@ -1073,8 +1082,6 @@ function applyActionClipsSnapshot(
       suppressSelectionUndoRedo = false
     }
   }
-
-  Editor.Instance.dispatch('animationChange')
 }
 
 function updateSelectedKeyValue(line: number, key: KeyframeData, newValue: any) {
@@ -1116,7 +1123,6 @@ function updateSelectedKeyValue(line: number, key: KeyframeData, newValue: any) 
   }
 
   animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-  Editor.Instance.dispatch('animationChange')
 
   // 同步面板选中项（如果更新的 key 属于当前选中）
   syncSelectionForKey(line, key.time)
@@ -1153,7 +1159,6 @@ function updateSelectedKeyEasing(line: number, key: KeyframeData, easing: number
     ; (k as any).easing = easing
 
   animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-  Editor.Instance.dispatch('animationChange')
   syncSelectionForKey(line, key.time)
 
   const afterClips = deepClone(currentRuntimeAction.value.clips)
@@ -1183,7 +1188,6 @@ function batchUpdateSelectedKeyEasing(easing: number) {
   }
 
   animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-  Editor.Instance.dispatch('animationChange')
   selectedKeyframes.value.forEach(s => syncSelectionForKey(s.line, s.key.time))
   updateCurrentTransforms()
 
@@ -1269,11 +1273,10 @@ watch(animLoop, (val) => {
 
   const action = currentRuntimeAction.value
   if (action) {
-    ; (action as any).loop = loopVal
+    (action as any).loop = loopVal
     // 同步到运行时动画列表，保证下次打开仍保持
     runtimeAnimations.value = [...runtimeAnimations.value]
     Editor.Instance.Scene.runtimeAnimation = toRaw(runtimeAnimations.value)
-    Editor.Instance.dispatch('animationChange')
     saveAnimLoop(action.uuid, loopVal)
   }
 })
@@ -1390,10 +1393,11 @@ onMounted(() => {
           }
 
           timeline.setKeyframes(currentRuntimeAction.value.clips.map((x) => x.key))
-          if (sel && sel.length > 0) timeline.setSelectedKeyframes(sel)
+          if (sel && sel.length > 0) {
+            timeline.setSelectedKeyframes(sel)
+          }
           else timeline.setSelectedKeyframes([] as any)
           animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-          Editor.Instance.dispatch('animationChange')
           updateCurrentTransforms()
         } finally {
           suppressSelectionUndoRedo = false
@@ -1546,7 +1550,6 @@ function onPositionChanged(e: { object: TransformNode, newPosition: number[], ol
       updateSelectedKeyValue(m.line, m.key, e.object.position.asArray())
     })
     animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-    Editor.Instance.dispatch('animationChange')
     updateCurrentTransforms()
     return
   }
@@ -1614,7 +1617,6 @@ function onRotationChanged(e: { object: TransformNode, newRotation: number[], ol
   if (matched.length > 0) {
     matched.forEach(m => updateSelectedKeyValue(m.line, m.key, e.object.rotationQuaternion.asArray()))
     animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-    Editor.Instance.dispatch('animationChange')
     updateCurrentTransforms()
     return
   }
@@ -1679,7 +1681,6 @@ function onScaleChanged(e: { object: TransformNode, newScale: number[], oldScale
   if (matched.length > 0) {
     matched.forEach(m => updateSelectedKeyValue(m.line, m.key, e.newScale))
     animator?.updateClip((uuid) => Editor.Instance.getNodeById(uuid))
-    Editor.Instance.dispatch('animationChange')
     updateCurrentTransforms()
     return
   }

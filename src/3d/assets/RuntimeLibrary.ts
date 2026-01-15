@@ -216,6 +216,16 @@ export class RuntimeLibrary
   currentScene: Scene;
   geomertyIDs: Set<string> = new Set();
   textureIds: Set<string> = new Set();
+  scripts: CC.ScriptData[] = [
+    {
+      uuid: ID.generateUUID(),
+      name: 'Scripts',
+      code: `
+        console.log('Scripts');
+      `,
+      args: [],
+    },
+  ];
 
   private needUpdateScript: Map<string, CC.ScriptData> = new Map();
 

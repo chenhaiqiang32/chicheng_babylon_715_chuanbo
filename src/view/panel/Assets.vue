@@ -45,6 +45,17 @@
                     </template>
                 </Grid>
             </el-tab-pane>
+            <el-tab-pane label="脚本" @contextmenu="scriptContextMenu">
+                <Grid :data="scripts" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
+                    <template #default="{ item, index }">
+                        <div class="grid-item" :title="item.name" draggable="true"
+                            @dragstart="e => handleDragStart(e, item)">
+                            <img v-if="item.url" :src="item.url" alt="" style="width: 80%; height: 80%;">
+                            <span class="itme-name">{{ item.name }}</span>
+                        </div>
+                    </template>
+                </Grid>
+            </el-tab-pane>
         </el-tabs>
     </div>
 </template>
@@ -60,6 +71,9 @@ import {
     getAssetsModelContextMenuCommands, getAssetsTextureContextMenuCommands
 } from '@/view/panel/ContextMenuCommands';
 import { renderMaterail } from '@/tools/preview/materialPreviewGenerator';
+import { CC } from '@/3d/assets/BaseRes';
+import { useDialog } from '../dialog';
+import ScriptEditorDialog from '../dialog/ScriptEditorDialog.vue';
 
 const minWidth = 70
 const rowHeight = 70
@@ -68,6 +82,7 @@ const objectList = ref<any[]>([]);
 const materialList = ref<any[]>([]);
 const textureList = ref<any[]>([]);
 const envTextureList = ref<any[]>([]);
+const scripts = ref<CC.ScriptData[]>([]);
 
 
 
@@ -84,6 +99,7 @@ onMounted(() => {
 
 
 async function onChange() {
+    scripts.value = RuntimeLibrary.Instance.scripts;
     objectList.value = RuntimeLibrary.Instance.rootNodes.map(x => {
         return {
             type: 'object',
@@ -150,6 +166,24 @@ async function onChange() {
     Editor.Instance.Engine.resize()
 }
 
+function scriptContextMenu(e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    openContextMenu({
+        position: {
+            x: e.clientX,
+            y: e.clientY
+        },
+        commands: [
+            {
+                name: '新建脚本',
+                callback: () => {
+                    useDialog(ScriptEditorDialog)
+                }
+            }
+        ]
+    })
+}
 // 当材质属性发生改变时
 async function onMaterialChanged(e: { useCache: boolean }) {
     for (var i = 0; i < materialList.value.length; i++) {
