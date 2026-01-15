@@ -272,13 +272,29 @@ async function onKeydown(e: KeyboardEvent) {
     else if (key == 'delete') {
         if (Editor.Instance.selectNodes.length > 0) {
             let node = Editor.Instance.selectNodes[0];
+            const treeNode = treeRef.value?.getNode(node.uuid);
+            const parent = treeNode.parent;         
+            const prev = treeNode.previousSibling;  // 前一个Node
+            const next = treeNode.nextSibling;      // 后一个Node
+            // BJS中隐藏
             nodeCRUD().deleteNode(node);
+            // ElTree中删除
+            treeRef.value.remove(treeNode.data);
             registerUndoRedo({
-                undo: async () =>  {
-                    node = await nodeCRUD().restoreNode();
+                undo: () =>  {
+                    nodeCRUD().restoreNode(node);
+                    // ElTree中插入到原来的位置
+                    if(prev) {
+                        treeRef.value.insertAfter(treeNode.data, prev.data);
+                    } else if(next) {
+                        treeRef.value.insertBefore(treeNode.data, next.data);
+                    } else {
+                        treeRef.value.append(treeNode.data, parent.data);
+                    }
                 },
                 redo: () => {
                     nodeCRUD().deleteNode(node);
+                    treeRef.value.remove(treeNode.data);
                 },
             })
         }

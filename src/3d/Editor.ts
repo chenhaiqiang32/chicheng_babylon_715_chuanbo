@@ -826,6 +826,7 @@ function getNodeByUUid(node: Node, uuid: string, weakMap?: Map<string, Node>): N
     weakMap.set(node.uuid, node);
   }
   if (node.uuid === uuid) {
+    if(node.isDeleted) return null;
     return node;
   }
   const children = node.getChildren();
@@ -833,6 +834,7 @@ function getNodeByUUid(node: Node, uuid: string, weakMap?: Map<string, Node>): N
     for (let index = 0; index < children.length; index++) {
       const ret = getNodeByUUid(children[index], uuid, weakMap);
       if (ret) {
+        if(node.isDeleted) return null;
         return ret;
       }
     }

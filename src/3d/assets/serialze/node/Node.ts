@@ -44,6 +44,7 @@ export function serializeNode(
 
     for (let index = 0; index < children.length; index++) {
       const element = children[index];
+      if(element.isDeleted) continue;
       const node = serializeNode(element as TransformNode, assets, padding);
       reuslt.children.push(node);
     }

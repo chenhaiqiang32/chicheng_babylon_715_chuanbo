@@ -93,37 +93,18 @@ export function nodeCRUD() {
   }
 
   /**
-   * 在BJS和Hierarchy中删除该Node
+   * BJS里面没有真正将其移除是因为加回来很麻烦，需要记录parent和具体位置index
    */
   async function deleteNode(node: Node) {
-    // 1. 先把删除的Node序列化保存，方便redo
-    deletedSerializedNode = new deletedSerializedNodeClass(node.clone(node.name, node.parent), await copyNode(node), node.parent);
-    const list = node.parent ? node.parent._children : Editor.Instance.Scene.rootNodes;
-    deletedSerializedNode.index = list.findIndex((x) => x.uuid == node.uuid);
-    // 2.在层级面板删除
-    useScene().removeHierarchy(node);
-    // 3.在bjs中删除该Node
-    Editor.Instance.Scene.getNodes()
-      .find((x) => x.uuid == node.uuid)
-      ?.dispose();
+    node.setEnabled(false);
+    node.isDeleted = true;
   }
 
-  /**
-   * 将删除的节点重新弄回来
-   * 现在做法是删除的时候clone源数据然后序列化，redo时候反序列化
-   * warning:有可能自定义数据没有被clone或者序列化进去
-   */
-  async function restoreNode():Promise<Node> {
-    // 反序列化之前保存的删除节点的数据
-    if(deletedSerializedNode) {
-      // todo:顺序
-      const node = await pasteNode(deletedSerializedNode.serializedNode, deletedSerializedNode.parent, deletedSerializedNode.index);
-      deletedSerializedNode.rawNode.dispose();
-      deletedSerializedNode = null;
-      useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
-      return node;
-    }
+  function restoreNode(node: Node) {
+    node.setEnabled(true);
+    node.isDeleted = false;
   }
+
   /**
    * 更新 Node 的新层级
    */
