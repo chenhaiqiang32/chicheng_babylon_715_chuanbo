@@ -6,25 +6,6 @@ import { useScene } from '@/store/useScene';
 import { ArrayUtils } from '@/utils/Array';
 import { Node, TransformNode } from '@babylonjs/core';
 
-class deletedSerializedNodeClass{
-  constructor(_rawNode:Node, _serializedNode: CC.ObjectNode, _parent: Node | null) {
-    this.rawNode = _rawNode;
-    this.serializedNode = _serializedNode;
-    this.parent = _parent;
-    // setEnabled和parent保证clone体不显示在Scene中,remove保证保存时不序列化进去
-    this.rawNode.setEnabled(false);
-    this.rawNode.parent = null;
-    this.rawNode._removeFromSceneRootNodes();
-  }
-
-  public rawNode: Node | null = null;
-  public serializedNode : CC.ObjectNode | null = null;
-  public parent: Node | null = null;
-  public index: number = -1;
-}
-
-let deletedSerializedNode : deletedSerializedNodeClass | null;
-
 /**
  * BJS和Hierarchy中Node的增删改查
  */
@@ -120,11 +101,11 @@ export function nodeCRUD() {
     else {
       node.parent = nodeNewParent;
     }
-    // 由于 ElTree的源数据是BJS结构树的映射，而不是结构树本身，所以还是需要手动修改BJS结构树来改变顺序
-    // 保证下次进来的顺序和 ElTree 一样
+    // 第一层节点无法通过 rootNodes 来修改顺序，会导致该节点从 rootNodes 中消失;所以目前第一层无法确定顺序
     // @ts-ignore
-    const children = nodeNewParent ? nodeNewParent._children : Editor.Instance.Scene.rootNodes;
-    switchNodePosInParent(node, targetPosNode, type, children);
+    const children = nodeNewParent ? nodeNewParent._children : null;
+    if(children)
+      switchNodePosInParent(node, targetPosNode, type, children);
   }
 
   function switchNodePosInParent(from: Node, to: Node, type: 'before' | 'after' | 'inner', children: Node[]) {

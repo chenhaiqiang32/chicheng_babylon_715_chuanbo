@@ -33,7 +33,7 @@
                     <div style="height: 0;flex: 1;">
                         <ElScrollbar style="height: 100%;">
                             <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
-                                draggable @node-drop="handleNodeDrop" :data="hierarchy" highlight-current
+                                draggable @node-drag-start="handleNodeDragStart" @node-drop="handleNodeDrop" :data="hierarchy" highlight-current
                                 :props="treeProps" node-key="id" :default-expanded="true" :default-active="true" :expand-on-click-node="false"
                                 @node-click="handleNodeClick">
                                 <!-- 节点类型图标 + 节点名 -->
@@ -77,6 +77,8 @@ const treeProps = {
 }
 
 const { hierarchy, currentSelected, sceneInfoList, currentScene } = storeToRefs(useScene());
+
+let dragParent:Node,dragPrev:Node,dragNext:Node;
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const sceneSettingVisible = ref(false);
@@ -226,6 +228,16 @@ const toggleSceneSetting = async () => {
     useDialog(SceneSettingDialog)
 }
 
+// 记录拖拽之前Node的位置
+const handleNodeDragStart = (
+    draggingNode: Node,
+    ev: DragEvent
+) => {
+    dragParent = draggingNode.parent;
+    dragPrev =   draggingNode.previousSibling;
+    dragNext =   draggingNode.nextSibling;
+}
+
 // 拖拽释放节点，修改该节点的层级
 const handleNodeDrop = (
     draggingNode: Node,
@@ -238,6 +250,35 @@ const handleNodeDrop = (
     const node = Editor.Instance.getNodeById(draggingNode.data.id);
     const drop = Editor.Instance.getNodeById(dropNode.data.id);
     nodeCRUD().updateNodeHierarchy(node, drop, dropType);
+    registerUndoRedo({
+        undo: () => {
+            if(dragPrev) {
+                nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragPrev.data.id), "after");
+                // 如果直接更新 hierarchy 的响应式数据的话会重绘整个树，性能不太好，所以这里直接用 ElTree的删除和插入来实现更新View层
+                treeRef.value.remove(draggingNode.data);
+                treeRef.value.insertAfter(draggingNode.data, treeRef.value.getNode(dragPrev).data);
+            } else if(dragNext) {
+                nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragNext.data.id), "before");
+                treeRef.value.remove(draggingNode.data);
+                treeRef.value.insertBefore(draggingNode.data, treeRef.value.getNode(dragNext).data);
+            } else {
+                nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragParent.data.id), "inner");
+                treeRef.value.remove(draggingNode.data);
+                treeRef.value.append(draggingNode.data, treeRef.value.getNode(dragParent).data);
+            }
+        },
+        redo: () => {
+            nodeCRUD().updateNodeHierarchy(node, drop, dropType);
+            treeRef.value.remove(draggingNode.data);
+            if(dropType === 'before') {
+                treeRef.value.insertBefore(draggingNode.data, dropNode.data);
+            } else if(dropType === 'after') {
+                treeRef.value.insertAfter(draggingNode.data, dropNode.data);
+            } else  {
+                treeRef.value.append(draggingNode.data, dropNode.data);
+            }
+        }
+    })
 }
 
 async function onKeydown(e: KeyboardEvent) {
