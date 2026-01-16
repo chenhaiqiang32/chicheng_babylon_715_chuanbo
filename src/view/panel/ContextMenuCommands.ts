@@ -14,6 +14,7 @@ import { Utils } from '@/utils';
 import { addParticleSystem } from '@/tools/particles/particles';
 import { importSkyboxTexture } from '@/3d/core/utils/EnvSkybox';
 import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
+import { registerUndoRedo } from '@/tools/undoredo';
 
 /**
  * 获取层级面板的右键菜单配置
@@ -155,6 +156,14 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
       name: '删除',
       callback: () => {
         nodeCRUD().deleteNode(parentNode);
+        registerUndoRedo({
+          undo: () => {
+            nodeCRUD().restoreNode(parentNode);
+          },
+          redo: () => {
+            nodeCRUD().deleteNode(parentNode);
+          }
+        })
       },
     },
     {
@@ -170,6 +179,14 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
       name: '粘贴',
       callback: async () => {
         const clone = await nodeCRUD().pasteNode(useScene().currentCopy, parentNode || null);
+        registerUndoRedo({
+          undo: () => {
+            nodeCRUD().deleteNode(clone);
+          },
+          redo: () => {
+            nodeCRUD().restoreNode(clone);
+          }
+        })
       }
     }
     ] : []),

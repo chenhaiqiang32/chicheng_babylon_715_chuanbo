@@ -84,7 +84,7 @@ export const useScene = defineStore('scene', () => {
     hierarchy: hierarchyModule.hierarchy,
     setHierarchy: hierarchyModule.setHierarchy,
     addHierarchy: hierarchyModule.addHierarchy,
-    removeHierarchy: hierarchyModule.removeHierarchy,
+    updateHierarchy: hierarchyModule.updateHierarchy,
     // control
     currentControlMode: controlModule.currentControlMode,
     currentViewFlagsMode: controlModule.currentViewFlagsMode,

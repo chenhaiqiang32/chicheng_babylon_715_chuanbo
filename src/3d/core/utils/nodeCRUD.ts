@@ -68,8 +68,6 @@ export function nodeCRUD() {
     //}
     // hierarchy层面添加
     useScene().addHierarchy(clonedNode, parentNode || null);
-    // 更新位置，如果是拷贝的话，默认直接放到最后面，如果是删除后复原，则需要复原到指定位置
-    switchNodePosInParentByIndex(clonedNode, parentNode, index);
     return clonedNode;
   }
 
@@ -79,11 +77,13 @@ export function nodeCRUD() {
   async function deleteNode(node: Node) {
     node.setEnabled(false);
     node.isDeleted = true;
+    useScene().updateHierarchy(node.parent);
   }
 
   function restoreNode(node: Node) {
     node.setEnabled(true);
     node.isDeleted = false;
+    useScene().updateHierarchy(node.parent);
   }
 
   /**
@@ -104,8 +104,12 @@ export function nodeCRUD() {
     // 第一层节点无法通过 rootNodes 来修改顺序，会导致该节点从 rootNodes 中消失;所以目前第一层无法确定顺序
     // @ts-ignore
     const children = nodeNewParent ? nodeNewParent._children : null;
-    if(children)
+    if(children){
       switchNodePosInParent(node, targetPosNode, type, children);
+      useScene().updateHierarchy(nodeNewParent.parent);
+    } else {
+      useScene().updateHierarchy(null);
+    }
   }
 
   function switchNodePosInParent(from: Node, to: Node, type: 'before' | 'after' | 'inner', children: Node[]) {
@@ -133,15 +137,6 @@ export function nodeCRUD() {
     }
     // 插入元素
     children.splice(toIndex, 0, item);
-  }
-
-  function switchNodePosInParentByIndex(node:Node, parentNode:Node, index:number) {
-    const targetPosNode = parentNode.getChildren()[index];
-    if(index == -1 || !targetPosNode || targetPosNode.uuid == node.uuid) return;
-
-    //console.log(parentNode.getChildren());
-    //console.log(`${node.name} insert to ${targetPosNode.name} before`);
-    switchNodePosInParent(node, targetPosNode, "before", parentNode._children);
   }
 
   return {

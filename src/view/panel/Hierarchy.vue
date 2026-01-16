@@ -254,29 +254,14 @@ const handleNodeDrop = (
         undo: () => {
             if(dragPrev) {
                 nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragPrev.data.id), "after");
-                // 如果直接更新 hierarchy 的响应式数据的话会重绘整个树，性能不太好，所以这里直接用 ElTree的删除和插入来实现更新View层
-                treeRef.value.remove(draggingNode.data);
-                treeRef.value.insertAfter(draggingNode.data, treeRef.value.getNode(dragPrev).data);
             } else if(dragNext) {
                 nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragNext.data.id), "before");
-                treeRef.value.remove(draggingNode.data);
-                treeRef.value.insertBefore(draggingNode.data, treeRef.value.getNode(dragNext).data);
             } else {
                 nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragParent.data.id), "inner");
-                treeRef.value.remove(draggingNode.data);
-                treeRef.value.append(draggingNode.data, treeRef.value.getNode(dragParent).data);
             }
         },
         redo: () => {
             nodeCRUD().updateNodeHierarchy(node, drop, dropType);
-            treeRef.value.remove(draggingNode.data);
-            if(dropType === 'before') {
-                treeRef.value.insertBefore(draggingNode.data, dropNode.data);
-            } else if(dropType === 'after') {
-                treeRef.value.insertAfter(draggingNode.data, dropNode.data);
-            } else  {
-                treeRef.value.append(draggingNode.data, dropNode.data);
-            }
         }
     })
 }
@@ -304,7 +289,7 @@ async function onKeydown(e: KeyboardEvent) {
                     nodeCRUD().deleteNode(clone);
                 },
                 redo: () => {
-                    nodeCRUD().pasteNode(useScene().currentCopy, parent);
+                    nodeCRUD().restoreNode(clone);
                 }
             });
         }
@@ -313,29 +298,14 @@ async function onKeydown(e: KeyboardEvent) {
     else if (key == 'delete') {
         if (Editor.Instance.selectNodes.length > 0) {
             let node = Editor.Instance.selectNodes[0];
-            const treeNode = treeRef.value?.getNode(node.uuid);
-            const parent = treeNode.parent;         
-            const prev = treeNode.previousSibling;  // 前一个Node
-            const next = treeNode.nextSibling;      // 后一个Node
             // BJS中隐藏
             nodeCRUD().deleteNode(node);
-            // ElTree中删除
-            treeRef.value.remove(treeNode.data);
             registerUndoRedo({
                 undo: () =>  {
                     nodeCRUD().restoreNode(node);
-                    // ElTree中插入到原来的位置
-                    if(prev) {
-                        treeRef.value.insertAfter(treeNode.data, prev.data);
-                    } else if(next) {
-                        treeRef.value.insertBefore(treeNode.data, next.data);
-                    } else {
-                        treeRef.value.append(treeNode.data, parent.data);
-                    }
                 },
                 redo: () => {
                     nodeCRUD().deleteNode(node);
-                    treeRef.value.remove(treeNode.data);
                 },
             })
         }

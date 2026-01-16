@@ -1,9 +1,13 @@
-import { Node, TransformNode } from '@babylonjs/core';
+import { Node } from '@babylonjs/core';
 import { Editor } from '@/3d/Editor';
 import { ID } from '@/utils/id';
-import { ref, toRaw } from 'vue';
+import { ref, toRef } from 'vue';
 
 function buildHierarchy(node: Node): HierarchyNode {
+  // 过滤掉
+  if(node.isIgnore || node.isDeleted){
+    return null;
+  }
   if (!node.uuid) {
     node.uuid = ID.generateUUID();
   }
@@ -19,7 +23,7 @@ function buildHierarchy(node: Node): HierarchyNode {
     name: node.name,
     type: node.getClassName(),
     id: node.uuid,
-    children: node.getChildren()?.map(buildHierarchy) ?? [],
+    children: node.getChildren()?.map(buildHierarchy).filter((x) => x != null) ?? [], // 如果是null则不加到数组里面
     isActive: isActive,
   };
 }
@@ -27,47 +31,61 @@ function buildHierarchy(node: Node): HierarchyNode {
 export function useHierarchyModule() {
   const hierarchy = ref<HierarchyNode[]>([]);
 
+  // uuid -> HierarchyNode
+  const hierarchyMap:Map<string, HierarchyNode> = new Map();
+
+  // 递归构建映射
+  function buildMap(nodes: HierarchyNode[]) {
+    for (const node of nodes) {
+      hierarchyMap.set(node.id, node);
+      if (node.children) {
+        buildMap(node.children);
+      }
+    }
+  }
+
   function setHierarchy(rootNodes: Node[]) {
-    hierarchy.value = rootNodes.map(buildHierarchy);
+    hierarchy.value = rootNodes.map(buildHierarchy).filter((x) => x!=null);
     rootNodes.forEach((x) => {
       if (x.name == 'SubemitterSystemEmitter') {
         x.isIgnore = true;
       }
     });
-    hierarchy.value = rootNodes.filter((node) => !node.isIgnore).map(buildHierarchy);
+    hierarchyMap.clear();
+    buildMap(hierarchy.value);
+  }
+
+  function updateHierarchy(parentNode: Node) {
+    if(parentNode){
+      let hNode = hierarchyMap.get(parentNode.uuid);
+      const newhNode = buildHierarchy(parentNode);
+      // 直接赋值会导致hierarchy引用断开
+      hNode.children = newhNode.children;
+    } else {
+      // 根节点
+      setHierarchy(Editor.Instance.Scene.rootNodes);
+    }
   }
 
   function addHierarchy(node: Node, parent: Node | null) {
     const newNode = buildHierarchy(node);
     // 由于 Node 没有 parent 属性，所以只能通过找 parent 然后设置 childrent lai实现层级关系
     if (parent) {
-      const parentNode = Editor.Instance.getNodeById(parent.uuid);
+      const parentNode = hierarchyMap.get(parent.uuid);
       if (parentNode) {
         // 需要双向绑定
         node.parent = parent;
-        parentNode._children?.push(node);
+        const refNode = toRef(parentNode);
+        refNode.value.children?.push(newNode);
       } else {
         hierarchy.value.push(newNode);
+        hierarchyMap.set(node.uuid, newNode);
       }
     } else {
       hierarchy.value.push(newNode);
+      hierarchyMap.set(node.uuid, newNode);
     }
   }
-
-  function removeHierarchy(node: Node) {
-    const parent = node.parent;
-    // 解除父子关系
-    if (parent) {
-      const parentNode = Editor.Instance.getNodeById(parent.uuid);
-      if (parentNode) {
-        node.parent = null;
-        parentNode._children = parentNode._children?.filter((x) => x.id != node.uuid);
-      }
-    }
-    // 删除节点
-    hierarchy.value = hierarchy.value.filter((x) => x.id != node.uuid);
-  }
-
 
   return {
     // state
@@ -75,7 +93,7 @@ export function useHierarchyModule() {
 
     // function
     setHierarchy,
+    updateHierarchy,
     addHierarchy,
-    removeHierarchy,
   };
 }

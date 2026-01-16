@@ -195,6 +195,10 @@ export class Editor extends Dispatch<EditorEvent> {
           useScene().currentControlMode = ControlMode.Scale;
           break;
         }
+        case 'f3': {
+          useScene().setHierarchy(this.scene.rootNodes);
+          break;
+        }
       }
     });
     this.engine.runRenderLoop(() => {
