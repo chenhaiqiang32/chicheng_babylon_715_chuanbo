@@ -21,6 +21,7 @@ import {
   WebGPUEngine,
   AbstractEngine,
   Plane,
+  Texture,
   DefaultRenderingPipeline,
   SSAO2RenderingPipeline,
   SSRRenderingPipeline,
@@ -35,6 +36,8 @@ import {
   RectAreaLight,
   HDRCubeTexture,
   CascadedShadowGenerator,
+  MeshBuilder,
+  Tools,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -56,7 +59,7 @@ import { isVector3 } from '@/tools/guards/math';
 import { ParticleContainer } from './core/Extension/ParticleContainer';
 import { useEditor } from '@/store/useEditor';
 import { ControlMode } from '@/store/useSceneModule/useControl';
-
+import { UniqueNumber } from '@/tools/tools';
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
   numberChanged: { newNumber: number; id: string };
@@ -330,7 +333,8 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   async createNewScene(arg0: string) {
-    const scene = await this.createScene();
+    //  const scene = await this.createScene();
+    const scene = await this.createNewDefaultScene();
     scene.name = arg0;
     scene.uuid = ID.generateUUID();
     return scene;
@@ -388,6 +392,103 @@ export class Editor extends Dispatch<EditorEvent> {
     scene.environmentTexture = env;
     this.createLight('directional', scene);
     return scene;
+  }
+  async createNewDefaultScene() {
+    const scene = new Scene(this.engine);
+    scene.useRightHandedSystem = false;
+    const camera = new ArcRotateCamera('camera', 0, 0, 0, new Vector3(0, 0, 0), scene);
+    camera.setPosition(new Vector3(30, 30, -5));
+    camera.minZ = 0.01;
+    camera.maxZ = 5000;
+    camera.attachControl();
+    camera.lowerRadiusLimit = 0.01;
+    camera.wheelPrecision = 0;
+    camera.pinchDeltaPercentage = 0.1;
+    camera.wheelDeltaPercentage = 0.1;
+    camera.upperRadiusLimit = 5000;
+    camera.inertia = 0.4;
+    camera.panningInertia = 0.5;
+
+
+    const ground = MeshBuilder.CreateGround("New Ground", { width: 1024, height: 1024 });
+    ground.rotationQuaternion = new Quaternion(0, 0, 0);
+    ground.flipFaces();
+    this.configureAddedMesh(scene, ground);
+
+    ground.name = "ground";
+
+    const groundMaterial = new PBRMaterial("groundMaterial", scene);
+    groundMaterial.metallic = 0;
+    groundMaterial.roughness = 1;
+    const textureUrl = Tools.GetAssetUrl('/DefaultScene/albedo.png');
+    const groundAlbedoTexture = new Texture(textureUrl, scene);
+    groundAlbedoTexture.uScale = 50;
+    groundAlbedoTexture.vScale = 50;
+    groundAlbedoTexture.anisotropicFilteringLevel = 4;
+    groundMaterial.albedoTexture = groundAlbedoTexture;
+
+    ground.material = groundMaterial;
+
+
+    const box = MeshBuilder.CreateBox("New Box", { width: 10, depth: 10, height: 10 });
+    box.rotationQuaternion = new Quaternion(0, 0, 0);
+    box.flipFaces();
+    this.configureAddedMesh(scene, box);
+    box.name = "box";
+    box.position.y = 5;
+
+    const boxMaterial = new PBRMaterial("boxMaterial", scene);
+    boxMaterial.directIntensity = 1;
+    boxMaterial.emissiveIntensity = 1;
+    boxMaterial.environmentIntensity = 1;
+    boxMaterial.specularIntensity = 1;
+    boxMaterial.albedoColor = new Color3(1, 1, 1);
+    boxMaterial.emissiveColor = new Color3(0, 0, 0);
+    boxMaterial.metallic = 0;
+    boxMaterial.roughness = 1;
+
+    const textureUrl1 = Tools.GetAssetUrl('/DefaultScene/amiga.jpg');
+    const albedoTexture = new Texture(textureUrl1, scene);
+    albedoTexture.uScale = 1;
+    albedoTexture.vScale = 1;
+    albedoTexture.anisotropicFilteringLevel = 4;
+    boxMaterial.albedoTexture = albedoTexture;
+
+    box.material = boxMaterial;
+
+    const env = new CubeTexture('/DefaultScene/country.env', scene);
+    scene.environmentTexture = env;
+    scene.ambientColor = new Color3(0, 0, 0);
+
+
+
+    const light = this.createLight('directional', scene) as DirectionalLight;
+    light.position = new Vector3(10, 20, 10);
+    light.direction = new Vector3(-1, -2, -1);
+    light.intensity = 3.43;
+    light.name = "sun";
+    const sg = new CascadedShadowGenerator(4096, light);
+    sg.lambda = 1;
+    sg.bias = 0.01;
+    sg.getShadowMap()?.renderList?.push(box);
+    return scene;
+  }
+
+  configureAddedMesh(scene: Scene, mesh: AbstractMesh, parent?: Node) {
+    mesh.receiveShadows = true;
+    mesh.id = Tools.RandomId();
+    mesh.uniqueId = UniqueNumber.Get();
+    mesh.parent = parent ?? null;
+
+    if (mesh.geometry) {
+      mesh.geometry.id = Tools.RandomId();
+      mesh.geometry.uniqueId = UniqueNumber.Get();
+
+      scene.lights.forEach((light) => {
+        light.getShadowGenerator()?.getShadowMap()?.renderList?.push(mesh);
+      });
+    }
+    return mesh;
   }
 
   createLight(type: 'directional' | 'point' | 'spot' | 'area', scene: Scene): Light {

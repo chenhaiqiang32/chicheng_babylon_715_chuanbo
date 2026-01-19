@@ -10,7 +10,9 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import path from 'path';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
-import basicSsl from '@vitejs/plugin-basic-ssl';
+// @ts-ignore
+import monacoEditorPlugin from 'vite-plugin-monaco-editor-esm';
+
 
 export default defineConfig({
   plugins: [
@@ -36,6 +38,7 @@ export default defineConfig({
       // 指定symbolId格式
       symbolId: 'icon-[name]',
     }),
+    monacoEditorPlugin.default ? monacoEditorPlugin.default() : monacoEditorPlugin(),
   ],
   css: {
     preprocessorOptions: {
