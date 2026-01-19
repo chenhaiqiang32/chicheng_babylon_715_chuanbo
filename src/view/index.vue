@@ -39,6 +39,7 @@
         </ElSplitter>
         <Loading :progress="loading" v-if="loading > 0 && loading < 1"> </Loading>
     </div>
+    <!-- <ScriptEditorDialog /> -->
 </template>
 <script setup lang='ts'>
 import Header from './Header.vue'
@@ -57,6 +58,7 @@ import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile'
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary'
 import { Editor } from '@/3d/Editor'
 import { useScene } from '@/store/useScene'
+import ScriptEditorDialog from './dialog/ScriptEditorDialog.vue'
 import { ArcRotateCamera } from '@babylonjs/core'
 const props = defineProps<{
     edit?: boolean,
@@ -81,7 +83,9 @@ async function loadProject(name: string) {
     });
     if (sceneList.length > 0) {
         useScene().setSceneList(sceneList);
-        Editor.Instance.setCurrentScene(sceneList[0].uuid);
+        Editor.Instance.setCurrentScene(sceneList[0].uuid, (v) => {
+            loading.value = v;
+        });
     } else {
         const scene = await Editor.Instance.createNewScene('默认场景');
         await useScene().addScene(scene);
@@ -96,7 +100,7 @@ async function loadProject(name: string) {
 
 
 function sizeChange(size: number, type: 'left' | 'bottom' | 'right') {
-    if(size <= 0)   return;
+    if (size <= 0) return;
     editorLayout.value[type] = size;
 
 }

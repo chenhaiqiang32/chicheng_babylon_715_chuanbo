@@ -1,5 +1,4 @@
 import { BaseTexture, Geometry, Material, type Scene } from '@babylonjs/core';
-import { IFile } from './file/IFile';
 
 export interface ICollectAssets {
   addTexture(texture: BaseTexture): Promise<void>;

@@ -14,9 +14,6 @@ import { TransformNode } from '@babylonjs/core';
 import { loadSkyBox } from '@/3d/core/utils/EnvSkybox';
 import { useEditor } from '@/store/useEditor';
 import { storeToRefs } from 'pinia';
-import { Animator } from '@/3d/animation/animator';
-import { TimeController } from '@/utils/Time';
-import { CC } from '@/3d/assets/BaseRes';
 
 const { edit } = storeToRefs(useEditor());
 const clips = ref<{
@@ -57,7 +54,7 @@ async function handleDrop(ev: DragEvent) {
     } else if (data.type === "envTexture") {
         const envTexture = await RuntimeLibrary.Instance.getEnvTexture(data.sourceUUID);
         Editor.Instance.Scene.environmentTexture = envTexture;
-        if(Editor.Instance.Scene.bgType == 1){
+        if (Editor.Instance.Scene.bgType == 1) {
             await loadSkyBox(Editor.Instance.Scene, envTexture);
         }
     } else {

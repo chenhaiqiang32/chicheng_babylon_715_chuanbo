@@ -81,9 +81,9 @@ async function openProject(mode: FileMode) {
             return;
         }
         // 检查是否和数据库中的项目名重复
-        for(let i=0; i<projects.value.length; i++){
+        for (let i = 0; i < projects.value.length; i++) {
             const item = projects.value[i];
-            if(item.name == name){
+            if (item.name == name) {
                 ElMessage.error('项目名重复');
                 throw "项目名重复"
             }
@@ -107,26 +107,6 @@ async function openProject(mode: FileMode) {
     }
 }
 
-async function openLocalProject() {
-    try {
-        await EditorFileSystem.Instance.init(FileMode.LOCAL);
-        const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
-            console.log(v);
-        });
-        if (sceneList.length > 0) {
-            useScene().setSceneList(sceneList);
-            Editor.Instance.setCurrentScene(sceneList[0].uuid);
-        } else {
-            const scene = await Editor.Instance.createNewScene('默认场景');
-            await useScene().addScene(scene);
-            Editor.Instance.setCurrentScene(scene.uuid);
-        }
-        props.close();
-    } catch (error) {
-        console.error(error);
-    } finally {
-    }
-}
 async function openIndexDBProject(p: { name: string; time: string; type: string }) {
     try {
         if (p.type === 'net') {
@@ -135,16 +115,20 @@ async function openIndexDBProject(p: { name: string; time: string; type: string 
             await EditorFileSystem.Instance.init(FileMode.INDEXEDDB, p.name);
         }
         const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
-            loading.value = v;
+            loading.value = v * 0.2;
         });
 
         if (sceneList.length > 0) {
             useScene().setSceneList(sceneList);
-            Editor.Instance.setCurrentScene(sceneList[0].uuid);
+            Editor.Instance.setCurrentScene(sceneList[0].uuid, (v) => {
+                loading.value = v * 0.8 + 0.2;
+            });
         } else {
             const scene = await Editor.Instance.createNewScene('默认场景');
             useScene().addScene(scene);
-            Editor.Instance.setCurrentScene(scene.uuid);
+            Editor.Instance.setCurrentScene(scene.uuid, (v) => {
+                loading.value = v * 0.8 + 0.2;
+            });
         }
         RuntimeLibrary.Instance.dispatch('onChanged');
         props.close();

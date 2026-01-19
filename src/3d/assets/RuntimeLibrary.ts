@@ -7,8 +7,8 @@ import {
   Scene,
   PBRMaterial,
   Texture,
-  SceneLoader,
   HDRCubeTexture,
+  SceneLoader,
 } from '@babylonjs/core';
 import { Editor } from '../Editor';
 import { Dispatch } from '@/utils/dispatch';
@@ -47,8 +47,10 @@ interface RuntimeAssetsEventBus {
 export interface IGetBuffer {
   getGeoBuffer(uuid: string): any;
   getTextureBuffer(uuid: string): any;
+  getEnvTextureBuffer(sourceUUID: string): any;
   getMaterialData(uuid: string): any;
   getTexturelData(uuid: string): any;
+  getEnvTextureData(sourceUUID: string): any;
   getGeometry(uuid: string): Promise<Geometry>;
 }
 
@@ -99,6 +101,10 @@ export class RuntimeLibrary
     const texture = this.texture.find((x) => x.uuid == uuid);
     return texture;
   }
+  getEnvTextureData(sourceUUID: string) {
+    const env = this.envTexture.find((x) => x.sourceUUID == sourceUUID);
+    return env;
+  }
   getMaterialData(uuid: string) {
     const material = this.material.find((x) => x.uuid == uuid);
     return material;
@@ -138,7 +144,7 @@ export class RuntimeLibrary
     root.name = file.name.split('.')[0];
     fixMaterial(root);
     const padding: Array<Padding> = [];
-    const node = serializeNode(root, this, padding);
+    const node = serializeNode(root, this, padding, false);
     const groupPadding = ArrayUtils.groupArray(padding, Math.ceil(padding.length / 20));
     for (let index = 0; index < groupPadding.length; index++) {
       const group = groupPadding[index].map((f) => f());
@@ -169,29 +175,19 @@ export class RuntimeLibrary
   }
 
   async loadAssets(loading?: (v: number) => void) {
-    let progress = 0.1;
     const assetsText = await this.fileSystem.getFileText('assets.json');
-    loading?.(progress);
     if (!assetsText) {
-      progress = 1;
-      loading?.(progress);
+      loading?.(1);
       return [];
     }
     const assets = JSON.parse(assetsText) as any;
     this.texture = assets.texture;
     this.envTexture = assets.envTexture ?? [];
-    const padding = new Set<Promise<any>>();
     this.material = assets.material;
     this.rootNodes = assets.rootNode;
-
-    promiseEvery([...padding], (v) => {
-      loading?.(progress + v * 0.9);
-    });
-    await Promise.all(padding);
-    progress = 1;
     const sceneText = await this.fileSystem.getFileText('scene.json');
     const scene = JSON.parse(sceneText) as CC.Scene[];
-    loading?.(progress);
+    loading?.(1);
     return scene.filter((x) => x);
   }
 
@@ -219,6 +215,16 @@ export class RuntimeLibrary
   currentScene: Scene;
   geomertyIDs: Set<string> = new Set();
   textureIds: Set<string> = new Set();
+  scripts: CC.ScriptData[] = [
+    {
+      uuid: ID.generateUUID(),
+      name: 'Scripts',
+      code: `
+        console.log('Scripts');
+      `,
+      args: [],
+    },
+  ];
 
   private needUpdateScript: Map<string, CC.ScriptData> = new Map();
 
@@ -229,37 +235,39 @@ export class RuntimeLibrary
     this.needUpdateScript.set(script.uuid, script);
   }
 
-  async addTexture(texture: BaseTexture, force: boolean = true): Promise<any> {
+  async addTexture(texture: BaseTexture): Promise<any> {
     if (!texture.uuid) {
       texture.uuid = ID.generateUUID();
     }
     if (!texture.sourceUUID) {
       texture.sourceUUID = ID.generateUUID();
     }
-    const old = this.texture.find((item) => item.uuid === texture.uuid);
-    if (!old || force) {
-      const data = texture.serialize();
-      data.uuid = texture.uuid;
-      delete data.url;
-      if (old) {
-        ArrayUtils.remove(old, this.texture);
-      }
-      data.sourceUUID = texture.sourceUUID;
-      this.texture.push(data);
-      if (!this.textureIds.has(data.sourceUUID)) {
-        const t = texture.getInternalTexture();
-        if (t._buffer) {
-          const buffer = await serializeTextureBuffer(t._buffer);
-          //@ts-ignore
-          this.fileSystem.saveFile(data.sourceUUID, buffer, TEXTURE);
-        } else {
-          if (t.url) {
-            const buffer = await (await fetch(t.url)).arrayBuffer();
-            this.fileSystem.saveFile(data.sourceUUID, new Uint8Array(buffer), TEXTURE);
-          }
+    const texData = this.texture.find((item) => item.uuid === texture.uuid);
+    if (!texture.isDirty) {
+      return texData;
+    }
+    texture.isDirty = false;
+    const data = texture.serialize();
+    data.uuid = texture.uuid;
+    delete data.url;
+    data.sourceUUID = texture.sourceUUID;
+    if (texData) {
+      ArrayUtils.remove(texData, this.texture);
+    }
+    this.texture.push(data);
+    if (!this.textureIds.has(data.sourceUUID)) {
+      const t = texture.getInternalTexture();
+      if (t._buffer) {
+        const buffer = await serializeTextureBuffer(t._buffer);
+        //@ts-ignore
+        this.fileSystem.saveFile(data.sourceUUID, buffer, TEXTURE);
+      } else {
+        if (t.url) {
+          const buffer = await (await fetch(t.url)).arrayBuffer();
+          this.fileSystem.saveFile(data.sourceUUID, new Uint8Array(buffer), TEXTURE);
         }
-        this.textureIds.add(data.sourceUUID);
       }
+      this.textureIds.add(data.sourceUUID);
       return data;
     }
   }
@@ -347,50 +355,53 @@ export class RuntimeLibrary
       }
     });
   }
-  async addMaterial(material: Material, force: boolean = true) {
+  async addMaterial(material: Material) {
     if (!material.uuid) {
       material.uuid = ID.generateUUID();
     }
-    const oldMat = this.material.find((item) => item.uuid === material.uuid);
-    if (!oldMat || force) {
-      const data = material.serialize();
-      for (const key in material) {
+    if (!material.isDirty) {
+      return;
+    }
+    material.isDirty = false;
+    const data = material.serialize();
+    for (const key in material) {
+      //@ts-ignore
+      const value = material[key];
+      //@ts-ignore
+      if (material[key] instanceof Texture) {
+        if (!key.startsWith('_') && key.indexOf('environment') == -1) {
+          await this.addTexture(value);
+          data[key + '_MAP'] = value.uuid;
+          delete data[key];
+        }
+      }
+    }
+    //@ts-ignore
+    const clearCoat = material['clearCoat'];
+    if (clearCoat) {
+      for (const key in clearCoat) {
         //@ts-ignore
-        const value = material[key];
+        const value = clearCoat[key];
+        const clearCoatData = data['plugins']['PBRClearCoatConfiguration'];
         //@ts-ignore
-        if (material[key] instanceof Texture) {
+        if (clearCoat[key] instanceof Texture) {
           if (!key.startsWith('_') && key.indexOf('environment') == -1) {
             await this.addTexture(value);
-            data[key + '_MAP'] = value.uuid;
-            delete data[key];
+            data['clearCoat.' + key + '_MAP'] = value.uuid;
+            delete clearCoatData[key];
           }
+        } else {
         }
       }
-      //@ts-ignore
-      const clearCoat = material['clearCoat'];
-      if (clearCoat) {
-        for (const key in clearCoat) {
-          //@ts-ignore
-          const value = clearCoat[key];
-          const clearCoatData = data['plugins']['PBRClearCoatConfiguration'];
-          //@ts-ignore
-          if (clearCoat[key] instanceof Texture) {
-            if (!key.startsWith('_') && key.indexOf('environment') == -1) {
-              await this.addTexture(value);
-              data['clearCoat.' + key + '_MAP'] = value.uuid;
-              delete clearCoatData[key];
-            }
-          } else {
-          }
-        }
-      }
-
-      data.uuid = material.uuid;
-      if (oldMat) {
-        ArrayUtils.remove(oldMat, this.material);
-      }
-      this.material.push(data);
     }
+
+    data.uuid = material.uuid;
+    data.share = material.share;
+    const oldMat = this.material.find((item) => item.uuid == material.uuid);
+    if (oldMat) {
+      ArrayUtils.remove(oldMat, this.material);
+    }
+    this.material.push(data);
   }
   private geometryArray: Array<Geometry> = [];
   async addGeometry(geometry: Geometry) {
@@ -434,6 +445,7 @@ export class RuntimeLibrary
       const data = this.material.find((x) => x.uuid == uuid);
       if (data) {
         const mat = Material.Parse(data, this.currentScene, null) as PBRMaterial;
+        mat.share = data.share;
         for (const key in data) {
           if (key.endsWith('_MAP')) {
             const uuid = data[key];

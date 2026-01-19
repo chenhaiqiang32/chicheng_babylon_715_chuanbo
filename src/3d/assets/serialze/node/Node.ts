@@ -13,6 +13,7 @@ export function serializeNode(
   node: TransformNode,
   assets: ICollectAssets,
   padding: Array<Padding> = [],
+  force?: boolean,
 ): CC.ObjectNode {
   try {
     if (!node.uuid) {

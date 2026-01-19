@@ -131,7 +131,7 @@
       "pointSize": "点大小",
       "wireframe": "线框",
       "isTintEnabled": "启用颜色",
-      "name": "材质名称",
+      "name": "名称",
       "backFaceCulling": "背面裁剪",
       "alpha": "透明度",
       "directIntensity": "光照强度",
@@ -161,6 +161,7 @@
       "opacityTexture": "透明度",
       "reflectionTexture": "反射",
       "lightmapTexture": "光照",
+      "share": "共享",
       "useLightmapAsShadowmap": "将光照贴图作为阴影贴图",
       "useOnlyMetallicFromMetallicReflectanceTexture": "仅使用反射纹理的金属通道",
       "metallic": "金属度",
@@ -487,6 +488,14 @@
       "highCompress": "高压缩",
       "textureCompress": "纹理压缩",
       "offline": "离线支持"
+    },
+    "scriptEditor": {
+      "title": "脚本编辑器",
+      "save": "保存",
+      "cancel": "取消",
+      "saveSuccess": "保存成功",
+      "saveFailed": "保存失败",
+      "initFailed": "编辑器初始化失败"
     }
   }
 }

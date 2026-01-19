@@ -1,6 +1,7 @@
-import { GaussianSplattingMesh, Mesh, Scene, SceneSerializer } from '@babylonjs/core';
+import { BaseTexture, GaussianSplattingMesh, Mesh, Scene, SceneSerializer } from '@babylonjs/core';
 import type { CC } from '../../BaseRes';
 import { ILoaderAssets, ICollectAssets } from '../../AssetsManager';
+import { Timer } from '@/utils/Time';
 
 export function serializeMeshNode(
   mesh: Mesh,
@@ -23,6 +24,17 @@ export function serializeMeshNode(
     padding.push(getGeometry);
   }
   if (mesh.material) {
+  }
+
+  if (mesh.material) {
+    mesh.material.isDirty = true;
+    for (const element in mesh.material) {
+      //@ts-ignore
+      const value = mesh.material[element];
+      if (value instanceof BaseTexture) {
+        value.isDirty = true;
+      }
+    }
     const getMaterial = async () => {
       await assetsManager.addMaterial(mesh.material);
       meshData.material = mesh.material?.uuid || '';

@@ -311,7 +311,7 @@ const zhuliang: any = {
 window.addEventListener(
   'click',
   (data) => {
-    const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera;
+    const camera = Editor.Instance.Scene?.activeCamera as ArcRotateCamera;
     if (!camera) return;
     camera.useAutoRotationBehavior = false;
   },
@@ -365,7 +365,7 @@ function playClip(uuid: string) {
     },
     false,
     () => {
-      animator.dispose();
+      // animator.dispose();
     },
   );
 }

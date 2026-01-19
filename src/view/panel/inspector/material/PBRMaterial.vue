@@ -1,9 +1,16 @@
 <template>
   <SectionField :title="$t('component.material.title')">
+
+    <template #right>
+      <ElButton type="info" size="small" @click.stop="shareMaterial">{{ $t('component.material.share') }}</ElButton>
+    </template>
     <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
-      <StringField style="flex: 1;" :label="$t('component.material.name')" :object="material" property="name" />
+      <StringField :text-width="40" style="flex: 1;" :label="$t('component.material.name')" :object="material"
+        property="name" />
       <ElButton type="info" size="small" @click="changeMaterial">更换</ElButton>
     </div>
+
+
     <SectionField :title="$t('component.material.base')">
       <Color :label="$t('component.material.albedo')" :object="material" property="albedoColor"
         @change="(newC, oldC) => changeProperty('albedoColor', newC, oldC, 'color3')" />
@@ -245,6 +252,12 @@ async function changeMaterial() {
     },
     type: 'material'
   })
+}
+
+async function shareMaterial() {
+  props.material.share = true
+  props.material.isDirty = true
+  RuntimeLibrary.Instance.addMaterial(props.material)
 }
 
 onMounted(() => {

@@ -1,5 +1,15 @@
 {
   "view": {
     "hierarchy": "hierarchy"
+  },
+  "dialog": {
+    "scriptEditor": {
+      "title": "Script Editor",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saveSuccess": "Save successful",
+      "saveFailed": "Save failed",
+      "initFailed": "Editor initialization failed"
+    }
   }
 }

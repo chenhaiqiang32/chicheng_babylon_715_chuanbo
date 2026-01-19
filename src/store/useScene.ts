@@ -70,7 +70,7 @@ export const useScene = defineStore('scene', () => {
         padding,
       );
 
-      const groupPadding = ArrayUtils.groupArray(padding, Math.ceil(padding.length / 10));
+      const groupPadding = ArrayUtils.groupArray(padding, Math.ceil(padding.length / 40));
       for (let index = 0; index < groupPadding.length; index++) {
         const group = groupPadding[index].map((f) => f());
         await Promise.all(group);

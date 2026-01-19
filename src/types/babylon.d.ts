@@ -27,12 +27,15 @@ declare module '@babylonjs/core' {
   }
   interface Material {
     uuid: string;
+    isDirty: boolean;
+    share: boolean;
   }
   interface BaseTexture {
     uuid: string;
     sourceUUID: string;
     url: string;
     prevUrl: string;
+    isDirty: boolean;
   }
   interface InternalTexture {
     uuid: string;

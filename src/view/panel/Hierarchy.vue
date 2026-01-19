@@ -35,7 +35,7 @@
                             <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                                 draggable @node-drop="handleNodeDrop" :data="hierarchy" highlight-current
                                 :props="treeProps" node-key="id" :default-expanded="true" :default-active="true"
-                                @node-click="handleNodeClick">
+                                :expand-on-click-node="false" @node-click="handleNodeClick">
                                 <!-- 节点类型图标 + 节点名 -->
                                 <template #default="{ node, data }">
                                     <!-- 节点上也可以右键新增 -->
@@ -70,6 +70,7 @@ import { getHierarchyContextMenuCommands } from '@/view/panel/ContextMenuCommand
 import { Node as BJS_Node } from '@babylonjs/core';
 import { registerKeyDown, unregisterKeyDown } from '@/utils/ShortcutKey';
 import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
+import { registerUndoRedo } from '@/tools/undoredo';
 const searchText = ref('');
 const treeProps = {
     label: 'name',
@@ -258,12 +259,29 @@ async function onKeydown(e: KeyboardEvent) {
             if (!e.shiftKey && parent)
                 parent = parent.parent;
             const clone = await nodeCRUD().pasteNode(useScene().currentCopy, parent);
+            registerUndoRedo({
+                undo: () => {
+                    nodeCRUD().deleteNode(clone);
+                },
+                redo: () => {
+                    nodeCRUD().pasteNode(useScene().currentCopy, parent);
+                }
+            });
         }
     }
     // 删除节点
     else if (key == 'delete') {
         if (Editor.Instance.selectNodes.length > 0) {
-            nodeCRUD().deleteNode(Editor.Instance.selectNodes[0]);
+            let node = Editor.Instance.selectNodes[0];
+            nodeCRUD().deleteNode(node);
+            registerUndoRedo({
+                undo: async () => {
+                    node = await nodeCRUD().restoreNode();
+                },
+                redo: () => {
+                    nodeCRUD().deleteNode(node);
+                },
+            })
         }
     }
 }

@@ -18,7 +18,8 @@ import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
 import CameraComp from './inspector/Camera.vue'
 import Event from './inspector/Event.vue'
-import { Camera, Light, Material, Mesh, PBRMaterial, TransformNode } from '@babylonjs/core';
+import Scripts from './inspector/Scripts.vue';
+import { Camera, Light, Material, Mesh, TransformNode } from '@babylonjs/core';
 import { _EventBus } from '@/utils/dispatch';
 import ParticleComponents from './inspector/particle/ParticleComponents.vue';
 
@@ -96,9 +97,7 @@ const comps = computed(() => {
     if (selectedObject.value instanceof Light) {
         arr.push(LightComp)
     }
-    if (selectedObject.value instanceof ParticleContainer) {
-        arr.push(ParticleComponents)
-    }
+    arr.push(Scripts)
     arr.push(Event)
     return arr
 })

@@ -34,6 +34,7 @@ import {
   AreaLight,
   RectAreaLight,
   HDRCubeTexture,
+  CascadedShadowGenerator,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -213,7 +214,7 @@ export class Editor extends Dispatch<EditorEvent> {
     this.initWatch();
   }
 
-  async setCurrentScene(uuid: string) {
+  async setCurrentScene(uuid: string, loading?: (v: number) => void) {
     this.weakMap.clear();
     if (this.scene) {
       this.scene.onPointerObservable.removeCallback(this.onPointerDonw);
@@ -223,10 +224,24 @@ export class Editor extends Dispatch<EditorEvent> {
       this.scene.dispose();
     }
     const scene = new Scene(this.engine);
+    let create = false;
     useScene().getScene(
       uuid,
-      (percent: number) => {
-        useEditor().setLoading(percent);
+      (percent) => {
+        loading?.(percent);
+        if (percent == 1 && !create) {
+          create = true;
+          const generator = new CascadedShadowGenerator(4096, scene.lights[0] as DirectionalLight);
+          generator.bias = 0.00268;
+          generator.lambda = 1;
+          generator.depthClamp = true;
+          generator.autoCalcDepthBounds = true;
+          generator.autoCalcDepthBoundsRefreshRate = 60;
+          scene.meshes.forEach(m => {
+            m.receiveShadows = true;
+          })
+          generator.getShadowMap()?.renderList?.push(...scene.meshes);
+        }
       },
       scene,
     );
@@ -259,12 +274,6 @@ export class Editor extends Dispatch<EditorEvent> {
       // });
     }
     this.scene = scene;
-    this.scene.collisionsEnabled = true;
-    // this.scene.environmentTexture = new HDRCubeTexture('./studio005.hdr', scene, 128);
-    // this.scene.environmentTexture.gammaSpace = true;
-    //this.scene.gravity = new Vector3(0, -0.9, 0);
-    // 开启物理引擎
-    //this.scene.enablePhysics(new Vector3(0, -0.9, 0), new CannonJSPlugin(true, 10, CANNON));
     useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });
