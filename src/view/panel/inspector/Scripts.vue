@@ -63,14 +63,6 @@ function handleDrop(ev: DragEvent) {
             value: [],
         }))
     })
-    new Function('node', 'args', `
-        let v=false;
-        setInterval(() => {
-            node.setEnabled(v);
-            v=!v;
-        }, 100)
-    `)(props.object, 222)
-
 }
 onUnmounted(() => {
 

@@ -1,45 +1,46 @@
 <template>
-    <div class="editor-container">
-        <Header v-show="edit"></Header>
-        <ElSplitter :lazy="true" style="height: 0 ; flex: 1;">
-            <ElSplitterPanel min="600px">
-                <ElSplitter :lazy="true" layout="vertical">
-                    <ElSplitterPanel>
-                        <ElSplitter :lazy="true">
-                            <ElSplitterPanel min="280px" :size="editorLayout.left + 'px'" collapsible
-                                @update:size="e => sizeChange(e, 'left')" v-if="edit">
-                                <Hierarchy />
-                            </ElSplitterPanel>
-                            <ElSplitterPanel min="280px">
-                                <Scene />
-                            </ElSplitterPanel>
-                        </ElSplitter>
-                    </ElSplitterPanel>
-                    <ElSplitterPanel min="280px" :size="editorLayout.bottom + 'px'" collapsible
-                        @update:size="e => sizeChange(e, 'bottom')" v-if="edit">
-                        <div class="tab-container-panel">
-                            <div class="tab-title">
-                                <div class="item" :class="{ 'active': activeTab === 'assets' }"
-                                    @click="activeTab = 'assets'">资产</div>
-                                <div class="item" :class="{ 'active': activeTab === 'animation' }"
-                                    @click="activeTab = 'animation'">动画</div>
+    <ElConfigProvider :locale="zhCn">
+        <div class="editor-container">
+            <Header v-show="edit"></Header>
+            <ElSplitter :lazy="true" style="height: 0 ; flex: 1;">
+                <ElSplitterPanel min="600px">
+                    <ElSplitter :lazy="true" layout="vertical">
+                        <ElSplitterPanel>
+                            <ElSplitter :lazy="true">
+                                <ElSplitterPanel min="280px" :size="editorLayout.left + 'px'" collapsible
+                                    @update:size="e => sizeChange(e, 'left')" v-if="edit">
+                                    <Hierarchy />
+                                </ElSplitterPanel>
+                                <ElSplitterPanel min="280px">
+                                    <Scene />
+                                </ElSplitterPanel>
+                            </ElSplitter>
+                        </ElSplitterPanel>
+                        <ElSplitterPanel min="280px" :size="editorLayout.bottom + 'px'" collapsible
+                            @update:size="e => sizeChange(e, 'bottom')" v-if="edit">
+                            <div class="tab-container-panel">
+                                <div class="tab-title">
+                                    <div class="item" :class="{ 'active': activeTab === 'assets' }"
+                                        @click="activeTab = 'assets'">资产</div>
+                                    <div class="item" :class="{ 'active': activeTab === 'animation' }"
+                                        @click="activeTab = 'animation'">动画</div>
+                                </div>
+                                <div class="tab-content">
+                                    <Assets v-if="activeTab === 'assets'" />
+                                    <Animation v-else-if="activeTab === 'animation'" />
+                                </div>
                             </div>
-                            <div class="tab-content">
-                                <Assets v-if="activeTab === 'assets'" />
-                                <Animation v-else-if="activeTab === 'animation'" />
-                            </div>
-                        </div>
-                    </ElSplitterPanel>
-                </ElSplitter>
-            </ElSplitterPanel>
-            <ElSplitterPanel min="280px" :size="editorLayout.right + 'px'" collapsible
-                @update:size="e => sizeChange(e, 'right')" v-if="edit">
-                <Inspector />
-            </ElSplitterPanel>
-        </ElSplitter>
-        <Loading :progress="loading" v-if="loading > 0 && loading < 1"> </Loading>
-    </div>
-    <!-- <ScriptEditorDialog /> -->
+                        </ElSplitterPanel>
+                    </ElSplitter>
+                </ElSplitterPanel>
+                <ElSplitterPanel min="280px" :size="editorLayout.right + 'px'" collapsible
+                    @update:size="e => sizeChange(e, 'right')" v-if="edit">
+                    <Inspector />
+                </ElSplitterPanel>
+            </ElSplitter>
+            <Loading :progress="loading" v-if="loading > 0 && loading < 1"> </Loading>
+        </div>
+    </ElConfigProvider>
 </template>
 <script setup lang='ts'>
 import Header from './Header.vue'
@@ -58,8 +59,9 @@ import { EditorFileSystem, FileMode } from '@/3d/assets/file/IFile'
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary'
 import { Editor } from '@/3d/Editor'
 import { useScene } from '@/store/useScene'
-import ScriptEditorDialog from './dialog/ScriptEditorDialog.vue'
 import { ArcRotateCamera } from '@babylonjs/core'
+import { ElConfigProvider } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 const props = defineProps<{
     edit?: boolean,
     projectId?: string,

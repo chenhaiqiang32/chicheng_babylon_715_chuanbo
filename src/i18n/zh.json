@@ -113,7 +113,9 @@
       "type": "类型",
       "name": "名称",
       "visible": "可见性",
-      "physics": "物理效果"
+      "physics": "物理效果",
+      "receiveShadows": "接收阴影",
+      "castShadows": "投射阴影"
     },
     "transform": {
       "title": "矩阵信息",

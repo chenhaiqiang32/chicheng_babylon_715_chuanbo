@@ -1,7 +1,6 @@
 import { BaseTexture, GaussianSplattingMesh, Mesh, Scene, SceneSerializer } from '@babylonjs/core';
 import type { CC } from '../../BaseRes';
 import { ILoaderAssets, ICollectAssets } from '../../AssetsManager';
-import { Timer } from '@/utils/Time';
 
 export function serializeMeshNode(
   mesh: Mesh,
@@ -16,6 +15,7 @@ export function serializeMeshNode(
   meshData.type = 'mesh';
   meshData.checkCollisions = mesh.checkCollisions;
   meshData.material = mesh.material?.uuid || '';
+  meshData.sideOrientation = mesh.sideOrientation
   if (mesh.geometry) {
     const getGeometry = async () => {
       await assetsManager.addGeometry(mesh.geometry);
@@ -68,5 +68,6 @@ export function deserializeMeshNode(
     };
     padding.push(getMaterial);
   }
+  mesh.sideOrientation = data.sideOrientation;
   return mesh;
 }
