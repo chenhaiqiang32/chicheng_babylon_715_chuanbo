@@ -56,8 +56,7 @@ export interface IGetBuffer {
 
 export class RuntimeLibrary
   extends Dispatch<RuntimeAssetsEventBus>
-  implements ICollectAssets, ILoaderAssets, IGetBuffer
-{
+  implements ICollectAssets, ILoaderAssets, IGetBuffer {
   async getTextureURL(sourceUUID: string) {
     if (!sourceUUID) {
       return '';
@@ -244,7 +243,7 @@ export class RuntimeLibrary
       texture.sourceUUID = ID.generateUUID();
     }
     const texData = this.texture.find((item) => item.uuid === texture.uuid);
-    if (!texture.isDirty) {
+    if (!texture.isDirty && texData) {
       return texData;
     }
     texture.isDirty = false;
@@ -271,6 +270,7 @@ export class RuntimeLibrary
       this.textureIds.add(data.sourceUUID);
       return data;
     }
+    return data;
   }
 
   // ----- envTexture
@@ -517,7 +517,7 @@ export class RuntimeLibrary
     this.sceneEnvTexture.clear();
     return deserializeScene(rootNode, scene.getEngine() as Engine, this, scene, padding);
   }
-  saveComplate() {}
+  saveComplate() { }
 }
 
 export async function serializeTextureBuffer(
