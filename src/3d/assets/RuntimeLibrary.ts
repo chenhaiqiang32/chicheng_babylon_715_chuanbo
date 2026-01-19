@@ -243,7 +243,7 @@ export class RuntimeLibrary
       texture.sourceUUID = ID.generateUUID();
     }
     const texData = this.texture.find((item) => item.uuid === texture.uuid);
-    if (!texture.isDirty) {
+    if (!texture.isDirty && texData) {
       return texData;
     }
     texture.isDirty = false;
@@ -270,6 +270,7 @@ export class RuntimeLibrary
       this.textureIds.add(data.sourceUUID);
       return data;
     }
+    return data;
   }
 
   // ----- envTexture
