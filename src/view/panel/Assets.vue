@@ -46,17 +46,17 @@
                     </template>
                 </Grid>
             </el-tab-pane>
-            <el-tab-pane label="脚本" @contextmenu="scriptContextMenu">
+            <!-- <el-tab-pane label="脚本">
                 <Grid :data="scripts" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
                     <template #default="{ item, index }">
                         <div class="grid-item" :title="item.name" draggable="true"
-                            @dragstart="e => handleDragStart(e, item)">
+                            @dragstart="e => handleDragStart(e, item)" @contextmenu="e => scriptContextMenu(e, item)">
                             <img v-if="item.url" :src="item.url" alt="" style="width: 80%; height: 80%;">
                             <span class="itme-name">{{ item.name }}</span>
                         </div>
                     </template>
                 </Grid>
-            </el-tab-pane>
+            </el-tab-pane> -->
         </el-tabs>
     </div>
 </template>
@@ -178,7 +178,7 @@ async function onChange() {
     Editor.Instance.Engine.resize()
 }
 
-function scriptContextMenu(e: MouseEvent) {
+function scriptContextMenu(e: MouseEvent, script: CC.ScriptData) {
     e.stopPropagation();
     e.preventDefault();
     openContextMenu({
@@ -190,7 +190,18 @@ function scriptContextMenu(e: MouseEvent) {
             {
                 name: '新建脚本',
                 callback: () => {
-                    useDialog(ScriptEditorDialog)
+
+                }
+            }, {
+                name: '编辑脚本',
+                callback: () => {
+                    console.log(script.code);
+                    useDialog(ScriptEditorDialog, {
+                        initialCode: script.code,
+                        onSave: (s: string) => {
+                            script.code = s;
+                        }
+                    })
                 }
             }
         ]

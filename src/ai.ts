@@ -325,7 +325,8 @@ window.addEventListener('message', (data) => {
     if (!Editor.Instance.Scene.runtimeAnimation) {
       Editor.Instance.Scene.runtimeAnimation = [];
     }
-    if (Editor.Instance.Scene.runtimeAnimation.find((x) => x.uuid === jianzhen.uuid)) {
+    const ani = Editor.Instance.Scene.runtimeAnimation.find((x) => x.uuid === jianzhen.uuid);
+    if (ani) {
       playClip(jianzhen.uuid);
       return;
     }
@@ -336,8 +337,9 @@ window.addEventListener('message', (data) => {
     if (!Editor.Instance.Scene.runtimeAnimation) {
       Editor.Instance.Scene.runtimeAnimation = [];
     }
-    if (Editor.Instance.Scene.runtimeAnimation.find((x) => x.uuid === zhuliang.uuid)) {
-      playClip(zhuliang.uuid);
+    const ani = Editor.Instance.Scene.runtimeAnimation.find((x) => x.uuid === zhuliang.uuid);
+    if (ani) {
+      playClip(ani.uuid);
       return;
     }
     Editor.Instance.Scene.runtimeAnimation.push(zhuliang);

@@ -17,6 +17,17 @@ import * as monaco from 'monaco-editor';
 import { ElDialog, ElButton, ElMessage } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import { stopRegisterKeyDown, startRegisterKeyDown } from '@/utils/ShortcutKey';
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+
+window.MonacoEnvironment = {
+    getWorker(_, label) {
+        if (label === 'typescript' || label === 'javascript') {
+            return new tsWorker()
+        }
+        return new editorWorker()
+    }
+}
 
 const { t } = useI18n();
 const model = ref(true);
@@ -24,287 +35,287 @@ const editorContainerRef = ref<HTMLDivElement>();
 let editorInstance: monaco.editor.IStandaloneCodeEditor | null = null;
 
 const props = defineProps<{
-    // close: () => void;
-    // initialCode?: string;
-    // onSave?: (code: string) => void | Promise<void>;
+    close: () => void;
+    initialCode?: string;
+    onSave?: (code: string) => void | Promise<void>;
 }>();
 
 // 配置 Monaco Editor 的类型定义和代码提示
 function setupMonacoEditorTypes() {
-    //     // 检查 Monaco Editor 是否已加载
-    //     if (!monaco || !monaco.languages || !monaco.languages.typescript) {
-    //         console.error('Monaco Editor TypeScript support not available');
-    //         return;
-    //     }
+    // 检查 Monaco Editor 是否已加载
+    if (!monaco || !monaco.languages || !monaco.languages.typescript) {
+        console.error('Monaco Editor TypeScript support not available');
+        return;
+    }
 
-    //     try {
-    //         // 使用类型断言访问 API（Monaco Editor 的类型定义可能不完整）
-    //         const tsLang = monaco.languages.typescript as any;
-    //         const jsDefaults = tsLang.javascriptDefaults;
+    try {
+        // 使用类型断言访问 API（Monaco Editor 的类型定义可能不完整）
+        const tsLang = monaco.languages.typescript as any;
+        const jsDefaults = tsLang.javascriptDefaults;
 
-    //         if (!jsDefaults) {
-    //             console.error('javascriptDefaults not available');
-    //             return;
-    //         }
+        if (!jsDefaults) {
+            console.error('javascriptDefaults not available');
+            return;
+        }
 
-    //         // 配置 JavaScript/TypeScript 编译器选项
-    //         jsDefaults.setCompilerOptions({
-    //             target: tsLang.ScriptTarget.ES2020,
-    //             allowNonTsExtensions: true,
-    //             moduleResolution: tsLang.ModuleResolutionKind.NodeJs,
-    //             module: tsLang.ModuleKind.ESNext,
-    //             noEmit: true,
-    //             esModuleInterop: true,
-    //             allowJs: true,
-    //             typeRoots: ['node_modules/@types'],
-    //             lib: ['ES2020', 'DOM', 'DOM.Iterable'],
-    //         });
+        // 配置 JavaScript/TypeScript 编译器选项
+        jsDefaults.setCompilerOptions({
+            target: tsLang.ScriptTarget.ES2020,
+            allowNonTsExtensions: true,
+            moduleResolution: tsLang.ModuleResolutionKind.NodeJs,
+            module: tsLang.ModuleKind.ESNext,
+            noEmit: true,
+            esModuleInterop: true,
+            allowJs: true,
+            typeRoots: ['node_modules/@types'],
+            lib: ['ES2020', 'DOM', 'DOM.Iterable'],
+        });
 
-    //         // 配置编辑器提示选项
-    //         jsDefaults.setDiagnosticsOptions({
-    //             noSemanticValidation: false,
-    //             noSyntaxValidation: false,
-    //             noSuggestionDiagnostics: false,
-    //         });
+        // 配置编辑器提示选项
+        jsDefaults.setDiagnosticsOptions({
+            noSemanticValidation: false,
+            noSyntaxValidation: false,
+            noSuggestionDiagnostics: false,
+        });
 
-    //         console.log('✓ Monaco Editor compiler options configured');
-    //     } catch (error) {
-    //         console.error('Failed to setup Monaco Editor types:', error);
-    //     }
+        console.log('✓ Monaco Editor compiler options configured');
+    } catch (error) {
+        console.error('Failed to setup Monaco Editor types:', error);
+    }
 
-    //     // 添加全局类型定义
-    //     const typeDefinitions = `
-    // // 全局类型定义 - Editor API
-    // declare const Editor: {
-    //     Instance: {
-    //         /** 当前场景 */
-    //         Scene: import('@babylonjs/core').Scene;
-    //         /** 引擎实例 */
-    //         Engine: import('@babylonjs/core').AbstractEngine;
-    //         /** 资源场景 */
-    //         ResScene: import('@babylonjs/core').Scene;
-    //         /** 创建粒子系统 */
-    //         createParticleSystem(name: string): Promise<void>;
-    //         /** 获取选中的节点 */
-    //         selectNodes: import('@babylonjs/core').Node[];
-    //         /** 设置当前场景 */
-    //         setCurrentScene(uuid: string): void;
-    //         /** 创建新场景 */
-    //         createNewScene(name: string): Promise<import('@babylonjs/core').Scene>;
-    //         /** 事件监听 */
-    //         on<T extends keyof any>(event: T, callback: (data: any) => void): void;
-    //         /** 移除事件监听 */
-    //         off<T extends keyof any>(event: T, callback: (data: any) => void): void;
-    //         /** 触发事件 */
-    //         emit<T extends keyof any>(event: T, data: any): void;
-    //     };
-    // };
+    // 添加全局类型定义
+    const typeDefinitions = `
+    // 全局类型定义 - Editor API
+    declare const Editor: {
+        Instance: {
+            /** 当前场景 */
+            Scene: import('@babylonjs/core').Scene;
+            /** 引擎实例 */
+            Engine: import('@babylonjs/core').AbstractEngine;
+            /** 资源场景 */
+            ResScene: import('@babylonjs/core').Scene;
+            /** 创建粒子系统 */
+            createParticleSystem(name: string): Promise<void>;
+            /** 获取选中的节点 */
+            selectNodes: import('@babylonjs/core').Node[];
+            /** 设置当前场景 */
+            setCurrentScene(uuid: string): void;
+            /** 创建新场景 */
+            createNewScene(name: string): Promise<import('@babylonjs/core').Scene>;
+            /** 事件监听 */
+            on<T extends keyof any>(event: T, callback: (data: any) => void): void;
+            /** 移除事件监听 */
+            off<T extends keyof any>(event: T, callback: (data: any) => void): void;
+            /** 触发事件 */
+            emit<T extends keyof any>(event: T, data: any): void;
+        };
+    };
 
-    // // Babylon.js 核心类型
-    // declare namespace BABYLON {
-    //     export * from '@babylonjs/core';
-    // }
+    // Babylon.js 核心类型
+    declare namespace BABYLON {
+        export * from '@babylonjs/core';
+    }
 
-    // // Vector3 类型和构造函数
-    // declare class Vector3 {
-    //     constructor(x?: number, y?: number, z?: number);
-    //     x: number;
-    //     y: number;
-    //     z: number;
-    //     static Zero(): Vector3;
-    //     static One(): Vector3;
-    //     static Up(): Vector3;
-    //     static Down(): Vector3;
-    //     static Left(): Vector3;
-    //     static Right(): Vector3;
-    //     static Forward(): Vector3;
-    //     static Backward(): Vector3;
-    //     add(otherVector: Vector3): Vector3;
-    //     subtract(otherVector: Vector3): Vector3;
-    //     scale(scale: number): Vector3;
-    //     length(): number;
-    //     normalize(): Vector3;
-    //     clone(): Vector3;
-    // }
+    // Vector3 类型和构造函数
+    declare class Vector3 {
+        constructor(x?: number, y?: number, z?: number);
+        x: number;
+        y: number;
+        z: number;
+        static Zero(): Vector3;
+        static One(): Vector3;
+        static Up(): Vector3;
+        static Down(): Vector3;
+        static Left(): Vector3;
+        static Right(): Vector3;
+        static Forward(): Vector3;
+        static Backward(): Vector3;
+        add(otherVector: Vector3): Vector3;
+        subtract(otherVector: Vector3): Vector3;
+        scale(scale: number): Vector3;
+        length(): number;
+        normalize(): Vector3;
+        clone(): Vector3;
+    }
 
-    // // Color3 类型和构造函数
-    // declare class Color3 {
-    //     constructor(r?: number, g?: number, b?: number);
-    //     r: number;
-    //     g: number;
-    //     b: number;
-    //     static Red(): Color3;
-    //     static Green(): Color3;
-    //     static Blue(): Color3;
-    //     static Black(): Color3;
-    //     static White(): Color3;
-    //     static Yellow(): Color3;
-    //     static Magenta(): Color3;
-    //     static Cyan(): Color3;
-    //     clone(): Color3;
-    // }
+    // Color3 类型和构造函数
+    declare class Color3 {
+        constructor(r?: number, g?: number, b?: number);
+        r: number;
+        g: number;
+        b: number;
+        static Red(): Color3;
+        static Green(): Color3;
+        static Blue(): Color3;
+        static Black(): Color3;
+        static White(): Color3;
+        static Yellow(): Color3;
+        static Magenta(): Color3;
+        static Cyan(): Color3;
+        clone(): Color3;
+    }
 
-    // // Quaternion 类型
-    // declare class Quaternion {
-    //     constructor(x?: number, y?: number, z?: number, w?: number);
-    //     x: number;
-    //     y: number;
-    //     z: number;
-    //     w: number;
-    //     static Identity(): Quaternion;
-    //     clone(): Quaternion;
-    // }
+    // Quaternion 类型
+    declare class Quaternion {
+        constructor(x?: number, y?: number, z?: number, w?: number);
+        x: number;
+        y: number;
+        z: number;
+        w: number;
+        static Identity(): Quaternion;
+        clone(): Quaternion;
+    }
 
-    // // Scene 常用方法
-    // interface Scene {
-    //     /** 场景名称 */
-    //     name: string;
-    //     /** 场景 UUID */
-    //     uuid: string;
-    //     /** 创建网格 */
-    //     createDefaultCameraOrLight(createArcRotateCamera?: boolean, replace?: boolean, attachCameraControls?: boolean): void;
-    //     /** 获取所有网格 */
-    //     getMeshesByTags(tagsQuery: string): import('@babylonjs/core').AbstractMesh[];
-    //     /** 获取所有灯光 */
-    //     lights: import('@babylonjs/core').Light[];
-    //     /** 获取所有相机 */
-    //     cameras: import('@babylonjs/core').Camera[];
-    //     /** 获取活动相机 */
-    //     activeCamera: import('@babylonjs/core').Camera | null;
-    //     /** 渲染 */
-    //     render(): void;
-    // }
+    // Scene 常用方法
+    interface Scene {
+        /** 场景名称 */
+        name: string;
+        /** 场景 UUID */
+        uuid: string;
+        /** 创建网格 */
+        createDefaultCameraOrLight(createArcRotateCamera?: boolean, replace?: boolean, attachCameraControls?: boolean): void;
+        /** 获取所有网格 */
+        getMeshesByTags(tagsQuery: string): import('@babylonjs/core').AbstractMesh[];
+        /** 获取所有灯光 */
+        lights: import('@babylonjs/core').Light[];
+        /** 获取所有相机 */
+        cameras: import('@babylonjs/core').Camera[];
+        /** 获取活动相机 */
+        activeCamera: import('@babylonjs/core').Camera | null;
+        /** 渲染 */
+        render(): void;
+    }
 
-    // // Mesh 常用方法
-    // interface Mesh {
-    //     /** 位置 */
-    //     position: Vector3;
-    //     /** 旋转 */
-    //     rotation: Vector3;
-    //     /** 缩放 */
-    //     scaling: Vector3;
-    //     /** 可见性 */
-    //     isVisible: boolean;
-    //     /** 材质 */
-    //     material: import('@babylonjs/core').Material | null;
-    //     /** 设置位置 */
-    //     setPositionWithLocalVector(vector: Vector3): Mesh;
-    //     /** 设置旋转 */
-    //     setRotationWithQuaternion(quaternion: Quaternion): Mesh;
-    //     /** 克隆 */
-    //     clone(name: string, newParent?: import('@babylonjs/core').Node, doNotCloneChildren?: boolean): Mesh;
-    //     /** 释放资源 */
-    //     dispose(): void;
-    // }
+    // Mesh 常用方法
+    interface Mesh {
+        /** 位置 */
+        position: Vector3;
+        /** 旋转 */
+        rotation: Vector3;
+        /** 缩放 */
+        scaling: Vector3;
+        /** 可见性 */
+        isVisible: boolean;
+        /** 材质 */
+        material: import('@babylonjs/core').Material | null;
+        /** 设置位置 */
+        setPositionWithLocalVector(vector: Vector3): Mesh;
+        /** 设置旋转 */
+        setRotationWithQuaternion(quaternion: Quaternion): Mesh;
+        /** 克隆 */
+        clone(name: string, newParent?: import('@babylonjs/core').Node, doNotCloneChildren?: boolean): Mesh;
+        /** 释放资源 */
+        dispose(): void;
+    }
 
-    // // TransformNode 常用方法
-    // interface TransformNode {
-    //     /** 位置 */
-    //     position: Vector3;
-    //     /** 旋转 */
-    //     rotation: Vector3;
-    //     /** 缩放 */
-    //     scaling: Vector3;
-    //     /** 可见性 */
-    //     isVisible: boolean;
-    //     /** 名称 */
-    //     name: string;
-    //     /** UUID */
-    //     uuid: string;
-    //     /** 克隆 */
-    //     clone(name: string, newParent?: import('@babylonjs/core').Node, doNotCloneChildren?: boolean): TransformNode;
-    // }
+    // TransformNode 常用方法
+    interface TransformNode {
+        /** 位置 */
+        position: Vector3;
+        /** 旋转 */
+        rotation: Vector3;
+        /** 缩放 */
+        scaling: Vector3;
+        /** 可见性 */
+        isVisible: boolean;
+        /** 名称 */
+        name: string;
+        /** UUID */
+        uuid: string;
+        /** 克隆 */
+        clone(name: string, newParent?: import('@babylonjs/core').Node, doNotCloneChildren?: boolean): TransformNode;
+    }
 
-    // // Material 常用属性
-    // interface Material {
-    //     /** 名称 */
-    //     name: string;
-    //     /** UUID */
-    //     uuid: string;
-    //     /** 透明度 */
-    //     alpha: number;
-    //     /** 背面裁剪 */
-    //     backFaceCulling: boolean;
-    //     /** 线框模式 */
-    //     wireframe: boolean;
-    // }
+    // Material 常用属性
+    interface Material {
+        /** 名称 */
+        name: string;
+        /** UUID */
+        uuid: string;
+        /** 透明度 */
+        alpha: number;
+        /** 背面裁剪 */
+        backFaceCulling: boolean;
+        /** 线框模式 */
+        wireframe: boolean;
+    }
 
-    // // PBRMaterial 常用属性
-    // interface PBRMaterial extends Material {
-    //     /** 基础色 */
-    //     albedoColor: Color3;
-    //     /** 金属度 */
-    //     metallic: number;
-    //     /** 粗糙度 */
-    //     roughness: number;
-    //     /** 透明度 */
-    //     alpha: number;
-    //     /** 基础色贴图 */
-    //     albedoTexture: import('@babylonjs/core').BaseTexture | null;
-    //     /** 法线贴图 */
-    //     bumpTexture: import('@babylonjs/core').BaseTexture | null;
-    //     /** 金属度贴图 */
-    //     metallicTexture: import('@babylonjs/core').BaseTexture | null;
-    // }
+    // PBRMaterial 常用属性
+    interface PBRMaterial extends Material {
+        /** 基础色 */
+        albedoColor: Color3;
+        /** 金属度 */
+        metallic: number;
+        /** 粗糙度 */
+        roughness: number;
+        /** 透明度 */
+        alpha: number;
+        /** 基础色贴图 */
+        albedoTexture: import('@babylonjs/core').BaseTexture | null;
+        /** 法线贴图 */
+        bumpTexture: import('@babylonjs/core').BaseTexture | null;
+        /** 金属度贴图 */
+        metallicTexture: import('@babylonjs/core').BaseTexture | null;
+    }
 
-    // // Light 常用属性
-    // interface Light {
-    //     /** 强度 */
-    //     intensity: number;
-    //     /** 漫反射颜色 */
-    //     diffuse: Color3;
-    //     /** 镜面反射颜色 */
-    //     specular: Color3;
-    //     /** 位置 */
-    //     position: Vector3;
-    // }
+    // Light 常用属性
+    interface Light {
+        /** 强度 */
+        intensity: number;
+        /** 漫反射颜色 */
+        diffuse: Color3;
+        /** 镜面反射颜色 */
+        specular: Color3;
+        /** 位置 */
+        position: Vector3;
+    }
 
-    // // Camera 常用方法
-    // interface Camera {
-    //     /** 位置 */
-    //     position: Vector3;
-    //     /** 旋转 */
-    //     rotation: Vector3;
-    //     /** 设置目标 */
-    //     setTarget(target: Vector3): void;
-    //     /** 获取前方向 */
-    //     getForwardRay(length?: number): import('@babylonjs/core').Ray;
-    // }
+    // Camera 常用方法
+    interface Camera {
+        /** 位置 */
+        position: Vector3;
+        /** 旋转 */
+        rotation: Vector3;
+        /** 设置目标 */
+        setTarget(target: Vector3): void;
+        /** 获取前方向 */
+        getForwardRay(length?: number): import('@babylonjs/core').Ray;
+    }
 
-    // // 常用工具函数
-    // declare const console: {
-    //     log(...args: any[]): void;
-    //     error(...args: any[]): void;
-    //     warn(...args: any[]): void;
-    //     info(...args: any[]): void;
-    //     debug(...args: any[]): void;
-    // };
+    // 常用工具函数
+    declare const console: {
+        log(...args: any[]): void;
+        error(...args: any[]): void;
+        warn(...args: any[]): void;
+        info(...args: any[]): void;
+        debug(...args: any[]): void;
+    };
 
-    // // 常用全局对象
-    // declare const Math: Math;
-    // declare const JSON: JSON;
-    // declare const Promise: PromiseConstructor;
-    // declare const setTimeout: typeof globalThis.setTimeout;
-    // declare const setInterval: typeof globalThis.setInterval;
-    // declare const clearTimeout: typeof globalThis.clearTimeout;
-    // declare const clearInterval: typeof globalThis.clearInterval;
-    // `;
+    // 常用全局对象
+    declare const Math: Math;
+    declare const JSON: JSON;
+    declare const Promise: PromiseConstructor;
+    declare const setTimeout: typeof globalThis.setTimeout;
+    declare const setInterval: typeof globalThis.setInterval;
+    declare const clearTimeout: typeof globalThis.clearTimeout;
+    declare const clearInterval: typeof globalThis.clearInterval;
+    `;
 
-    //     // 添加类型定义到 Monaco
-    //     try {
-    //         const jsDefaults = (monaco.languages.typescript as any).javascriptDefaults;
-    //         if (jsDefaults && jsDefaults.addExtraLib) {
-    //             jsDefaults.addExtraLib(
-    //                 typeDefinitions,
-    //                 'file:///global.d.ts'
-    //             );
-    //             console.log('Type definitions added to Monaco Editor');
-    //         } else {
-    //             console.warn('Cannot add extra lib: javascriptDefaults not available');
-    //         }
-    //     } catch (error) {
-    //         console.error('Failed to add extra lib:', error);
-    //     }
+    // 添加类型定义到 Monaco
+    try {
+        const jsDefaults = (monaco.languages.typescript as any).javascriptDefaults;
+        if (jsDefaults && jsDefaults.addExtraLib) {
+            jsDefaults.addExtraLib(
+                typeDefinitions,
+                'file:///global.d.ts'
+            );
+            console.log('Type definitions added to Monaco Editor');
+        } else {
+            console.warn('Cannot add extra lib: javascriptDefaults not available');
+        }
+    } catch (error) {
+        console.error('Failed to add extra lib:', error);
+    }
 
     // 注册自定义代码补全提供器
     try {
@@ -416,13 +427,13 @@ function setupMonacoEditorTypes() {
 
 // 初始化 Monaco Editor
 onMounted(async () => {
-    // stopRegisterKeyDown();
+    stopRegisterKeyDown();
     await nextTick();
     if (editorContainerRef.value) {
         try {
-            // setupMonacoEditorTypes();
+            setupMonacoEditorTypes();
             editorInstance = monaco.editor.create(editorContainerRef.value, {
-                value: '// 输入您的 JavaScript 代码\n// 可以使用 Editor.Instance 访问编辑器实例\n// 例如: Editor.Instance.Scene\nconsole.log("Hello, World!");',
+                value: props.initialCode,
                 language: 'javascript',
                 theme: 'vs-dark',
                 suggest: {

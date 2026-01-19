@@ -2,16 +2,11 @@ import { fileURLToPath, URL } from 'node:url';
 
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import vueDevTools from 'vite-plugin-vue-devtools';
-
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import path from 'path';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
-
-// @ts-ignore
-import monacoEditorPlugin from 'vite-plugin-monaco-editor-esm';
 
 
 export default defineConfig({
@@ -37,8 +32,7 @@ export default defineConfig({
       iconDirs: [path.resolve(process.cwd(), 'src/assets/svg')],
       // 指定symbolId格式
       symbolId: 'icon-[name]',
-    }),
-    monacoEditorPlugin.default ? monacoEditorPlugin.default() : monacoEditorPlugin(),
+    })
   ],
   css: {
     preprocessorOptions: {

@@ -48,7 +48,6 @@
                             </ElTree>
                         </ElScrollbar>
                     </div>
-
                 </div>
             </ElSplitterPanel>
         </ElSplitter>
