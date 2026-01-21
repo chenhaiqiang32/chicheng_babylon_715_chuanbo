@@ -15,7 +15,8 @@ export function serializeMeshNode(
   meshData.type = 'mesh';
   meshData.checkCollisions = mesh.checkCollisions;
   meshData.material = mesh.material?.uuid || '';
-  meshData.sideOrientation = mesh.sideOrientation
+  meshData.sideOrientation = mesh.sideOrientation;
+
   if (mesh.geometry) {
     const getGeometry = async () => {
       await assetsManager.addGeometry(mesh.geometry);
@@ -23,9 +24,6 @@ export function serializeMeshNode(
     };
     padding.push(getGeometry);
   }
-  if (mesh.material) {
-  }
-
   if (mesh.material) {
     mesh.material.isDirty = true;
     for (const element in mesh.material) {
@@ -51,12 +49,13 @@ export function deserializeMeshNode(
 ) {
   const mesh = new Mesh(data.name, scene, {});
   mesh.checkCollisions = data.checkCollisions;
+  mesh.sideOrientation = data.sideOrientation;
   if (data.geometry) {
     const getMesh = async () => {
       const g = await assets.getGeometry(data.geometry);
+      console.log(g);
       g.applyToMesh(mesh);
       mesh.geometry.uuid = data.geometry;
-      mesh.sideOrientation = 0;
     };
     padding.push(getMesh);
   }
@@ -68,6 +67,5 @@ export function deserializeMeshNode(
     };
     padding.push(getMaterial);
   }
-  mesh.sideOrientation = data.sideOrientation;
   return mesh;
 }

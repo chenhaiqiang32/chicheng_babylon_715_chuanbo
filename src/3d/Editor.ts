@@ -36,6 +36,13 @@ import {
   HDRCubeTexture,
   CascadedShadowGenerator,
   ShadowGenerator,
+  HavokPlugin,
+  MeshBuilder,
+  PhysicsAggregate,
+  PhysicsShapeType,
+  PhysicsShapeBox,
+  PhysicsBody,
+  PhysicsMotionType,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -56,7 +63,7 @@ import { useEditor } from '@/store/useEditor';
 import { ControlMode } from '@/store/useSceneModule/useControl';
 import { Shadow } from './Shadow';
 
-
+import HavokPhysics from '@babylonjs/havok';
 
 Object.defineProperty(Node.prototype, 'active', {
   get: function () {
@@ -64,8 +71,8 @@ Object.defineProperty(Node.prototype, 'active', {
   },
   set: function (v: boolean) {
     this._nodeDataStorage._isVisible = v;
-  }
-})
+  },
+});
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -265,11 +272,42 @@ export class Editor extends Dispatch<EditorEvent> {
       });
     }
     this.scene = scene;
-    useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });
+    //开启物理引擎
+    // const havokInstance = await HavokPhysics({
+    //   locateFile: () => {
+    //     return '/lib/havok/HavokPhysics.wasm';
+    //   },
+    // });
+    // const havokPlugin = new HavokPlugin(true, havokInstance);
+    // scene.enablePhysics(undefined, havokPlugin);
+    // const box = MeshBuilder.CreateSphere('sphere');
+    // box.position.y = 10;
+    // const ground = MeshBuilder.CreateGround('ground', { width: 10, height: 10 }, scene);
+    // new PhysicsAggregate(
+    //   box,
+    //   PhysicsShapeType.MESH,
+    //   { mass: 50, friction: 0.5, restitution: 0.8 },
+    //   scene,
+    // );
+    // const groundShape = new PhysicsShapeBox(
+    //   new Vector3(0, 0, 0), // center
+    //   Quaternion.Identity(),
+    //   new Vector3(5, 0.1, 5), // extents (width/2, height/2, depth/2)
+    //   scene,
+    // );
 
+    // const groundBody = new PhysicsBody(
+    //   ground, // 绑 mesh
+    //   PhysicsMotionType.DYNAMIC, // ✅ 关键：手动控制
+    //   false,
+    //   scene,
+    // );
+    // groundBody.shape = groundShape;
+    // groundBody.setMassProperties({ mass: 0 }); // 模拟无限质量
 
+    useScene().setHierarchy(scene.rootNodes);
   }
 
   getRaycastPoint(x?: number, y?: number) {
@@ -462,9 +500,9 @@ export class Editor extends Dispatch<EditorEvent> {
 
     // 添加灯光 gizmo
 
-    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => { });
-    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => { });
-    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => { });
+    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {});
 
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;

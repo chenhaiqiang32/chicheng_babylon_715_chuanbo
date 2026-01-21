@@ -108,6 +108,12 @@
       "angle": "角度",
       "range": "范围"
     },
+    "customData": {
+      "title": "自定义数据",
+      "number": "数字",
+      "strting": "字符串",
+      "bool": "布尔值"
+    },
     "common": {
       "title": "常规",
       "type": "类型",

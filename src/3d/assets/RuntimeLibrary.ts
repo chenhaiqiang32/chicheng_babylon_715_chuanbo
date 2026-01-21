@@ -56,7 +56,8 @@ export interface IGetBuffer {
 
 export class RuntimeLibrary
   extends Dispatch<RuntimeAssetsEventBus>
-  implements ICollectAssets, ILoaderAssets, IGetBuffer {
+  implements ICollectAssets, ILoaderAssets, IGetBuffer
+{
   async getTextureURL(sourceUUID: string) {
     if (!sourceUUID) {
       return '';
@@ -404,7 +405,6 @@ export class RuntimeLibrary
     }
     this.material.push(data);
   }
-  private geometryArray: Array<Geometry> = [];
   async addGeometry(geometry: Geometry) {
     if (!geometry.uuid) {
       geometry.uuid = ID.generateUUID();
@@ -412,7 +412,7 @@ export class RuntimeLibrary
     if (this.geomertyIDs.has(geometry.uuid)) {
       return;
     }
-    this.geometryArray.push(geometry);
+    this.sceneGeometry.set(geometry.uuid, geometry);
     const data = geometry.serializeVerticeData();
     const buffer = vertexToBuffer(data);
     await this.fileSystem.saveFile(geometry.uuid, buffer, GEOMETRY);
@@ -423,10 +423,6 @@ export class RuntimeLibrary
     if (this.sceneGeometry.has(uuid)) {
       return Promise.resolve(this.sceneGeometry.get(uuid) as Geometry);
     } else {
-      const tempGeo = this.geometryArray.find((x) => x.uuid == uuid);
-      if (tempGeo) {
-        return Promise.resolve(tempGeo);
-      }
       let buffer = await this.fileSystem.getFileArrayBuffer(uuid, GEOMETRY);
       if (!buffer) {
         return Promise.reject(`Failed to load geometry from ${uuid}`);
@@ -517,7 +513,7 @@ export class RuntimeLibrary
     this.sceneEnvTexture.clear();
     return deserializeScene(rootNode, scene.getEngine() as Engine, this, scene, padding);
   }
-  saveComplate() { }
+  saveComplate() {}
 }
 
 export async function serializeTextureBuffer(
