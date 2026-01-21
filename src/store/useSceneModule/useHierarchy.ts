@@ -60,7 +60,7 @@ export function useHierarchyModule() {
       let hNode = hierarchyMap.get(parentNode.uuid);
       const newhNode = buildHierarchy(parentNode);
       // 直接赋值会导致hierarchy引用断开
-      hNode.children = newhNode.children;
+      hNode.children = newhNode?.children;
     } else {
       // 根节点
       setHierarchy(Editor.Instance.Scene.rootNodes);

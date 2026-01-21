@@ -44,6 +44,7 @@
                                             :name="iconMap[data.type]"></SVG>
                                         {{ data.name }}
                                     </div>
+                                    <div v-show="data.isSelected" class="tree-node-active"></div>
                                 </template>
                             </ElTree>
                         </ElScrollbar>
@@ -66,9 +67,9 @@ import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
 import { openContextMenu } from '@/component/content-menu';
-import { getHierarchyContextMenuCommands } from '@/view/panel/ContextMenuCommands';
+import { getHierarchyCtxMenuCommands, getHierarchyMultiCtxMenuCommands } from '@/view/panel/ContextMenuCommands';
 import { Node as BJS_Node } from '@babylonjs/core';
-import { registerKeyDown, unregisterKeyDown } from '@/utils/ShortcutKey';
+import { registerKeyDown, registerKeyUp, unregisterKeyDown, unregisterkeyUp } from '@/utils/ShortcutKey';
 import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
 import { registerUndoRedo } from '@/tools/undoredo';
 const searchText = ref('');
@@ -79,6 +80,9 @@ const treeProps = {
 const { hierarchy, currentSelected, sceneInfoList, currentScene } = storeToRefs(useScene());
 
 let dragParent:Node,dragPrev:Node,dragNext:Node;
+let isShiftHolding = false;
+let multiSelectBegin: HierarchyNode, multiSelectEnd: HierarchyNode;
+let selectedList:Node[];
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const sceneSettingVisible = ref(false);
@@ -98,6 +102,7 @@ onMounted(() => {
     Editor.Instance.on('onActiveCameraChanged', onActiveCameraChanged);
     Editor.Instance.on('onNodeActiveChanged', onNodeActiveChanged)
     registerKeyDown(onKeydown);
+    registerKeyUp(onKeyup)
 })
 
 onUnmounted(() => {
@@ -105,28 +110,40 @@ onUnmounted(() => {
     Editor.Instance.off('onActiveCameraChanged', onActiveCameraChanged);
     Editor.Instance.off('onNodeActiveChanged', onNodeActiveChanged)
     unregisterKeyDown(onKeydown);
+    unregisterkeyUp(onkeyup);
 })
 
 function contextMenu(e: MouseEvent, nodeData?: HierarchyNode) {
     e.stopPropagation();
     e.preventDefault();
 
-    // parent 优先为选中的节点；如果没有，则获取鼠标当前选中的节点
-    let parentNode: BJS_Node | null = null;
-    if (currentSelected.value.length > 0) {
-        parentNode = Editor.Instance.getNodeById(currentSelected.value[0]);
-    }
-    else {
-        parentNode = nodeData ? Editor.Instance.getNodeById(nodeData.id) : null;
-    }
+    // 多选模式
+    if(selectedList.length > 0) {
+        openContextMenu({
+            position: {
+                x: e.clientX,
+                y: e.clientY
+            },
+            commands: getHierarchyMultiCtxMenuCommands(selectedList)
+        })
+    } else{
+        // parent 优先为选中的节点；如果没有，则获取鼠标当前选中的节点
+        let parentNode: BJS_Node | null = null;
+        if (currentSelected.value.length > 0) {
+            parentNode = Editor.Instance.getNodeById(currentSelected.value[0]);
+        }
+        else {
+            parentNode = nodeData ? Editor.Instance.getNodeById(nodeData.id) : null;
+        }
 
-    openContextMenu({
-        position: {
-            x: e.clientX,
-            y: e.clientY
-        },
-        commands: getHierarchyContextMenuCommands(parentNode)
-    })
+        openContextMenu({
+            position: {
+                x: e.clientX,
+                y: e.clientY
+            },
+            commands: getHierarchyCtxMenuCommands(parentNode)
+        })
+    }
 }
 
 async function addScene() {
@@ -185,6 +202,14 @@ const handleNodeClick = (node: HierarchyNode) => {
     } else {
         treeRef.value?.setCurrentKey(null);
     }
+    if(multiSelectBegin && isShiftHolding){
+        multiSelectEnd = node;
+        handleMultiSelect();
+    } else if(!multiSelectBegin) {
+        multiSelectBegin = node;
+        selectedList?.forEach((x) => x.data.isSelected = false);
+        selectedList = [];
+    }
 }
 
 function handlePanelClick(e: MouseEvent) {
@@ -192,6 +217,26 @@ function handlePanelClick(e: MouseEvent) {
     if (!target.closest('.el-tree-node')) {
         handleNodeClick(null);
     }
+}
+
+// 多选节点
+function handleMultiSelect() {
+    selectedList?.forEach((x) => x.data.isSelected = false);
+    const nodeA = treeRef.value.getNode(multiSelectBegin.id);
+    const nodeB = treeRef.value.getNode(multiSelectEnd.id);
+    const nodes = treeRef.value.store._getAllNodes();
+    let min = nodes.findIndex((x) => x.id == nodeA.id);
+    let max = nodes.findIndex((x) => x.id == nodeB.id)
+    if(max < min) {
+        const tmp = max;
+        max = min;
+        min = tmp;
+    }
+    // 填充多选选中节点的数组
+    selectedList = nodes.splice(min, max - min + 1);
+    selectedList.forEach((x) => x.data.isSelected = true);
+    multiSelectBegin = null;
+    multiSelectEnd = null;
 }
 
 watch(currentSelected, (val) => {
@@ -249,7 +294,7 @@ const handleNodeDrop = (
 
     const node = Editor.Instance.getNodeById(draggingNode.data.id);
     const drop = Editor.Instance.getNodeById(dropNode.data.id);
-    nodeCRUD().updateNodeHierarchy(node, drop, dropType);
+    nodeCRUD().updateNodeHierarchy(node, drop, dropType, false);
     registerUndoRedo({
         undo: () => {
             if(dragPrev) {
@@ -268,6 +313,7 @@ const handleNodeDrop = (
 
 async function onKeydown(e: KeyboardEvent) {
     const key = e.key.toLowerCase();
+    isShiftHolding = e.shiftKey;
     // 拷贝节点
     if (e.ctrlKey && key === 'c') {
         if (Editor.Instance.selectNodes.length > 0) {
@@ -312,9 +358,9 @@ async function onKeydown(e: KeyboardEvent) {
     }
 }
 
-onUnmounted(() => {
-    unregisterKeyDown(onkeydown);
-})
+async function onKeyup(e: KeyboardEvent) {
+    isShiftHolding = e.shiftKey;
+}
 
 
 </script>
@@ -395,5 +441,18 @@ onUnmounted(() => {
 .tree-node {
     display: flex;
     gap: 10px;
+    z-index: 1;
+}
+
+.tree-node-active {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    background-color: #2d72d2;
+    z-index: 0;
+}
+
+:deep(.el-tree-node__content) {
+    position:relative;
 }
 </style>

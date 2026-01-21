@@ -93,6 +93,7 @@ export function nodeCRUD() {
     node: Node,
     targetPosNode: Node | null,
     type: 'before' | 'after' | 'inner',
+    updateView = true
   ) {
     const nodeNewParent = ['before', 'after'].includes(type) ? targetPosNode.parent : targetPosNode;
     if(node instanceof TransformNode){
@@ -106,9 +107,13 @@ export function nodeCRUD() {
     const children = nodeNewParent ? nodeNewParent._children : null;
     if(children){
       switchNodePosInParent(node, targetPosNode, type, children);
-      useScene().updateHierarchy(nodeNewParent.parent);
+      if(updateView){
+        useScene().updateHierarchy(nodeNewParent.parent);
+      }
     } else {
-      useScene().updateHierarchy(null);
+      if(updateView){
+        useScene().updateHierarchy(null);
+      }
     }
   }
 

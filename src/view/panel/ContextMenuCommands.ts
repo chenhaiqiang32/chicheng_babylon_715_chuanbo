@@ -15,11 +15,12 @@ import { addParticleSystem } from '@/tools/particles/particles';
 import { importSkyboxTexture } from '@/3d/core/utils/EnvSkybox';
 import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
 import { registerUndoRedo } from '@/tools/undoredo';
+import TreeNode from 'element-plus/es/components/tree/src/model/node.mjs';
 
 /**
  * 获取层级面板的右键菜单配置
  */
-export function getHierarchyContextMenuCommands(parentNode?: Node | null): ContextMenuItem[] {
+export function getHierarchyCtxMenuCommands(parentNode?: Node | null): ContextMenuItem[] {
   return [
     {
       name: '添加节点',
@@ -191,6 +192,44 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
     }
     ] : []),
   ];
+}
+
+// 多选右键
+export function getHierarchyMultiCtxMenuCommands(nodes:TreeNode[]) {
+  return [
+    {
+      name: '删除', 
+      callback: () => {
+        nodes.forEach((n) => {
+          var node = Editor.Instance.getNodeById(n.data.id);
+          nodeCRUD().deleteNode(node);
+        })
+        registerUndoRedo({
+          undo: () => {
+            nodes.forEach((n) => {
+              var node = Editor.Instance.getNodeById(n.data.id);
+              nodeCRUD().restoreNode(node);
+            })
+          },
+          redo: () => {
+            nodes.forEach((n) => {
+              var node = Editor.Instance.getNodeById(n.data.id);
+              nodeCRUD().deleteNode(node);
+            })
+          }
+        })
+      }
+    },
+    {
+      name: '显影',
+      callback: () => {
+        nodes.forEach((n) => {
+          var node = Editor.Instance.getNodeById(n.data.id);
+          node.isVisible = !node.isVisible;
+        })
+      }
+    }
+  ]
 }
 
 /**
