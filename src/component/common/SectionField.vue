@@ -1,12 +1,20 @@
 <template>
   <div class="editor-section">
     <div class="editor-section__header" @click="save">
-      <div class="editor-section__toggle">
+      <div class="editor-section__toggle" v-if="!arrow">
         <el-icon v-if="opened">
           <Minus />
         </el-icon>
         <el-icon v-else>
           <Plus />
+        </el-icon>
+      </div>
+      <div class="editor-section__toggle" v-else>
+        <el-icon v-if="opened">
+          <CaretRight />
+        </el-icon>
+        <el-icon v-else>
+          <CaretBottom />
         </el-icon>
       </div>
       <div class="editor-section__titlebar">
@@ -38,9 +46,9 @@
 
 <script setup lang="ts">
 import { ref } from "vue"
-import { InfoFilled, Plus, Minus, Loading } from "@element-plus/icons-vue"
 
-const props = defineProps<{ title?: any; label?: any; tooltip?: any; isProcessing?: boolean, open?: boolean }>()
+import { InfoFilled, Plus, Minus, Loading, CaretRight, CaretBottom } from "@element-plus/icons-vue"
+const props = defineProps<{ title?: any; label?: any; tooltip?: any; isProcessing?: boolean, open?: boolean, arrow?: boolean }>()
 const opened = ref<boolean>(props.open || get())
 
 

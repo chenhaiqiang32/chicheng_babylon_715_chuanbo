@@ -34,8 +34,8 @@
                         <ElScrollbar style="height: 100%;">
                             <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                                 draggable @node-drop="handleNodeDrop" :data="hierarchy" highlight-current
-                                :props="treeProps" node-key="id" :default-expanded="true" :default-active="true" :expand-on-click-node="false"
-                                @node-click="handleNodeClick">
+                                :props="treeProps" node-key="id" :default-expanded="true" :default-active="true"
+                                :expand-on-click-node="false" @node-click="handleNodeClick">
                                 <!-- 节点类型图标 + 节点名 -->
                                 <template #default="{ node, data }">
                                     <!-- 节点上也可以右键新增 -->
@@ -274,7 +274,7 @@ async function onKeydown(e: KeyboardEvent) {
             let node = Editor.Instance.selectNodes[0];
             nodeCRUD().deleteNode(node);
             registerUndoRedo({
-                undo: async () =>  {
+                undo: async () => {
                     node = await nodeCRUD().restoreNode();
                 },
                 redo: () => {

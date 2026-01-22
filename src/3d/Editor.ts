@@ -34,6 +34,7 @@ import {
   AreaLight,
   RectAreaLight,
   HDRCubeTexture,
+  CascadedShadowGenerator,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -219,10 +220,24 @@ export class Editor extends Dispatch<EditorEvent> {
       this.scene.dispose();
     }
     const scene = new Scene(this.engine);
+    let create = false;
     useScene().getScene(
       uuid,
       (percent) => {
         loading?.(percent);
+        if (percent == 1 && !create) {
+          create = true;
+          const generator = new CascadedShadowGenerator(4096, scene.lights[0] as DirectionalLight);
+          generator.bias = 0.00268;
+          generator.lambda = 1;
+          generator.depthClamp = true;
+          generator.autoCalcDepthBounds = true;
+          generator.autoCalcDepthBoundsRefreshRate = 60;
+          scene.meshes.forEach(m => {
+            m.receiveShadows = true;
+          })
+          generator.getShadowMap()?.renderList?.push(...scene.meshes);
+        }
       },
       scene,
     );
@@ -411,9 +426,9 @@ export class Editor extends Dispatch<EditorEvent> {
 
     // 添加灯光 gizmo
 
-    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {});
-    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {});
-    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => { });
+    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => { });
+    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => { });
 
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;

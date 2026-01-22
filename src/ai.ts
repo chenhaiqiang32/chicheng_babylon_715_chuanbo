@@ -365,7 +365,7 @@ function playClip(uuid: string) {
     },
     false,
     () => {
-      animator.dispose();
+      // animator.dispose();
     },
   );
 }

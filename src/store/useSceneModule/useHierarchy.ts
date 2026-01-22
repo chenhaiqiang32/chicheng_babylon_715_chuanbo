@@ -14,7 +14,6 @@ function buildHierarchy(node: Node): HierarchyNode {
   if (node.getClassName() === 'ArcRotateCamera' || node.getClassName() === 'UniversalCamera') {
     isActive = Editor.Instance.Scene.activeCamera.uuid === node.uuid;
   }
-
   return {
     name: node.name,
     type: node.getClassName(),

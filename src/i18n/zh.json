@@ -488,6 +488,14 @@
       "highCompress": "高压缩",
       "textureCompress": "纹理压缩",
       "offline": "离线支持"
+    },
+    "scriptEditor": {
+      "title": "脚本编辑器",
+      "save": "保存",
+      "cancel": "取消",
+      "saveSuccess": "保存成功",
+      "saveFailed": "保存失败",
+      "initFailed": "编辑器初始化失败"
     }
   }
 }
