@@ -55,7 +55,7 @@ import { createSSRRenderingPipeline } from './rendering/ssr';
 import { createMotionBlurPostProcess } from './rendering/motion-blur';
 import { registerKeyDown } from '@/utils/ShortcutKey';
 import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
-import { isAbstractMesh } from '@/tools/guards/nodes';
+import { isAbstractMesh, isDirectionalLight, isPointLight, isSpotLight } from '@/tools/guards/nodes';
 import { isVector3 } from '@/tools/guards/math';
 import { ParticleContainer } from './core/Extension/ParticleContainer';
 import { useEditor } from '@/store/useEditor';
@@ -269,6 +269,44 @@ export class Editor extends Dispatch<EditorEvent> {
         lightGizmo.light = light;
         lightGizmo.scaleRatio = 0;
         light.gizmo = lightGizmo;
+        console.log(Editor.Instance.shadow.getShadowGeneratorMap());
+
+        //TODO DefaultScene
+        // if (isDirectionalLight(light)) {
+        //   const sg = Editor.Instance.shadow.openShadow(light, "cascaded") as CascadedShadowGenerator;
+        //   sg.lambda = 1;
+        //   sg.bias = 0.0005;
+        //   sg.depthClamp = true;
+        //   sg.autoCalcDepthBounds = true;
+        //   sg.autoCalcDepthBoundsRefreshRate = 60;
+        //   sg.usePercentageCloserFiltering = true;
+        //   sg.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+        //   sg.transparencyShadow = true;
+        //   sg.enableSoftTransparentShadow = true;
+        //   sg.getShadowMap()?.renderList?.push(...sg.getLight().getScene().meshes);
+        //   sg.getLight().getScene().meshes.forEach((item) => {
+        //    console.log('castShadows:', item.castShadows); // true
+        //    console.log('receiveShadows:', item.receiveShadows); // true
+        //     Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
+        //   });
+        // }
+        //阴影只能场景加载完创建 
+        if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
+          {
+            const sg = Editor.Instance.shadow.getShadowGenerator(light);
+            sg.getLight().getScene().meshes.forEach((item) => {
+              if (item.castShadows) {
+                console.log(item.name);
+                
+                Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
+              }
+
+            });
+          }
+        }
+
+
+
 
 
         // const generator = new CascadedShadowGenerator(4096, light as DirectionalLight);
@@ -281,6 +319,7 @@ export class Editor extends Dispatch<EditorEvent> {
         // generator.enableSoftTransparentShadow = true;
         // generator.getShadowMap()?.renderList?.push(...generator.getLight().getScene().meshes);
         // console.log(generator.getClassName?.());
+
 
       });
       // scene.meshes.forEach((item) => {
@@ -431,6 +470,7 @@ export class Editor extends Dispatch<EditorEvent> {
   async createNewDefaultScene() {
     const scene = new Scene(this.engine);
     scene.useRightHandedSystem = false;
+
     const camera = new ArcRotateCamera('camera', 0, 0, 0, new Vector3(0, 0, 0), scene);
     camera.setPosition(new Vector3(30, 30, -5));
     camera.minZ = 0.01;
@@ -451,7 +491,7 @@ export class Editor extends Dispatch<EditorEvent> {
     this.configureAddedMesh(scene, ground);
 
     ground.name = "ground";
-
+    ground.receiveShadows = true;
     const groundMaterial = new PBRMaterial("groundMaterial", scene);
     groundMaterial.metallic = 0;
     groundMaterial.roughness = 1;
@@ -471,7 +511,8 @@ export class Editor extends Dispatch<EditorEvent> {
     this.configureAddedMesh(scene, box);
     box.name = "box";
     box.position.y = 5;
-
+    box.receiveShadows = true;
+    box.castShadows = true;
     const boxMaterial = new PBRMaterial("boxMaterial", scene);
     boxMaterial.directIntensity = 1;
     boxMaterial.emissiveIntensity = 1;
@@ -502,10 +543,33 @@ export class Editor extends Dispatch<EditorEvent> {
     light.direction = new Vector3(-1, -2, -1);
     light.intensity = 3.43;
     light.name = "sun";
-    const sg = new CascadedShadowGenerator(4096, light);
+    light.createDefaultShadowGenerator = true;
+    // const sg = Editor.Instance.shadow.openShadow(light, "cascaded") as CascadedShadowGenerator;
+    // sg.lambda = 1;
+    // sg.bias = 0.0005;
+    // sg.depthClamp = true;
+    // sg.autoCalcDepthBounds = true;
+    // sg.autoCalcDepthBoundsRefreshRate = 60;
+    // sg.getShadowMap()?.renderList?.push(box);
+    // sg.addShadowCaster(box);
+    // sg.usePercentageCloserFiltering = true;
+    // sg.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+    // sg.transparencyShadow = true;
+    // sg.enableSoftTransparentShadow = true;
+    // sg.getShadowMap()?.renderList?.push(...sg.getLight().getScene().meshes);
+    const sg = Editor.Instance.shadow.openShadow(light, "cascaded") as CascadedShadowGenerator;
     sg.lambda = 1;
-    sg.bias = 0.01;
-    sg.getShadowMap()?.renderList?.push(box);
+    sg.bias = 0.0005;
+    sg.depthClamp = true;
+    sg.autoCalcDepthBounds = true;
+    sg.autoCalcDepthBoundsRefreshRate = 60;
+    sg.usePercentageCloserFiltering = true;
+    sg.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+    sg.transparencyShadow = true;
+    sg.enableSoftTransparentShadow = true;
+    sg.getShadowMap()?.renderList?.push(...sg.getLight().getScene().meshes);
+    Editor.Instance.shadow.addMeshToShadowGenerator(ground, light);
+
     return scene;
   }
 
@@ -559,6 +623,7 @@ export class Editor extends Dispatch<EditorEvent> {
       lightGizmo.scaleRatio = 0;
       light.gizmo = lightGizmo;
     }
+    light.uuid = ID.generateUUID();
     return light;
   }
 

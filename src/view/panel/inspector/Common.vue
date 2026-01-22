@@ -12,6 +12,10 @@
             :label="$t('component.common.receiveShadows')" />
         <Switch v-if="objectType == 'Mesh'" :object="props.object" property="castShadows"
             :label="$t('component.common.castShadows')" @change="onCastShadowsChanged" />
+                    <!-- <Field :title="$t('component.common.castShadows')">
+            <el-switch style="margin-left: auto;" v-model="_castShadows"
+                @change="onCastShadowsChanged(_castShadows)" />
+        </Field> -->
     </SectionField>
 </template>
 <script setup lang='ts'>
@@ -22,13 +26,20 @@ import Switch from "@/component/base/Switch.vue";
 import Field from "@/component/common/Field.vue";
 import { Editor } from "@/3d/Editor";
 import { Mesh } from "@babylonjs/core";
+import { getObjectValue } from "@/tools/property";
+import { updateLightShadowMapRefreshRate, updatePointLightShadowMapRenderListPredicate } from "@/tools/light/shadows";
 const props = defineProps<{ object: any }>()
 const objectType = computed(() => {
     if (!props.object) return 'None';
     console.log(props.object.getClassName?.());
     return props.object.getClassName?.() || 'Unknown';
 });
-
+const _castShadows = ref(false)
+// const _castShadows = computed(() => {
+//     return Editor.Instance.Scene.lights.some((light) => {
+//         return light.getShadowGenerator()?.getShadowMap()?.renderList?.includes(props.object);
+//     });
+// })
 const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')
 
 function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
@@ -47,6 +58,7 @@ function onNameChanged(newName: string) {
 
 
 function onCastShadowsChanged(v: boolean) {
+
     if (v) {
         Editor.Instance.shadow.addMeshToShadowGenerator(props.object as Mesh);
     } else {
@@ -57,7 +69,16 @@ function onCastShadowsChanged(v: boolean) {
 
 watch(() => props.object, (newObject) => {
     if (!newObject) return;
+     if (props.object && Editor.Instance.Scene) {
+        _castShadows.value = Editor.Instance.Scene.lights.some((light) => {
+            return light.getShadowGenerator()?.getShadowMap()?.renderList?.includes(props.object);
+        });
+    }
 }, { immediate: true })
+onMounted(() => {
+ console.log( getObjectValue(props.object,"receiveShadows"));
+ 
+})
 </script>
 <style scoped lang='scss'>
 .common-list {

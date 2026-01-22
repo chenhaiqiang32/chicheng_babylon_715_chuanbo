@@ -43,6 +43,7 @@ declare module '@babylonjs/core' {
   }
   interface Light {
     gizmo: LightGizmo;
+    createDefaultShadowGenerator: Boolean;
   }
   interface TransformNode {
   }
@@ -53,5 +54,7 @@ declare module '@babylonjs/core' {
   interface GPUParticleSystem {
     isDefaultexture: boolean = true;
   }
-
+  interface AbstractMesh {
+    castShadows: boolean;
+  }
 }

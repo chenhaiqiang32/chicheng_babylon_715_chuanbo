@@ -53,6 +53,9 @@ export function updateAllLights(scene: Scene) {
 export function isCascadedShadowGenerator(object: any): object is CascadedShadowGenerator {
 	return object.getClassName?.() === "CascadedShadowGenerator";
 }
+export function isShadowGenerator(object: any): object is ShadowGenerator {
+	return object.getClassName?.() === "ShadowGenerator";
+}
 export function _createShadowGenerator(light: Light, generator1: IShadowGenerator, type: "none" | "classic" | "cascaded"): void {
 	const mapSize = generator1?.getShadowMap()?.getSize();
 	const renderList = generator1?.getShadowMap()?.renderList?.slice(0);
