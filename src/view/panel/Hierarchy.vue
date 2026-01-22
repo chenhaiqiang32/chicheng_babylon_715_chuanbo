@@ -48,7 +48,6 @@
                             </ElTree>
                         </ElScrollbar>
                     </div>
-
                 </div>
             </ElSplitterPanel>
         </ElSplitter>
@@ -137,6 +136,7 @@ async function addScene() {
     if (value) {
         const scene = await Editor.Instance.createNewScene(value);
         useScene().addScene(scene);
+        Editor.Instance.setCurrentScene(scene.uuid);
     }
 }
 

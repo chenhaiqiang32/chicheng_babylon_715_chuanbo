@@ -17,7 +17,7 @@ const app = createApp(App);
 app.use(i18n);
 app.use(createPinia());
 app.use(router);
-import './ai';
+// import './ai';
 app.mount('#app');
 
 registerKeyDown((event) => {

@@ -20,7 +20,7 @@ export function serializeNode(
     const reuslt: Partial<CC.ObjectNode> = {
       uuid: node.uuid,
       name: node.name,
-      visible: node.isVisible,
+      visible: node.active,
       children: [],
       isIgnore: node.isIgnore,
     };
@@ -85,7 +85,7 @@ export function deserializeNode(
     deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode, assets);
   }
   currentNode.inheritVisibility = true;
-  currentNode.isVisible = node.visible;
+  currentNode.active = node.visible;
   currentNode.isIgnore = node.isIgnore;
   if (node.metadata) {
     currentNode.metadata = node.metadata;

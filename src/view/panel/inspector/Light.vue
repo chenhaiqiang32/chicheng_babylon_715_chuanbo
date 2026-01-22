@@ -16,6 +16,8 @@
         <template v-else-if="lightClass === 'SpotLight'">
             <Number :label="$t('component.light.angle')" :object="object" property="angle" />
         </template>
+        <Switch :label="$t('component.light.shadow')" :object="object" property="shadow" @change="onShadowChanged" />
+
     </SectionField>
 </template>
 <script setup lang='ts'>
@@ -26,6 +28,7 @@ import Color from '@/component/base/Color.vue';
 import Vector from '@/component/base/Vector.vue';
 import { Light, DirectionalLight, PointLight, SpotLight, TransformNode, LightGizmo, Node } from '@babylonjs/core';
 import { Editor } from '@/3d/Editor';
+import Switch from '@/component/base/Switch.vue';
 
 const lightClass = ref<string>(null);
 
@@ -58,6 +61,15 @@ function onPositionChanged(e: { object: TransformNode }) {
 function onRotationChanged(e: { object: TransformNode }) {
     if (e.object === props.object.gizmo.attachedMesh) {
         rotationRef.value?.syncFromObject()
+    }
+}
+
+function onShadowChanged(v: boolean) {
+    if (v) {
+        Editor.Instance.shadow.openShadow(props.object as DirectionalLight | PointLight | SpotLight);
+    } else {
+        Editor.Instance.shadow.closeShadow(props.object as DirectionalLight | PointLight | SpotLight);
+
     }
 }
 

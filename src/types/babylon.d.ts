@@ -21,6 +21,7 @@ declare module '@babylonjs/core' {
   interface Node {
     uuid: string;
     isIgnore: boolean;
+    active: boolean
   }
   interface Geometry {
     uuid: string;

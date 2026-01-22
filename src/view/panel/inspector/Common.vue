@@ -5,10 +5,13 @@
         </Field>
         <StringField :object="props.object" property="name" :label="$t('component.common.name')"
             @change="onNameChanged" />
-        <Switch :object="props.object" property="isVisible" :label="$t('component.common.visible')"
-            @change="setVisible" />
-        <Switch v-if="props.object instanceof AbstractMesh" :object="props.object" property="checkCollisions"
+        <Switch :object="props.object" property="active" :label="$t('component.common.visible')" />
+        <Switch v-if="objectType == 'Mesh'" :object="props.object" property="checkCollisions"
             :label="$t('component.common.physics')" />
+        <Switch v-if="objectType == 'Mesh'" :object="props.object" property="receiveShadows"
+            :label="$t('component.common.receiveShadows')" />
+        <Switch v-if="objectType == 'Mesh'" :object="props.object" property="castShadows"
+            :label="$t('component.common.castShadows')" @change="onCastShadowsChanged" />
     </SectionField>
 </template>
 <script setup lang='ts'>
@@ -18,7 +21,7 @@ import StringField from '@/component/base/StringField.vue'
 import Switch from "@/component/base/Switch.vue";
 import Field from "@/component/common/Field.vue";
 import { Editor } from "@/3d/Editor";
-import { AbstractMesh, PhysicsImpostor } from "@babylonjs/core";
+import { Mesh } from "@babylonjs/core";
 const props = defineProps<{ object: any }>()
 //const objectType = ref<string>("");
 // 计算属性：获取物体类型信息
@@ -32,15 +35,24 @@ const propertyChanged = inject<(property: string, newValue: any, oldValue: any, 
 function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
     propertyChanged?.(property, newValue, oldValue, type);
 }
-function setVisible(visible: boolean) {
-    props.object.isVisible = visible;
-    Editor.Instance.switchNodeActive(props.object.uuid, props.object.isVisible);
-    changeProperty('isVisible', visible, !visible, 'boolean');
-}
+// function setVisible(visible: boolean) {
+//     props.object.isVisible = visible;
+//     Editor.Instance.switchNodeActive(props.object.uuid, props.object.isVisible);
+//     changeProperty('isVisible', visible, !visible, 'boolean');
+// }
 
 function onNameChanged(newName: string) {
     if (!props.object) return;
     Editor.Instance.dispatch('nameChanged', { newName, id: props.object.uuid })
+}
+
+
+function onCastShadowsChanged(v: boolean) {
+    if (v) {
+        Editor.Instance.shadow.addMeshToShadowGenerator(props.object as Mesh);
+    } else {
+        Editor.Instance.shadow.removeMeshFromShadowGenerator(props.object);
+    }
 }
 
 

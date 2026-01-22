@@ -35,6 +35,14 @@ import {
   RectAreaLight,
   HDRCubeTexture,
   CascadedShadowGenerator,
+  ShadowGenerator,
+  HavokPlugin,
+  MeshBuilder,
+  PhysicsAggregate,
+  PhysicsShapeType,
+  PhysicsShapeBox,
+  PhysicsBody,
+  PhysicsMotionType,
 } from '@babylonjs/core';
 
 import '@babylonjs/loaders/glTF';
@@ -53,6 +61,18 @@ import { registerKeyDown } from '@/utils/ShortcutKey';
 import { registerPropertyUndoRedo, registerUndoRedo } from '@/tools/undoredo';
 import { useEditor } from '@/store/useEditor';
 import { ControlMode } from '@/store/useSceneModule/useControl';
+import { Shadow } from './Shadow';
+
+import HavokPhysics from '@babylonjs/havok';
+
+Object.defineProperty(Node.prototype, 'active', {
+  get: function () {
+    return this._nodeDataStorage._isVisible;
+  },
+  set: function (v: boolean) {
+    this._nodeDataStorage._isVisible = v;
+  },
+});
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -84,6 +104,7 @@ export class Editor extends Dispatch<EditorEvent> {
   private downX = 0;
   private downY = 0;
   private isDown = false;
+  shadow: Shadow;
   static get Instance() {
     if (Editor.instance == null) {
       Editor.instance = new Editor();
@@ -117,6 +138,8 @@ export class Editor extends Dispatch<EditorEvent> {
   private enableMask: boolean = true;
 
   private weakMap = new Map<string, Node>();
+
+  private shadowGenerator: ShadowGenerator;
   get selectNodes() {
     return this._selectNodes;
   }
@@ -173,6 +196,7 @@ export class Editor extends Dispatch<EditorEvent> {
         limitDeviceRatio: 2,
       });
     }
+    this.shadow = new Shadow();
     registerKeyDown((event) => {
       const key = event.key.toLowerCase();
       switch (key) {
@@ -219,28 +243,22 @@ export class Editor extends Dispatch<EditorEvent> {
       await useScene().saveScene(this.scene);
       this.scene.dispose();
     }
+    // 清理旧的阴影生成器
+    if (this.shadowGenerator) {
+      this.shadowGenerator.dispose();
+      this.shadowGenerator = null;
+    }
+
     const scene = new Scene(this.engine);
-    let create = false;
-    useScene().getScene(
+    // 等待场景完全加载完成
+    await useScene().getScene(
       uuid,
       (percent) => {
         loading?.(percent);
-        if (percent == 1 && !create) {
-          create = true;
-          const generator = new CascadedShadowGenerator(4096, scene.lights[0] as DirectionalLight);
-          generator.bias = 0.00268;
-          generator.lambda = 1;
-          generator.depthClamp = true;
-          generator.autoCalcDepthBounds = true;
-          generator.autoCalcDepthBoundsRefreshRate = 60;
-          scene.meshes.forEach(m => {
-            m.receiveShadows = true;
-          })
-          generator.getShadowMap()?.renderList?.push(...scene.meshes);
-        }
       },
       scene,
     );
+
     if (scene) {
       this.initGizmos(scene);
       scene.activeCamera.attachControl();
@@ -254,9 +272,42 @@ export class Editor extends Dispatch<EditorEvent> {
       });
     }
     this.scene = scene;
-    useScene().setHierarchy(scene.rootNodes);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });
+    //开启物理引擎
+    // const havokInstance = await HavokPhysics({
+    //   locateFile: () => {
+    //     return '/lib/havok/HavokPhysics.wasm';
+    //   },
+    // });
+    // const havokPlugin = new HavokPlugin(true, havokInstance);
+    // scene.enablePhysics(undefined, havokPlugin);
+    // const box = MeshBuilder.CreateSphere('sphere');
+    // box.position.y = 10;
+    // const ground = MeshBuilder.CreateGround('ground', { width: 10, height: 10 }, scene);
+    // new PhysicsAggregate(
+    //   box,
+    //   PhysicsShapeType.MESH,
+    //   { mass: 50, friction: 0.5, restitution: 0.8 },
+    //   scene,
+    // );
+    // const groundShape = new PhysicsShapeBox(
+    //   new Vector3(0, 0, 0), // center
+    //   Quaternion.Identity(),
+    //   new Vector3(5, 0.1, 5), // extents (width/2, height/2, depth/2)
+    //   scene,
+    // );
+
+    // const groundBody = new PhysicsBody(
+    //   ground, // 绑 mesh
+    //   PhysicsMotionType.DYNAMIC, // ✅ 关键：手动控制
+    //   false,
+    //   scene,
+    // );
+    // groundBody.shape = groundShape;
+    // groundBody.setMassProperties({ mass: 0 }); // 模拟无限质量
+
+    useScene().setHierarchy(scene.rootNodes);
   }
 
   getRaycastPoint(x?: number, y?: number) {
@@ -326,7 +377,30 @@ export class Editor extends Dispatch<EditorEvent> {
     this.watcher.push(selectWatcher);
     this.watcher.push(controlModeWatcher);
     this.watcher.push(viewFlagsModeWatcher);
+
+    // 监听灯光位置和旋转变化，更新阴影
+    this.on('onPositionChanged', this.onLightTransformChanged);
+    this.on('onRotationChanged', this.onLightTransformChanged);
   }
+
+  private onLightTransformChanged = (e: { object: TransformNode }) => {
+    // 检查移动的是否是灯光的 gizmo
+    if (!this.shadowGenerator || !this.scene) {
+      return;
+    }
+
+    // 检查是否是第一个灯光（有阴影生成器的灯光）的 gizmo
+    const light = this.scene.lights[0];
+    if (light && light.gizmo && light.gizmo.attachedMesh === e.object) {
+      // ShadowGenerator 会自动跟随灯光更新，但我们可以强制刷新一次
+      // 确保阴影立即更新
+      const shadowMap = this.shadowGenerator.getShadowMap();
+      if (shadowMap) {
+        // 强制渲染一次阴影贴图
+        shadowMap.render();
+      }
+    }
+  };
 
   newResScene() {
     const scene = new Scene(this.engine);
@@ -426,19 +500,25 @@ export class Editor extends Dispatch<EditorEvent> {
 
     // 添加灯光 gizmo
 
-    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => { });
-    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => { });
-    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => { });
+    this.gizmoManager.boundingBoxDragBehavior.onDragStartObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onDragEndObservable.add(() => {});
+    this.gizmoManager.boundingBoxDragBehavior.onPositionChangedObservable.add(() => {});
 
     this.gizmoManager.rotationGizmoEnabled = true;
     this.gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = false;
-    const startRotation = new Quaternion();
+    const startRotation = new Vector3();
+    const startRotationQuaternion = new Quaternion();
     const startPosition = new Vector3();
     const startScaling = new Vector3();
     this.gizmoManager.gizmos.rotationGizmo.onDragStartObservable.add(() => {
       const node =
         this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode);
-      startRotation.copyFrom(node.rotationQuaternion);
+      if (node.rotationQuaternion) {
+        startRotationQuaternion.copyFrom(node.rotationQuaternion);
+      }
+      if (node.rotation) {
+        startRotation.copyFrom(node.rotation);
+      }
     });
 
     this.gizmoManager.gizmos.rotationGizmo.onDragObservable.add(() => {
@@ -448,22 +528,32 @@ export class Editor extends Dispatch<EditorEvent> {
       // 拖拽结束
       const node =
         this.gizmoManager.attachedMesh ?? (this.gizmoManager.attachedNode as TransformNode);
-      const oldRotation = startRotation.clone();
-      const newRotation = node.rotationQuaternion.clone();
-      registerUndoRedo({
-        undo: () => {
-          node.rotationQuaternion.copyFrom(oldRotation);
-        },
-        redo: () => {
-          node.rotationQuaternion.copyFrom(newRotation);
-        },
-        executeRedo: false,
-      });
-      this.dispatch('onRotationChanged', {
-        object: node,
-        newRotation: node.rotationQuaternion.asArray(),
-        oldRotation: startRotation.asArray(),
-      });
+
+      if (node.rotationQuaternion) {
+        const oldRotation = startRotationQuaternion.clone();
+        const newRotation = node.rotationQuaternion.clone();
+        registerUndoRedo({
+          undo: () => {
+            node.rotationQuaternion.copyFrom(oldRotation);
+          },
+          redo: () => {
+            node.rotationQuaternion.copyFrom(newRotation);
+          },
+          executeRedo: false,
+        });
+      } else {
+        const oldRotation = startRotation.clone();
+        const newRotation = node.rotation.clone();
+        registerUndoRedo({
+          undo: () => {
+            node.rotation.copyFrom(oldRotation);
+          },
+          redo: () => {
+            node.rotation.copyFrom(newRotation);
+          },
+          executeRedo: false,
+        });
+      }
     });
 
     this.gizmoManager.rotationGizmoEnabled = false;
