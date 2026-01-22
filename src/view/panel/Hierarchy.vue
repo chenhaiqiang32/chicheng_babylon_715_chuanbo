@@ -202,6 +202,7 @@ const handleNodeClick = (node: HierarchyNode) => {
     } else {
         treeRef.value?.setCurrentKey(null);
     }
+    // 判断是否为多选
     if(multiSelectBegin && isShiftHolding){
         multiSelectEnd = node;
         handleMultiSelect();
@@ -292,6 +293,46 @@ const handleNodeDrop = (
 ) => {
     if (!draggingNode || !dropNode) return;
 
+    // 多选拖拽
+    if(selectedList?.length > 0) {
+        const drop = Editor.Instance.getNodeById(dropNode.data.id);
+        // 找到 level 最小的，因为我们只想移动第一层节点
+        const level = Math.min(...selectedList.map(x => x.level));
+        const moveList = selectedList.filter((x) => x.level == level);
+        // todo: 顺序问题
+        for(var i=moveList.length - 1; i >=0; i--){
+            const node = Editor.Instance.getNodeById(moveList[i].data.id);
+            nodeCRUD().updateNodeHierarchy(node, drop, dropType);
+        }
+        registerUndoRedo({
+            undo: () => {
+                if(dragPrev) {
+                    for(var i=moveList.length - 1; i >=0; i--){
+                        const node = Editor.Instance.getNodeById(moveList[i].data.id);
+                        nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragPrev.data.id), "after");
+                    }
+                } else if(dragNext) {
+                    for(var i=moveList.length - 1; i >=0; i--){
+                        const node = Editor.Instance.getNodeById(moveList[i].data.id);
+                        nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragNext.data.id), "before");
+                    }
+                } else {
+                    for(var i=moveList.length - 1; i >=0; i--){
+                        const node = Editor.Instance.getNodeById(moveList[i].data.id);
+                        nodeCRUD().updateNodeHierarchy(node, Editor.Instance.getNodeById(dragParent.data.id), "inner");
+                    }
+                }
+            },
+            redo: () => {
+                for(var i=moveList.length - 1; i >=0; i--){
+                    const node = Editor.Instance.getNodeById(moveList[i].data.id);
+                    nodeCRUD().updateNodeHierarchy(node, drop, dropType);
+                }
+            }
+        })
+    }
+    // 单个拖拽
+    else {
     const node = Editor.Instance.getNodeById(draggingNode.data.id);
     const drop = Editor.Instance.getNodeById(dropNode.data.id);
     nodeCRUD().updateNodeHierarchy(node, drop, dropType, false);
@@ -309,6 +350,7 @@ const handleNodeDrop = (
             nodeCRUD().updateNodeHierarchy(node, drop, dropType);
         }
     })
+}
 }
 
 async function onKeydown(e: KeyboardEvent) {
@@ -361,6 +403,7 @@ async function onKeydown(e: KeyboardEvent) {
 async function onKeyup(e: KeyboardEvent) {
     isShiftHolding = e.shiftKey;
 }
+
 
 
 </script>
