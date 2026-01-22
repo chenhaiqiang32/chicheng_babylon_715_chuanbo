@@ -22,7 +22,6 @@ export function deserializeLight(node: CC.LightNode, scene: Scene, assetsManager
     const generator = node.isShadowGenerator
       ? ShadowGenerator.Parse(node.shadowGenerator, scene)
       : CascadedShadowGenerator.Parse(node.shadowGenerator, scene);
-    
     Editor.Instance.shadow.addShadowGeneratorMap(node.uuid, generator);
   }
   

@@ -297,7 +297,7 @@ export class Editor extends Dispatch<EditorEvent> {
             sg.getLight().getScene().meshes.forEach((item) => {
               if (item.castShadows) {
                 console.log(item.name);
-                
+
                 Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
               }
 
@@ -569,7 +569,7 @@ export class Editor extends Dispatch<EditorEvent> {
     sg.enableSoftTransparentShadow = true;
     sg.getShadowMap()?.renderList?.push(...sg.getLight().getScene().meshes);
     Editor.Instance.shadow.addMeshToShadowGenerator(ground, light);
-
+    scene.bgType = 1;
     return scene;
   }
 
