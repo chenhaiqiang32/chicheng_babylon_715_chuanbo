@@ -71,7 +71,7 @@ function onViewIconClick(flag: ViewFlagsMode) {
     top: 0;
     left: 0;
     width: 100%;
-    height: 40px;
+    height: 32px;
     padding: 0 12px;
     display: flex;
     align-items: center;

@@ -18,6 +18,7 @@ import { IFile } from './file/IFile';
 import { loadSkyboxWithExt } from '../core/utils/EnvSkybox';
 import { renderEnvTexture } from '@/tools/preview/materialPreviewGenerator';
 import { Axios } from 'axios';
+import { toWebP } from '@/utils/Image';
 
 const TEXTURE = 'texture';
 const GEOMETRY = 'geometry';
@@ -38,6 +39,7 @@ export class PublishAssets {
     publishScenes: Partial<CC.Scene>[],
     onProgress?: (v: number) => void,
     meshCompressLevel: number = 3,
+    convertToWebP: boolean = false,
   ) {
     await encoder.whenReadyAsync();
     const files: ZipFile[] = [];
@@ -117,11 +119,20 @@ export class PublishAssets {
       const element = this.texture[index];
       const buffer = await this.getBufferSystem.getTextureBuffer(element.sourceUUID);
       if (buffer) {
-        this.textureMap.set(element.sourceUUID, buffer);
+        if (convertToWebP) {
+          const webpBuffer = await toWebP(buffer);
+          const arrayBuffer = await webpBuffer.arrayBuffer();
+          this.textureMap.set(element.sourceUUID, new Uint8Array(arrayBuffer));
+        } else {
+          this.textureMap.set(element.sourceUUID, buffer);
+        }
       }
     }
     for (const item of publishScenes) {
       if (item.background.texture) {
+        if (this.textureMap.has(item.background.texture.sourceUUID)) {
+          continue;
+        }
         const buffer = await this.getBufferSystem.getTextureBuffer(
           item.background.texture.sourceUUID,
         );

@@ -1306,6 +1306,9 @@ onMounted(() => {
       })
 
       timeline.setTimeChanged((t: number) => {
+        if (!animator) {
+          return
+        }
         if (t == 0) {
           animator.reset()
         }

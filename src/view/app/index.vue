@@ -9,8 +9,9 @@
 import { App } from '@/3d/app';
 import { onMounted, ref } from 'vue';
 import { AppAssets } from '@/3d/assets/PublishLibrary';
-import { ArcRotateCamera, CascadedShadowGenerator, Color4, DirectionalLight, HDRCubeTexture, MeshBuilder, PBRMaterial, ShadowGenerator, Vector4 } from '@babylonjs/core';
+import { ArcRotateCamera, } from '@babylonjs/core';
 import Loading from '@/component/common/Loading.vue'
+
 
 
 
@@ -26,10 +27,10 @@ onMounted(async () => {
         loading.value = progress * 0.4;
     });
     App.Instance.setAssetsLibrary(assets);
-    App.Instance.setScene((progress) => {
+    const scene = await App.Instance.setScene((progress) => {
         loading.value = progress * 0.6 + 0.4;
     });
-
+    const camera = scene.activeCamera as ArcRotateCamera;
 });
 
 </script>

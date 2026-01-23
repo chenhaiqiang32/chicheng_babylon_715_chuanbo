@@ -89,6 +89,7 @@ export class App {
       await Timer.sleep(10);
       onProgress?.(index / (group.length - 1));
     }
+    return scene;
   }
 
   registerAction() {

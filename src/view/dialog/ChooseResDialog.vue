@@ -7,17 +7,22 @@
                         搜索
                     </template>
                 </ElInput>
-                <ElButton type="primary" @click="add">新增</ElButton>
+                <ElButton type="primary" @click="add" v-if="showAdd">新增</ElButton>
             </div>
-            <Grid :data="showData" :minWidth="100" :rowHeight="100" :gap="30" :dense="true">
-                <template #default="{ item }">
-                    <div class="grid-item" @click.stop="choose(item)" :class="{ 'selected': item == selectedItem }">
-                        <img v-if="item.url" :src="item.url" alt="" style="width: 100%; height: 100%;">
-                        <SVG name="material" v-else size="42px"> </SVG>
-                        <div class="grid-item-name">{{ item.name }}</div>
-                    </div>
-                </template>
-            </Grid>
+            <ElScrollbar style="height: 300px;">
+                <Grid :data="showData" :minWidth="100" :rowHeight="100" :gap="30" :dense="true">
+                    <template #default="{ item }">
+                        <div class="grid-item" :title="item.name" @click.stop="choose(item)"
+                            :class="{ 'selected': item == selectedItem }">
+                            <div class="preview">
+                                <img v-if="item.url" :src="item.url" alt="">
+                                <SVG name="material" v-else size="42px"> </SVG>
+                            </div>
+                            <div class="grid-item-name"> {{ item.name }}</div>
+                        </div>
+                    </template>
+                </Grid>
+            </ElScrollbar>
         </div>
         <template #footer>
             <div class="dialog-footer">
@@ -49,6 +54,7 @@ const searchText = ref('')
 const selectedItem = shallowRef<any>(null);
 const data = ref<any[]>([]);
 
+const showAdd = ref(props.type == 'texture')
 
 const showData = computed(() => {
     if (searchText.value) {
@@ -66,12 +72,12 @@ async function getResList() {
     if (props.type == 'material') {
         data.value = [...RuntimeLibrary.Instance.material]
         // 获取材质预览图
-        for(let index = 0; index < data.value.length; index++) {
+        for (let index = 0; index < data.value.length; index++) {
             const element = data.value[index];
             const mat = await RuntimeLibrary.Instance.getMaterial(element.uuid);
             element.url = await renderMaterail(mat, true);
         }
-    } else if(props.type == 'envTexture') {
+    } else if (props.type == 'envTexture') {
         // 环境贴图
         const array = [...RuntimeLibrary.Instance.envTexture].map(x => {
             return {
@@ -81,14 +87,14 @@ async function getResList() {
         })
         const set = new Set<string>();
         data.value = array.filter(x => {
-            if(set.has(x.sourceUUID))
+            if (set.has(x.sourceUUID))
                 return false;
             set.add(x.sourceUUID);
             return true;
         });
-        for(let index = 0; index < data.value.length; index++) {
+        for (let index = 0; index < data.value.length; index++) {
             const element = data.value[index];
-            if(!element.url) {
+            if (!element.url) {
                 const tex = await RuntimeLibrary.Instance.getEnvTexture(element.sourceUUID);
                 element.url = tex.prevUrl;
             }
@@ -140,9 +146,7 @@ function confirm() {
 
 async function add() {
     const fileList = await Utils.chooseFile('image/*', true);
-    console.log(fileList)
     const array = [...fileList].filter(x => (x.type == 'image/png' || x.type == 'image/jpeg' || x.type == 'image/webp') || x.name.endsWith('.hdr'))
-    console.log(array);
     for (let index = 0; index < array.length; index++) {
         const element = array[index];
         await RuntimeLibrary.Instance.importTexture(element)
@@ -169,8 +173,39 @@ async function add() {
     }
 
     .grid-item {
-        padding: 5px;
-        border: 2px solid transparent;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background-color: var(--bg-color-3);
+
+        .preview {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 5px;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+
+        .grid-item-name {
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            line-height: 24px;
+            height: 24px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            padding: 0 5px;
+            color: white;
+        }
     }
 
     .selected {

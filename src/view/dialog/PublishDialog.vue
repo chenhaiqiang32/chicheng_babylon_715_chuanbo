@@ -1,5 +1,5 @@
 <template>
-    <ElDialog :title="$t(`dialog.publish.title`)" v-model="model" @close="close" width="550">
+    <ElDialog :title="$t(`dialog.publish.title`)" v-model="model" @close="close" width="450">
         <div class="dialog-content">
             <Field :title="$t('dialog.publish.selectScene')">
                 <Grid :data="sceneInfoList" :minWidth="100" :rowHeight="20" :gap="10" :dense="true">
@@ -19,10 +19,10 @@
                     <el-radio-button :label="$t('dialog.publish.highCompress')" :value="2" />
                 </ElRadioGroup>
             </Field>
-            <!-- <Field :title="$t('dialog.publish.textureCompress')">
+            <Field :title="$t('dialog.publish.textureCompress')">
                 <ElSwitch v-model="textureCompress" active-value="true" inactive-value="false" />
             </Field>
-            <Field :title="$t('dialog.publish.offline')">
+            <!-- <Field :title="$t('dialog.publish.offline')">
                 <ElSwitch v-model="offline" active-value="true" inactive-value="false" />
             </Field> -->
             <Field title="">
@@ -48,7 +48,7 @@ import { ref } from 'vue';
 const model = ref(true);
 const { sceneInfoList } = storeToRefs(useScene())
 const meshCompress = ref(-1);
-const textureCompress = ref(false);
+const textureCompress = ref(true);
 const offline = ref(false);
 const { loading } = storeToRefs(useEditor());
 
@@ -73,9 +73,7 @@ async function onPublish() {
     const publish = new PublishAssets(RuntimeLibrary.Instance);
     const buffer = await publish.addScene(publishScenes, (v) => {
         loading.value = v;
-        console.log(v);
-
-    }, meshCompress.value);
+    }, meshCompress.value, textureCompress.value);
     //@ts-ignore
     Tools.Download(new Blob([buffer], { type: 'application/zip' }), 'publish.zip');
 }

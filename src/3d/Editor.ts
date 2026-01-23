@@ -64,6 +64,7 @@ import { ControlMode } from '@/store/useSceneModule/useControl';
 import { Shadow } from './Shadow';
 
 import HavokPhysics from '@babylonjs/havok';
+import { OutlinePass } from './rendering/OutlinePass';
 
 Object.defineProperty(Node.prototype, 'active', {
   get: function () {
@@ -135,9 +136,9 @@ export class Editor extends Dispatch<EditorEvent> {
 
   private enableGizmo: boolean = true;
 
-  private enableMask: boolean = true;
-
   private weakMap = new Map<string, Node>();
+
+  private outlinePass: OutlinePass;
 
   private shadowGenerator: ShadowGenerator;
   get selectNodes() {
@@ -175,7 +176,7 @@ export class Editor extends Dispatch<EditorEvent> {
     if (this._selectNodes.length > 0) {
       this._selectNodes.forEach((item) => {
         if (item instanceof Mesh) {
-          this.toggleMeshMask(item, this.enableMask);
+          this.toggleMeshMask(item, true);
         }
       });
     }
@@ -242,6 +243,11 @@ export class Editor extends Dispatch<EditorEvent> {
       Editor.Instance.dispatch('onSceneChangeBefore', { scene: this.scene });
       await useScene().saveScene(this.scene);
       this.scene.dispose();
+      // 清理旧的轮廓渲染器
+      if (this.outlinePass) {
+        this.outlinePass.dispose();
+        this.outlinePass = null;
+      }
     }
     // 清理旧的阴影生成器
     if (this.shadowGenerator) {
@@ -251,7 +257,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
     const scene = new Scene(this.engine);
     // 等待场景完全加载完成
-    await useScene().getScene(
+    useScene().getScene(
       uuid,
       (percent) => {
         loading?.(percent);
@@ -272,6 +278,7 @@ export class Editor extends Dispatch<EditorEvent> {
       });
     }
     this.scene = scene;
+    this.outlinePass = new OutlinePass(0.003, new Vector3(1, 64 / 255, 0), this.scene.activeCamera);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });
     //开启物理引擎
@@ -710,23 +717,14 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   setEnableMask(flag: boolean) {
-    this.enableMask = flag;
-
-    if (this._selectNodes == undefined) return;
-    this._selectNodes.forEach((item) => {
-      if (item instanceof Mesh) {
-        this.toggleMeshMask(item, this.enableMask);
-      }
-    });
+    this.outlinePass.enable(flag);
   }
 
   toggleMeshMask(mesh: Mesh, isOn: boolean) {
     if (isOn) {
-      mesh.overlayColor = new Color3(1, 0, 0);
-      mesh.overlayAlpha = 0.2;
-      mesh.renderOverlay = true;
+      this.outlinePass.addToRenderList(mesh);
     } else {
-      mesh.renderOverlay = false;
+      this.outlinePass.removeFromRenderList(mesh);
     }
   }
   onPointerDonw = (pointerInfo: PointerInfo) => {

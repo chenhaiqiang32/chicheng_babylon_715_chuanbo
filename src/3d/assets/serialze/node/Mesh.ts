@@ -53,7 +53,6 @@ export function deserializeMeshNode(
   if (data.geometry) {
     const getMesh = async () => {
       const g = await assets.getGeometry(data.geometry);
-      console.log(g);
       g.applyToMesh(mesh);
       mesh.geometry.uuid = data.geometry;
     };

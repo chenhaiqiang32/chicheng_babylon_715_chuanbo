@@ -446,17 +446,16 @@ export class RuntimeLibrary
         for (const key in data) {
           if (key.endsWith('_MAP')) {
             const uuid = data[key];
-            this.getTexture(uuid).then((tex) => {
-              if (!key.includes('.')) {
-                //@ts-ignore
-                mat[key.replace('_MAP', '')] = tex;
-              } else {
-                let result = key.replace('_MAP', '');
-                const keyArray = result.split('.');
-                //@ts-ignore
-                mat[keyArray[0]][keyArray[1]] = tex;
-              }
-            });
+            const tex = await this.getTexture(uuid);
+            if (!key.includes('.')) {
+              //@ts-ignore
+              mat[key.replace('_MAP', '')] = tex;
+            } else {
+              let result = key.replace('_MAP', '');
+              const keyArray = result.split('.');
+              //@ts-ignore
+              mat[keyArray[0]][keyArray[1]] = tex;
+            }
           }
         }
 
