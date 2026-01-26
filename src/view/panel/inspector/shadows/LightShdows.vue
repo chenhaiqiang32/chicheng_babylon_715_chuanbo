@@ -215,13 +215,15 @@ import {
   DirectionalLight,
   IShadowGenerator,
   IShadowLight,
+  PointLight,
   RenderTargetTexture,
   ShadowGenerator,
+  SpotLight,
 } from '@babylonjs/core';
 
 import { waitNextAnimationFrame } from '@/tools/tools';
 import { isDirectionalLight, isPointLight, isSpotLight } from '@/tools/guards/nodes';
-import { isCascadedShadowGenerator, isShadowGenerator } from '@/tools/light/shadows';
+import { isCascadedShadowGenerator, isShadowGenerator, updateAllLights } from '@/tools/light/shadows';
 import {
   updateLightShadowMapRefreshRate,
   updatePointLightShadowMapRenderListPredicate,
@@ -279,17 +281,18 @@ const softShadowItems = computed(() => {
 });
 
 const refreshShadowGenerator = () => {
- // const gen = props.light.getShadowGenerator();
  if (isDirectionalLight(props.light) || isPointLight(props.light) || isSpotLight(props.light)) {
+    console.log(props.light.uuid);
+    
  const gen = Editor.Instance.shadow.getShadowGenerator(props.light);
- console.log(props.light);
- 
   generatorType.value = !gen ? 'none' : isCascadedShadowGenerator(gen) ? 'cascaded' : 'classic';
   softShadowType.value = getSoftShadowType(gen);
   generatorSize.value = gen?.getShadowMap()?.getSize().width ?? 1024;
   generator.value = gen;
-  console.log(generator);
   
+  if (gen?.getShadowMap()) {
+    shadowMapRefreshRate.value = gen.getShadowMap().refreshRate;
+  }
  }
 };
 
@@ -307,7 +310,7 @@ const getSoftShadowType = (gen: IShadowGenerator | null): SoftShadowType => {
 
 const createShadowGenerator = (type: 'none' | 'classic' | 'cascaded') => {
   const mapSize = generator.value?.getShadowMap()?.getSize();
-  const renderList = generator.value?.getShadowMap()?.renderList?.slice(0);
+  const renderList = generator.value?.getShadowMap()?.renderList?.slice(0).filter((item) => item.castShadows);
   generator.value?.dispose();
     
 
@@ -320,17 +323,15 @@ const createShadowGenerator = (type: 'none' | 'classic' | 'cascaded') => {
     if (!isDirectionalLight(props.light)) {
       type = 'classic';
     }
-
-    const gen =  Editor.Instance.shadow.openShadow(props.light, type, mapSize);
-    console.log(gen);
     
-    //const gen = Editor.Instance.shadow.getShadowGenerator(props.light);
-
+    const gen =  Editor.Instance.shadow.openShadow(props.light, type, mapSize);    
+    //console.log(gen);
     if (isCascadedShadowGenerator(gen)) {
       gen.lambda = 1;
       gen.depthClamp = true;
       gen.autoCalcDepthBounds = true;
       gen.autoCalcDepthBoundsRefreshRate = 60;
+
     }
 
     if (!isPointLight(props.light)) {
@@ -341,19 +342,30 @@ const createShadowGenerator = (type: 'none' | 'classic' | 'cascaded') => {
     gen.transparencyShadow = true;
     gen.enableSoftTransparentShadow = true;
 
+
     if (renderList) {
       gen.getShadowMap()?.renderList?.push(...renderList);
     } else {
-      gen.getShadowMap()?.renderList?.push(...gen.getLight().getScene().meshes);
+      gen.getShadowMap()?.renderList?.push(...gen.getLight().getScene().meshes.filter((item) => item.castShadows));
+    }
+     
+ if (isDirectionalLight(props.light) || isPointLight(props.light) || isSpotLight(props.light)) {
+      gen.getLight().getScene().meshes.forEach((item) => {
+        if (item.castShadows) {
+           // console.log(item);
+          Editor.Instance.shadow.addMeshToShadowGenerator(item, props.light as DirectionalLight | PointLight | SpotLight);
+        }
+      });
     }
 
 }
+//Editor.Instance.Scene
+
 refreshShadowGenerator();
 };
 
 const resizeShadowGenerator = (size: number) => {
     console.log(generator);
-    
   const shadowMap = generator.value?.getShadowMap();
   if (shadowMap) {
     const refreshRate = shadowMap.refreshRate;
@@ -426,7 +438,19 @@ function getPowerOfTwoSizesUntil(limit: number = 4096, from?: number): number[] 
 
   return result;
 }
+// ...
+
 onMounted(() => {
   refreshShadowGenerator();
+});
+
+// 添加监听
+watch(() => props.light, (newLight, oldLight) => {
+  if (newLight) {
+    refreshShadowGenerator();
+  }
+}, { 
+  immediate: true, 
+  deep: true 
 });
 </script>

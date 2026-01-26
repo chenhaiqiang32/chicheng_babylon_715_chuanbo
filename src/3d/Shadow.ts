@@ -15,7 +15,6 @@ export class Shadow {
       : new CascadedShadowGenerator(mapSize?.width ?? 1024, light as DirectionalLight, true);
       //  shadowGenerator.useExponentialShadowMap = true;
         const id = light.uuid;
-
         this.shadowGeneratorMap.set(id, shadowGenerator);
         console.log(id);
         
