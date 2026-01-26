@@ -147,6 +147,18 @@ export function getHierarchyContextMenuCommands(parentNode?: Node | null): Conte
             addParticleSystem('explosion');
           },
         },
+        {
+          name: '添加星云',
+          callback: () => {
+            addParticleSystem('nebula');
+          },
+        },
+        {
+          name: '添加魔法粒子',
+          callback: () => {
+            addParticleSystem('magic');
+          },
+        }
       ],
     },
     // 对节点进行操作

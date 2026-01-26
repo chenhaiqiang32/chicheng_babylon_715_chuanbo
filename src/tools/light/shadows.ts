@@ -1,6 +1,6 @@
-import { Light, RenderTargetTexture, Scene, Vector3 } from "@babylonjs/core";
+import { CascadedShadowGenerator, DirectionalLight, IShadowGenerator, Light, RenderTargetTexture, Scene, ShadowGenerator, ShadowLight, Vector3 } from "@babylonjs/core";
 
-import { isPointLight, isSpotLight } from "@/tools/guards/nodes";
+import { isDirectionalLight, isPointLight, isSpotLight } from "@/tools/guards/nodes";
 
 /**
  * Updates the shadow map render list predicate of the given point light.
@@ -50,3 +50,62 @@ export function updateAllLights(scene: Scene) {
 		updatePointLightShadowMapRenderListPredicate(light);
 	});
 }
+export function isCascadedShadowGenerator(object: any): object is CascadedShadowGenerator {
+	return object.getClassName?.() === "CascadedShadowGenerator";
+}
+export function isShadowGenerator(object: any): object is ShadowGenerator {
+	return object.getClassName?.() === "ShadowGenerator";
+}
+export function _createShadowGenerator(light: Light, generator1: IShadowGenerator, type: "none" | "classic" | "cascaded"): void {
+	const mapSize = generator1?.getShadowMap()?.getSize();
+	const renderList = generator1?.getShadowMap()?.renderList?.slice(0);
+
+	generator1?.dispose();
+
+	if (type === "none") {
+		//return this._refreshShadowGenerator();
+	}
+
+	if (!isDirectionalLight(light)) {
+		type = "classic";
+	}
+
+	const generator =
+		type === "classic"
+			? new ShadowGenerator(mapSize?.width ?? 1024, light as ShadowLight, true)
+			: new CascadedShadowGenerator(mapSize?.width ?? 1024, light as DirectionalLight, true);
+
+	if (isCascadedShadowGenerator(generator)) {
+		generator.lambda = 1;
+		generator.depthClamp = true;
+		generator.autoCalcDepthBounds = true;
+		generator.autoCalcDepthBoundsRefreshRate = 60;
+	}
+
+	if (!isPointLight(light)) {
+		generator.usePercentageCloserFiltering = true;
+		generator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+	}
+
+	generator.transparencyShadow = true;
+	generator.enableSoftTransparentShadow = true;
+
+	if (renderList) {
+		generator.getShadowMap()?.renderList?.push(...renderList);
+	} else {
+		generator.getShadowMap()?.renderList?.push(...generator.getLight().getScene().meshes);
+	}
+	//light.setShadowGenerator(generator);
+	//_refreshShadowGenerator();
+}
+function _refreshShadowGenerator(generator: IShadowGenerator) {
+	// const generator = this.props.light.getShadowGenerator();
+
+	// this._generatorType = !generator ? "none" : isCascadedShadowGenerator(generator) ? "cascaded" : "classic";
+
+	// this._softShadowType = this._getSoftShadowType(generator);
+	// this._generatorSize = generator?.getShadowMap()?.getSize().width ?? 1024;
+
+	// this.setState({ generator });
+}
+

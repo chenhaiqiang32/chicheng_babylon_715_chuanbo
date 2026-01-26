@@ -30,6 +30,13 @@ export namespace CC {
     scale: number[];
     particleSet: any;
   }
+  export interface ParticleContainer extends ObjectNode {
+    type: 'particle';
+    position: number[];
+    rotation: number[];
+    scale: number[];
+    particleSet: any;
+  }
 
   export interface MeshNode extends ObjectNode {
     type: 'mesh';
@@ -37,10 +44,14 @@ export namespace CC {
     material: string;
     sideOrientation: number;
     checkCollisions: boolean;
+    receiveShadows: boolean;
+    castShadows: boolean;
   }
   export interface LightNode extends ObjectNode {
     type: 'light';
     data: any;
+    shadowGenerator: any;
+    isShadowGenerator: boolean;
   }
 
   export interface Model extends BaseRes {

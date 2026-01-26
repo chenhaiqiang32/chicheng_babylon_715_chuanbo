@@ -211,6 +211,7 @@ import AlphaModeField from "@/component/base/AlphaModeField.vue"
 import { useDialog } from "@/view/dialog"
 import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary"
 import { PBRMaterial } from "@babylonjs/core"
+import { Editor } from "@/3d/Editor"
 
 const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
 const force = () => { }

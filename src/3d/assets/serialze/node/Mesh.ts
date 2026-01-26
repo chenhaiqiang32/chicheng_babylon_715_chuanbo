@@ -16,7 +16,8 @@ export function serializeMeshNode(
   meshData.checkCollisions = mesh.checkCollisions;
   meshData.material = mesh.material?.uuid || '';
   meshData.sideOrientation = mesh.sideOrientation;
-
+  meshData.receiveShadows = mesh.receiveShadows;
+  meshData.castShadows = mesh.castShadows;
   if (mesh.geometry) {
     const getGeometry = async () => {
       await assetsManager.addGeometry(mesh.geometry);
@@ -50,6 +51,8 @@ export function deserializeMeshNode(
   const mesh = new Mesh(data.name, scene, {});
   mesh.checkCollisions = data.checkCollisions;
   mesh.sideOrientation = data.sideOrientation;
+  mesh.receiveShadows = data.receiveShadows;
+  mesh.castShadows = data.castShadows;
   if (data.geometry) {
     const getMesh = async () => {
       const g = await assets.getGeometry(data.geometry);

@@ -1,5 +1,6 @@
 <template>
-  <component v-if="object?.material" :key="refreshKey" :is="component" :mesh="object" :material="object.material" @matChanged="handleMatChanged" />
+  <component v-if="object?.material" :key="refreshKey" :is="component" :mesh="object" :material="object.material"
+    @matChanged="handleMatChanged" />
 </template>
 
 <script setup lang="ts">
@@ -17,12 +18,14 @@ import TriPlanarMaterial from "./TriPlanarMaterial.vue"
 import CellMaterial from "./CellMaterial.vue"
 import FireMaterial from "./FireMaterial.vue"
 import GradientMaterial from "./GradientMaterial.vue"
+import { Material } from "@babylonjs/core"
 
 const props = defineProps<{ object?: any; }>()
 // 强制渲染
 const refreshKey = ref(0);
 const mapping: Record<string, any> = {
   PBRMaterial: PBRMaterial,
+
   StandardMaterial: StandardMaterial,
   NodeMaterial: NodeMaterial,
   MultiMaterial: MultiMaterial,

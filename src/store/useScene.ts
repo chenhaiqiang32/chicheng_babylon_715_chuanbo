@@ -23,6 +23,7 @@ export const useScene = defineStore('scene', () => {
 
   const currentCopy = ref<CC.ObjectNode | null>(null);
 
+  const currentSelectResNode = ref<string>();
   function setSceneList(scenes: CC.Scene[]) {
     sceneInfoList.value = scenes;
   }
@@ -42,6 +43,9 @@ export const useScene = defineStore('scene', () => {
 
   function setCurrentSelect(objectIds?: string[]) {
     currentSelected.value = objectIds ?? [];
+  }
+  function setCurrentSelectResNode(uuid: string) {
+    currentSelectResNode.value = uuid;
   }
 
   async function addScene(scene: Scene) {
@@ -102,6 +106,8 @@ export const useScene = defineStore('scene', () => {
     currentSelected,
     currentCopy,
     setCurrentSelect,
+    currentSelectResNode,
+    setCurrentSelectResNode
   };
 });
 export { ViewFlagsMode };

@@ -6,6 +6,8 @@ import { deserializeTransformNode, serializeTransformNode } from './Transform';
 import { deserializeLight, serializeLight } from './Light';
 import { ICollectAssets, ILoaderAssets } from '../../AssetsManager';
 import { ID } from '@/utils/id';
+import { ParticleContainer } from '@/3d/core/Extension/ParticleContainer';
+import { deserializeParticleNode, serializeParticleNode } from './ParticleContainer';
 
 export function serializeNode(
   node: TransformNode,
@@ -35,6 +37,9 @@ export function serializeNode(
     }
     if (node instanceof TransformNode) {
       serializeTransformNode(node, reuslt as CC.TransformNode, assets);
+    }
+    if (node instanceof ParticleContainer) {
+       serializeParticleNode(node, reuslt as CC.ParticleContainer, assets,padding);
     }
     if (node.metadata) {
       reuslt.metadata = node.metadata;
@@ -70,7 +75,11 @@ export function deserializeNode(
     currentNode = deserializeCamera(node as CC.CameraNode, scene, assets);
   } else if (node.type === 'light') {
     currentNode = deserializeLight(node as CC.LightNode, scene, assets);
-  } else {
+  } else if (node.type === 'particle') {
+
+    currentNode = new ParticleContainer(node.name, scene);
+  }
+  else {
     currentNode = new TransformNode(node.name, scene);
   }
   if (!clone) {
@@ -83,6 +92,9 @@ export function deserializeNode(
   }
   if (currentNode instanceof TransformNode) {
     deserializeTransformNode(node as CC.TransformNode, currentNode as TransformNode, assets);
+  }
+  if (currentNode instanceof ParticleContainer) {
+    deserializeParticleNode(node as CC.ParticleContainer, currentNode as ParticleContainer, assets);
   }
   currentNode.inheritVisibility = true;
   currentNode.active = node.visible;

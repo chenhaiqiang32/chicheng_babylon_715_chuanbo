@@ -16,7 +16,8 @@
                 <Grid :data="materialList" :minWidth="minWidth" :row-height="rowHeight" style="padding: 10px;">
                     <template #default="{ item, index }">
                         <div class="grid-item" :title="item.name" draggable="true"
-                            @dragstart="e => handleDragStart(e, item)">
+                            :class="{ selected: selectResItem === item }" @dragstart="e => handleDragStart(e, item)"
+                            @click="handleMaterialClick(item)">
                             <img v-if="item.previewUrl" :src="item.previewUrl" style="width: 42px; height: 42px;" />
                             <span class="itme-name">{{ item.name }}</span>
                         </div>
@@ -85,7 +86,18 @@ const envTextureList = ref<any[]>([]);
 const scripts = ref<CC.ScriptData[]>([]);
 
 
-
+// 添加选中状态跟踪
+const selectResItem = ref<any>(null)
+// 添加点击处理函数
+function handleMaterialClick(item: any) {
+    if (selectResItem.value === item) {
+        selectResItem.value = null
+        //useScene().setCurrentSelectResNode(null)
+    } else {
+        selectResItem.value = item
+      //  useScene().setCurrentSelectResNode(item.uuid)
+    }
+}
 function handleDragStart(ev: DragEvent, data: any) {
     ev.dataTransfer?.setData('assets', JSON.stringify(data))
 }
@@ -285,6 +297,10 @@ onUnmounted(() => {
         border-radius: var(--border-radius);
 
         &:hover {
+            background-color: var(--bg-color-3);
+        }
+
+        &.selected {
             background-color: var(--bg-color-3);
         }
 

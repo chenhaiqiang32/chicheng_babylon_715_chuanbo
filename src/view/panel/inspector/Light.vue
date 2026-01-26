@@ -16,8 +16,8 @@
         <template v-else-if="lightClass === 'SpotLight'">
             <Number :label="$t('component.light.angle')" :object="object" property="angle" />
         </template>
-        <Switch :label="$t('component.light.shadow')" :object="object" property="shadow" @change="onShadowChanged" />
-
+        <!-- <Switch :label="$t('component.light.shadow')" :object="object" property="shadow" @change="onShadowChanged" /> -->
+<LightShdows :light="object as IShadowLight" />
     </SectionField>
 </template>
 <script setup lang='ts'>
@@ -26,9 +26,10 @@ import SectionField from '@/component/common/SectionField.vue'
 import Number from '@/component/base/Number.vue';
 import Color from '@/component/base/Color.vue';
 import Vector from '@/component/base/Vector.vue';
-import { Light, DirectionalLight, PointLight, SpotLight, TransformNode, LightGizmo, Node } from '@babylonjs/core';
+import { Light, DirectionalLight, PointLight, SpotLight, TransformNode, LightGizmo, Node, IShadowLight } from '@babylonjs/core';
 import { Editor } from '@/3d/Editor';
 import Switch from '@/component/base/Switch.vue';
+import LightShdows from './shadows/LightShdows.vue';
 
 const lightClass = ref<string>(null);
 
@@ -56,7 +57,7 @@ function onPositionChanged(e: { object: TransformNode }) {
     if (e.object === props.object.gizmo.attachedMesh) {
         positionRef.value?.syncFromObject();
     }
-}
+} 
 
 function onRotationChanged(e: { object: TransformNode }) {
     if (e.object === props.object.gizmo.attachedMesh) {
@@ -66,10 +67,9 @@ function onRotationChanged(e: { object: TransformNode }) {
 
 function onShadowChanged(v: boolean) {
     if (v) {
-        Editor.Instance.shadow.openShadow(props.object as DirectionalLight | PointLight | SpotLight);
+      //  Editor.Instance.shadow.openShadow(props.object as DirectionalLight | PointLight | SpotLight);
     } else {
-        Editor.Instance.shadow.closeShadow(props.object as DirectionalLight | PointLight | SpotLight);
-
+       // Editor.Instance.shadow.closeShadow(props.object as DirectionalLight | PointLight | SpotLight);
     }
 }
 

@@ -1,12 +1,12 @@
 <template>
     <div class="ParticleSystems">
         <SectionField :title="$t('component.particleSystem.particleSystems')">
-            <div class="ActionsFlex" v-if="props.object.particleSystem.systems.length > 1">
+            <div class="ActionsFlex" v-if="props.object.particleSystems.systems.length > 1">
                 <ElButton title="Start/Stop" :type="buttonType" :style="{ width: '50%' }" @click="handleStartOrStop"
                     class="handleStartOrStopClass">
                     <span> {{ buttonText }}</span>
                 </ElButton>
-                <ElButton title="Reset" type="primary" :style="{ width: '50%' }" @click="() => reset()"
+                <ElButton title="Reset" type="info" :style="{ width: '50%' }" @click="() => reset()"
                     class="handleResetClass">
                     <span>Reset</span>
                 </ElButton>
@@ -21,31 +21,34 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { ParticleSystem, TransformNode, IParticleSystem } from '@babylonjs/core';
 import ParticleSystemComp from './ParticleSystem.vue';
 import SectionField from '@/component/common/SectionField.vue';
+import { ParticleContainer } from '@/3d/core/Extension/ParticleContainer';
 
-const props = defineProps<{ object: TransformNode }>();
+const props = defineProps<{ object: ParticleContainer }>();
 
 const systems = ref<IParticleSystem[]>();
 const started = ref(false);
 const buttonText = computed(() => started.value ? "Stop" : "Start");
-const buttonType = computed(() => started.value ? "primary" : "info");
+const buttonType = computed(() => started.value ? "info" : "info");
 const refreshSystems = () => {
-    systems.value = props.object?.particleSystem.systems;
+    systems.value = props.object?.particleSystems.systems;
+    started.value = props.object.particleSystems.systems.every(sys => sys.isStarted());
+
 };
 
 const handleStartOrStop = () => {
     if (started.value) {
-        props.object.particleSystem.systems.forEach(sys => sys.stop());
+        props.object.particleSystems.systems.forEach(sys => sys.stop());
     } else {
-        props.object.particleSystem.systems.forEach(sys => sys.start());
+        props.object.particleSystems.systems.forEach(sys => sys.start());
     }
     started.value = !started.value;
 };
 const reset = () => {
-    props.object.particleSystem.systems.forEach(sys => sys.reset());
+    props.object.particleSystems.systems.forEach(sys => sys.reset());
 };
 
 onMounted(() => {
-    console.log(props.object);
+    //   console.log(props.object);
     refreshSystems();
 });
 

@@ -25,8 +25,9 @@
                 @change="force" :min="0" :max="5" />
         </SectionField>
         <SectionField :title="$t('component.sceneSetting.fog')">
-            <Switch :label="$t('component.sceneSetting.enabled')" :object="scene" property="fogEnabled"
-                @change="force" />
+            <template #right>
+                <Switch :object="scene" property="fogEnabled" @change="force" />
+            </template>
             <template v-if="scene.fogEnabled">
                 <Field :title="$t('component.sceneSetting.fogColor')">
                     <el-select v-model="fogMode" @change="onFogModeChange" style="margin-left: auto; width: 100px;">
@@ -50,15 +51,17 @@
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.renderingPipeline')">
-            <Switch :label="$t('component.sceneSetting.enabled')" :object="pipelineConfig" property="enabled"
+            <Switch label="FXAA Enabled" :object="renderingPipeline" property="fxaaEnabled" />
+            <!-- <Switch :label="$t('component.sceneSetting.enabled')" :object="pipelineConfig" property="enabled"
                 @change="toggleDefaultPipeline" />
             <template v-if="renderingPipeline">
                 <Switch label="FXAA Enabled" :object="renderingPipeline" property="fxaaEnabled" />
-            </template>
+            </template> -->
             <template v-if="renderingPipeline">
                 <SectionField :title="$t('component.sceneSetting.imageProcessing')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="imageProcessingEnabled" />
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="imageProcessingEnabled" />
+                    </template>
                     <template v-if="renderingPipeline.imageProcessingEnabled">
                         <Number :label="$t('component.sceneSetting.exposure')"
                             :object="renderingPipeline.imageProcessing" property="exposure" />
@@ -110,6 +113,7 @@
                     v-if="renderingPipeline.imageProcessingEnabled">
                     <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline.imageProcessing"
                         property="colorCurvesEnabled" @change="force" />
+
                     <div v-if="renderingPipeline.imageProcessing.colorCurvesEnabled" style="margin-left: 20px;">
                         <div class="colorCurvesClild">{{ $t('component.sceneSetting.global') }}
                             <Number :label="$t('component.sceneSetting.hue')"
@@ -178,8 +182,10 @@
                 </SectionField>
 
                 <SectionField :title="$t('component.sceneSetting.bloom')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="bloomEnabled" @change="force" />
+
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="bloomEnabled" @change="force" />
+                    </template>
                     <template v-if="renderingPipeline.bloomEnabled">
                         <Number :label="$t('component.sceneSetting.threshold')" :object="renderingPipeline"
                             property="bloomThreshold" />
@@ -193,8 +199,10 @@
                 </SectionField>
 
                 <SectionField :title="$t('component.sceneSetting.sharpen')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="sharpenEnabled" @change="force" />
+
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="sharpenEnabled" @change="force" />
+                    </template>
                     <template v-if="renderingPipeline.sharpenEnabled">
                         <Number :label="$t('component.sceneSetting.edgeAmount')" :object="renderingPipeline.sharpen"
                             property="edgeAmount" />
@@ -204,8 +212,10 @@
                 </SectionField>
 
                 <SectionField :title="$t('component.sceneSetting.grain')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="grainEnabled" @change="force" />
+
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="grainEnabled" @change="force" />
+                    </template>
                     <template v-if="renderingPipeline.grainEnabled">
                         <Number :label="$t('component.sceneSetting.intensity')" :object="renderingPipeline.grain"
                             property="intensity" />
@@ -215,8 +225,10 @@
                 </SectionField>
 
                 <SectionField :title="$t('component.sceneSetting.depthOfField')">
-                    <Switch :label="$t('component.sceneSetting.enabled')" :object="renderingPipeline"
-                        property="depthOfFieldEnabled" @change="force" />
+
+                    <template #right>
+                        <Switch :object="renderingPipeline" property="depthOfFieldEnabled" @change="force" />
+                    </template>
                     <template v-if="renderingPipeline.depthOfFieldEnabled">
                         <div class="flex items-center gap-2">
                             <div class="w-40">{{ $t('component.sceneSetting.blurLevel') }}</div>
@@ -246,8 +258,11 @@
 
 
         <SectionField :title="$t('component.sceneSetting.ssao2')">
-            <Switch :label="$t('component.sceneSetting.enabled')" :object="ssaoConfig" property="enabled"
-                :noUndoRedo="true" @change="toggleSSAO" />
+            <template #right>
+                <ElSwitch :style="{ height: '20px' }" :label="$t('component.sceneSetting.enabled')" v-model="ssaoConfig"
+                    @change="toggleSSAO" />
+            </template>
+
             <template v-if="ssao2">
                 <Number :label="$t('component.sceneSetting.radius')" :object="ssao2" property="radius" />
                 <Number :label="$t('component.sceneSetting.totalStrength')" :object="ssao2" property="totalStrength" />
@@ -271,8 +286,13 @@
         </SectionField> -->
 
         <SectionField :title="$t('component.sceneSetting.reflections')">
-            <Switch :label="$t('component.sceneSetting.enabled')" :object="ssrConfig" property="enabled"
-                :noUndoRedo="true" @change="toggleSSR" />
+            <!-- <Switch :label="$t('component.sceneSetting.enabled')" :object="ssrConfig" property="enabled"
+                :noUndoRedo="true" @change="toggleSSR" /> -->
+            <template #right>
+                <ElSwitch :style="{ height: '20px' }" :label="$t('component.sceneSetting.enabled')" v-model="ssrConfig"
+                    @change="toggleSSR" />
+            </template>
+
             <template v-if="ssr">
                 <Number :label="$t('component.sceneSetting.step')" :object="ssr" property="step" :min="0" />
                 <Number :label="$t('component.sceneSetting.thickness')" :object="ssr" property="thickness" />
@@ -304,7 +324,8 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, shallowRef } from "vue";
+
+import { reactive, ref, shallowRef, watch } from "vue";
 import { Scene, DepthOfFieldEffectBlurLevel, TonemappingOperator, DefaultRenderingPipeline, SSAO2RenderingPipeline, SSRRenderingPipeline, Texture as BJS_Texture, Layer, Color4 } from "@babylonjs/core";
 import { registerUndoRedo } from "@/tools/undoredo";
 import { parseDefaultRenderingPipeline, serializeDefaultRenderingPipeline } from "@/3d/rendering/default-pipeline";
@@ -344,11 +365,12 @@ const scene = shallowRef<Scene>(Editor.Instance.Scene);
 const renderingPipeline = ref<DefaultRenderingPipeline>();
 const pipelineConfig = ref({ enabled: false });
 const ssao2 = ref<SSAO2RenderingPipeline>();
-const ssaoConfig = ref({ enabled: false });
+const ssaoConfig = ref(false);
 const bgType = ref<number>();
+
 const fogMode = ref<number>();
 const ssr = ref<SSRRenderingPipeline>();
-const ssrConfig = ref({ enabled: false });
+const ssrConfig = ref(false);
 const motionBlur = ref();
 const motionBlurConfig = ref({ enabled: false });
 
@@ -374,14 +396,20 @@ onMounted(() => {
     renderingPipeline.value = Editor.Instance.getRenderingPipeline(false)
     pipelineConfig.value.enabled = !!renderingPipeline.value;
     ssao2.value = Editor.Instance.getSSAORenderingPipeline(false);
-    ssaoConfig.value.enabled = !!ssao2.value;
+    ssaoConfig.value = !!ssao2.value;
     toneMappingType.value = renderingPipeline.value?.imageProcessing?.toneMappingType ?? TonemappingOperator.Hable;
     ssr.value = Editor.Instance.getSSRRenderingPipeline(false);
-    ssrConfig.value.enabled = !!ssr.value;
+    ssrConfig.value = !!ssr.value;
+    console.log(ssaoConfig.value);
+
     motionBlur.value = Editor.Instance.getMotionBlurPostProcess(false);
     motionBlurConfig.value.enabled = !!motionBlur.value;
-});
+})
 
+watch(() => Editor.Instance.Scene, () => {
+    scene.value = Editor.Instance.Scene;
+    //updateSceneSettings();
+});
 const onToneMappingTypeChange = (v: number) => {
     if (renderingPipeline.value?.imageProcessing) {
         renderingPipeline.value.imageProcessing.toneMappingType = v;
@@ -456,7 +484,7 @@ const toggleSSAO = () => {
             }
         }, action: () => {
             ssao2.value = Editor.Instance.getSSAORenderingPipeline(false);
-            ssaoConfig.value.enabled = !!ssao2.value;
+            ssaoConfig.value = !!ssao2.value;
         }
     });
 };
@@ -522,7 +550,7 @@ const toggleSSR = () => {
         },
         action: () => {
             ssr.value = Editor.Instance.getSSRRenderingPipeline(false);
-            ssrConfig.value.enabled = !!ssr.value;
+            ssrConfig.value = !!ssr.value;
         }
     });
 };
@@ -568,7 +596,7 @@ const onSelectSyncEnv = async () => {
     saveBgType(bgTypeEnum.SyncEnv);
 }
 
-const onSelectBgImage = async (tex:BJS_Texture) => {
+const onSelectBgImage = async (tex: BJS_Texture) => {
     loadImageBG(tex, Editor.Instance.Scene);
     saveBgType(bgTypeEnum.Texture);
 }

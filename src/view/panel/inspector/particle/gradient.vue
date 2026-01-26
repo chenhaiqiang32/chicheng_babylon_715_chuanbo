@@ -1,5 +1,12 @@
 <template>
   <SectionField :title="title">
+    <template #right>
+      <!-- <ElButton type="primary" size="small" @click="onRemove">删除</ElButton> -->
+      <el-tooltip class="box-item" effect="dark" content="删除" placement="top-start">
+        <Minus @click="onRemove" style="width: 15px; height: 15px; margin-right: 8px" tooltip="删除" />
+      </el-tooltip>
+
+    </template>
     <div class="flex gap-2 w-full">
       <div v-if="typeof gradient['factor1'] === 'number'" class="flex-1">
         <Number :object="gradient" property="factor1" :step="0.01" />
@@ -31,6 +38,7 @@ import Color from '@/component/base/Color4.vue';
 import Block from '@/component/common/Block.vue';
 import Slider from '@/component/base/Slider.vue';
 import SectionField from '@/component/common/SectionField.vue';
+import { Minus, Plus } from '@element-plus/icons-vue';
 interface IValueGradientExtended extends IValueGradient {
   factor1?: number;
   factor2?: number;

@@ -32,7 +32,7 @@ export default defineConfig({
       iconDirs: [path.resolve(process.cwd(), 'src/assets/svg')],
       // 指定symbolId格式
       symbolId: 'icon-[name]',
-    }),
+    })
   ],
   css: {
     preprocessorOptions: {

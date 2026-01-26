@@ -1,6 +1,13 @@
 <template>
   <SectionField :title=title>
-    <!-- <Switch no-undo-redo :object="o" property="value" :label="props.label" @change="handleUseChange" /> -->
+    <template #right>
+      <div class="RightContent" @click.stop>
+        <ElButton type="primary" size="small" @click="handleAddGradient">添加</ElButton>
+        <Switch :object="o" property="value" @change="handleUseChange" />
+
+      </div>
+
+    </template>
     <template v-if="!o.value">
       <slot />
     </template>
@@ -25,11 +32,11 @@ import Block from "@/component/common/Block.vue";
 import Switch from "@/component/base/Switch.vue";
 import Field from "@/component/common/Field.vue";
 import SectionField from "@/component/common/SectionField.vue";
+import { Plus } from "@element-plus/icons-vue";
 
 export interface IParticleSystemGradientInspectorProps {
   title?: string;
   label: string;
-
   object: IParticleSystem;
 
   getGradients: () => IValueGradient[] | null;
@@ -156,3 +163,10 @@ function handleAddGradient() {
   props.onUpdate();
 }
 </script>
+<style lang="scss" scoped>
+.RightContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+</style>
