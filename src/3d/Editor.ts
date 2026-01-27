@@ -284,15 +284,17 @@ export class Editor extends Dispatch<EditorEvent> {
         if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
           {
             const sg = Editor.Instance.shadow.getShadowGenerator(light);
-            if (sg) {
-              sg.getLight()
-                .getScene()
-                .meshes.forEach((item) => {
-                  if (item.castShadows) {
-                    Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
-                  }
-                });
+            if (!sg) {
+              return;
             }
+            sg.getLight()
+              .getScene()
+              .meshes.forEach((item) => {
+                if (item.castShadows) {
+                  console.log(item.name);
+                  Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
+                }
+              });
           }
         }
 
@@ -731,15 +733,15 @@ export class Editor extends Dispatch<EditorEvent> {
   }
 
   focusTransformNode(node?: ParticleContainer) {
-    if (!node) {
-      node = this._selectNodes[0] instanceof ParticleContainer ? this._selectNodes[0] : null;
-    }
-    if (!node) {
+    if (!node && !this._selectNodes[0]) {
       return;
     }
-    console.log('focusTransformNode', node);
+    // if (!node) {
+    //   node = this._selectNodes[0] instanceof ParticleContainer ? this._selectNodes[0] : null;
+    // }
     let min: Vector3, max: Vector3;
-    if (node.particleSystems) {
+    if (this._selectNodes[0] instanceof ParticleContainer) {
+      node = this._selectNodes[0];
       const firstSystem = node.particleSystems.systems[0];
       if (isAbstractMesh(firstSystem.emitter)) {
         console.log('firstSystem.emitter');
@@ -752,15 +754,21 @@ export class Editor extends Dispatch<EditorEvent> {
         max = new Vector3(emitterPos.x + 0.5, emitterPos.y + 0.5, emitterPos.z + 0.5);
       }
     } else {
-      min = node.getHierarchyBoundingVectors(true).min;
-      max = node.getHierarchyBoundingVectors(true).max;
+      const node1 = this._selectNodes[0];
+      console.log(node1);
+
+      min = node1.getHierarchyBoundingVectors(true).min;
+      max = node1.getHierarchyBoundingVectors(true).max;
     }
 
     //const { min, max } = node.getHierarchyBoundingVectors(true);
     const center = new Vector3().add(min).add(max).scale(0.5);
+    console.log('max' + max + 'min' + min);
 
     const size = new Vector3().add(max).subtract(min);
     const radius = Math.max(size.x, size.y, size.z) * 2;
+    console.log('center' + center + 'radius' + radius);
+
     let currentDirectionToCenter = center.subtract(this.scene.activeCamera.globalPosition);
     const currentDistance = currentDirectionToCenter.length();
 
@@ -1068,7 +1076,7 @@ function getNodeByUUid(node: Node, uuid: string, weakMap?: Map<string, Node>): N
     weakMap.set(node.uuid, node);
   }
   if (node.uuid === uuid) {
-    if(node.isDeleted) return null;
+    if (node.isDeleted) return null;
     return node;
   }
   const children = node.getChildren();
@@ -1076,7 +1084,7 @@ function getNodeByUUid(node: Node, uuid: string, weakMap?: Map<string, Node>): N
     for (let index = 0; index < children.length; index++) {
       const ret = getNodeByUUid(children[index], uuid, weakMap);
       if (ret) {
-        if(node.isDeleted) return null;
+        if (node.isDeleted) return null;
         return ret;
       }
     }

@@ -45,7 +45,6 @@
                                             :name="iconMap[data.type]"></SVG>
                                         {{ data.name }}
                                     </div>
-                                    <div v-show="data.isSelected" class="tree-node-active"></div>
                                 </template>
                             </ElTree>
                         </ElScrollbar>
@@ -58,11 +57,11 @@
 <script setup lang='ts'>
 import BasePanel from '@/component/common/BasePanel.vue'
 import { useScene } from '@/store/useScene';
-import { ElInput, ElMessageBox, NodeDropType, type ElTree, type TreeNodeData } from 'element-plus';
+import { ElInput, ElMessageBox, NodeDropType, TreeOptionProps, type ElTree, type TreeNodeData } from 'element-plus';
 import { Search } from '@element-plus/icons-vue'
 import Node from 'element-plus/es/components/tree/src/model/node.mjs';
 import { storeToRefs } from 'pinia';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, ShallowRef, watch } from 'vue';
 import { Editor } from '@/3d/Editor';
 import SVG from '@/component/common/SVG.vue';
 import { useDialog } from '../dialog';
@@ -72,9 +71,15 @@ import { Node as BJS_Node } from '@babylonjs/core';
 import { registerKeyDown, registerKeyUp, unregisterKeyDown, unregisterkeyUp } from '@/utils/ShortcutKey';
 import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
 import { registerUndoRedo } from '@/tools/undoredo';
+import { TreeProps } from 'element-plus/es/components/table/src/table/defaults.mjs';
 const searchText = ref('');
-const treeProps = {
+const treeProps: TreeOptionProps = {
     label: 'name',
+    class(data, node) {
+        console.log(12313);
+
+        return selectedList.value.includes(node) ? 'tree-node-active' : '';
+    },
 }
 
 const { hierarchy, currentSelected, sceneInfoList, currentScene } = storeToRefs(useScene());
@@ -82,7 +87,7 @@ const { hierarchy, currentSelected, sceneInfoList, currentScene } = storeToRefs(
 let dragParent: Node, dragPrev: Node, dragNext: Node;
 let isShiftHolding = false;
 let multiSelectBegin: HierarchyNode, multiSelectEnd: HierarchyNode;
-let selectedList: Node[];
+let selectedList: ShallowRef<Node[]> = ref([]);
 
 const treeRef = ref<InstanceType<typeof ElTree>>()
 const sceneSettingVisible = ref(false);
@@ -118,13 +123,13 @@ function contextMenu(e: MouseEvent, nodeData?: HierarchyNode) {
     e.preventDefault();
 
     // 多选模式
-    if (selectedList.length > 0) {
+    if (selectedList.value.length > 0) {
         openContextMenu({
             position: {
                 x: e.clientX,
                 y: e.clientY
             },
-            commands: getHierarchyMultiCtxMenuCommands(selectedList)
+            commands: getHierarchyMultiCtxMenuCommands(selectedList.value)
         })
     } else {
         // parent 优先为选中的节点；如果没有，则获取鼠标当前选中的节点
@@ -209,8 +214,8 @@ const handleNodeClick = (node: HierarchyNode) => {
         handleMultiSelect();
     } else if (!multiSelectBegin) {
         multiSelectBegin = node;
-        selectedList?.forEach((x) => x.data.isSelected = false);
-        selectedList = [];
+        selectedList.value?.forEach((x) => x.data.isSelected = false);
+        selectedList.value = [];
     }
 }
 
@@ -223,7 +228,6 @@ function handlePanelClick(e: MouseEvent) {
 
 // 多选节点
 function handleMultiSelect() {
-    selectedList?.forEach((x) => x.data.isSelected = false);
     const nodeA = treeRef.value.getNode(multiSelectBegin.id);
     const nodeB = treeRef.value.getNode(multiSelectEnd.id);
     const nodes = treeRef.value.store._getAllNodes();
@@ -235,8 +239,8 @@ function handleMultiSelect() {
         min = tmp;
     }
     // 填充多选选中节点的数组
-    selectedList = nodes.splice(min, max - min + 1);
-    selectedList.forEach((x) => x.data.isSelected = true);
+    selectedList.value = nodes.splice(min, max - min + 1);
+    // selectedList.forEach((x) => x.data.isSelected = true);
     multiSelectBegin = null;
     multiSelectEnd = null;
 }
@@ -295,11 +299,11 @@ const handleNodeDrop = (
     if (!draggingNode || !dropNode) return;
 
     // 多选拖拽
-    if (selectedList?.length > 0) {
+    if (selectedList.value?.length > 0) {
         const drop = Editor.Instance.getNodeById(dropNode.data.id);
         // 找到 level 最小的，因为我们只想移动第一层节点
-        const level = Math.min(...selectedList.map(x => x.level));
-        const moveList = selectedList.filter((x) => x.level == level);
+        const level = Math.min(...selectedList.value.map(x => x.level));
+        const moveList = selectedList.value.filter((x) => x.level == level);
         // todo: 顺序问题
         for (var i = moveList.length - 1; i >= 0; i--) {
             const node = Editor.Instance.getNodeById(moveList[i].data.id);
@@ -486,17 +490,22 @@ async function onKeyup(e: KeyboardEvent) {
     display: flex;
     gap: 10px;
     z-index: 1;
+    width: 100%;
+
+    &.tree-node-active {
+        background-color: #2d72d2;
+    }
 }
 
-.tree-node-active {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    background-color: #2d72d2;
-    z-index: 0;
-}
+
 
 :deep(.el-tree-node__content) {
     position: relative;
+}
+</style>
+
+<style lang="scss">
+.tree-node-active {
+    background-color: #2d72d2;
 }
 </style>
