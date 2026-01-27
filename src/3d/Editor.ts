@@ -148,7 +148,7 @@ export class Editor extends Dispatch<EditorEvent> {
   set selectNodes(v: Node[]) {
     if (this._selectNodes?.length > 0) {
       this._selectNodes.forEach((item) => {
-        if (item instanceof Mesh) {
+        if (item instanceof TransformNode) {
           this.toggleMeshMask(item, false);
         } else if (item instanceof Light) {
           item.gizmo.scaleRatio = 0; // 关掉灯的gizmo
@@ -176,7 +176,7 @@ export class Editor extends Dispatch<EditorEvent> {
     }
     if (this._selectNodes.length > 0) {
       this._selectNodes.forEach((item) => {
-        if (item instanceof Mesh) {
+        if (item instanceof TransformNode) {
           this.toggleMeshMask(item, true);
         }
       });
@@ -291,7 +291,6 @@ export class Editor extends Dispatch<EditorEvent> {
               .getScene()
               .meshes.forEach((item) => {
                 if (item.castShadows) {
-                  console.log(item.name);
                   Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
                 }
               });
@@ -867,7 +866,7 @@ export class Editor extends Dispatch<EditorEvent> {
     this.outlinePass.enable(flag);
   }
 
-  toggleMeshMask(mesh: Mesh, isOn: boolean) {
+  toggleMeshMask(mesh: TransformNode, isOn: boolean) {
     if (isOn) {
       this.outlinePass.addToRenderList(mesh);
     } else {

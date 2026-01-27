@@ -12,6 +12,8 @@ import {
   Effect,
   AbstractEngine,
   Constants,
+  TransformNode,
+  AbstractMesh,
 } from '@babylonjs/core';
 Effect.ShadersStore['outlineSampleVertexShader'] = `
         precision highp float;
@@ -113,16 +115,25 @@ export class OutlinePass extends PostProcess {
     }, 100);
   };
 
-  addToRenderList(mesh: Mesh) {
-    this.renderTarget.renderList = this.renderTarget.renderList ?? [];
-    mesh.setMaterialForRenderPass(this.renderTarget.renderPassId, this.material);
-    if (this.renderTarget.renderList.indexOf(mesh) === -1) {
-      this.renderTarget.renderList.push(mesh);
+  addToRenderList(mesh: TransformNode) {
+    const meshes = mesh.getChildren((n) => n instanceof AbstractMesh, false);
+    if (mesh instanceof AbstractMesh) {
+      meshes.push(mesh);
     }
+    for (const child of meshes) {
+      child.setMaterialForRenderPass(this.renderTarget.renderPassId, this.material);
+    }
+    this.renderTarget.renderList = meshes;
   }
 
-  removeFromRenderList(mesh: Mesh) {
-    this.renderTarget.renderList = this.renderTarget.renderList.filter((item) => item !== mesh);
+  removeFromRenderList(mesh: TransformNode) {
+    const meshes = mesh.getChildren((n) => n instanceof AbstractMesh, false);
+    if (mesh instanceof AbstractMesh) {
+      meshes.push(mesh);
+    }
+    this.renderTarget.renderList = this.renderTarget.renderList.filter(
+      (item) => !meshes.includes(item),
+    );
   }
 
   dispose(): void {

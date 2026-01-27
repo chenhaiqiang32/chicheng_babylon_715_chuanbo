@@ -11,12 +11,7 @@
         </Field>
         <Field :title="$t('component.shadows.GeneratorSize')">
           <el-select v-model="generatorSize" @change="resizeShadowGenerator" class="flex-1">
-            <el-option
-              v-for="size in sizes"
-              :key="size.value"
-              :label="size.text"
-              :value="size.value"
-            />
+            <el-option v-for="size in sizes" :key="size.value" :label="size.text" :value="size.value" />
           </el-select>
         </Field>
       </template>
@@ -34,154 +29,71 @@
       <slot></slot>
 
       <template v-if="generator">
-        <NumberField
-          :object="generator"
-          property="bias"
-          :step="0.000001"
-          :min="0"
-          :max="1"
-          :label="$t('component.shadows.Bias')"
-          @change="updateShadowMapRefreshRate"
-        />
-        <NumberField
-          :object="generator"
-          property="normalBias"
-          :step="0.000001"
-          :min="0"
-          :max="1"
-          :label="$t('component.shadows.NormalBias')"
-          @change="updateShadowMapRefreshRate"
-        />
-        <NumberField
-          :object="generator"
-          property="darkness"
-          :step="0.01"
-          :min="0"
-          :max="1"
-          :label="$t('component.shadows.Darkness')"
-        />
+        <NumberField :object="generator" property="bias" :step="0.000001" :min="0" :max="1"
+          :label="$t('component.shadows.Bias')" @change="updateShadowMapRefreshRate" />
+        <NumberField :object="generator" property="normalBias" :step="0.000001" :min="0" :max="1"
+          :label="$t('component.shadows.NormalBias')" @change="updateShadowMapRefreshRate" />
+        <NumberField :object="generator" property="darkness" :step="0.01" :min="0" :max="1"
+          :label="$t('component.shadows.Darkness')" />
 
         <template v-if="generator.getShadowMap()">
           <Field :title="$t('component.shadows.RefreshRate')">
-            <el-select
-              v-model="shadowMapRefreshRate"
-              @change="onShadowMapRefreshRateChange"
-              class="flex-1"
-            >
+            <el-select v-model="shadowMapRefreshRate" @change="onShadowMapRefreshRateChange" class="flex-1">
               <el-option :label="$t('component.shadows.Once')" :value="RenderTargetTexture.REFRESHRATE_RENDER_ONCE" />
-              <el-option
-                :label="$t('component.shadows.2Frames')"
-                :value="RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES"
-              />
-              <el-option
-                :label="$t('component.shadows.EveryFrame')"
-                :value="RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME"
-              />
+              <el-option :label="$t('component.shadows.2Frames')"
+                :value="RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYTWOFRAMES" />
+              <el-option :label="$t('component.shadows.EveryFrame')"
+                :value="RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME" />
             </el-select>
           </Field>
         </template>
 
-        <SwitchField
-          :object="generator"
-          property="transparencyShadow"
-          :label="$t('component.shadows.EnableTransparencyShadow')"
-        />
-        <SwitchField
-          :object="generator"
-          property="enableSoftTransparentShadow"
-          :label="$t('component.shadows.EnableSoftTransparentShadow')"
-        />
+        <SwitchField :object="generator" property="transparencyShadow"
+          :label="$t('component.shadows.EnableTransparencyShadow')" />
+        <SwitchField :object="generator" property="enableSoftTransparentShadow"
+          :label="$t('component.shadows.EnableSoftTransparentShadow')" />
       </template>
 
       <template v-if="generator && generatorType === 'cascaded'">
         <slot></slot>
-        <SwitchField
-          :object="generator"
-          property="stabilizeCascades"
-          :label="$t('component.shadows.StabilizeCascades')"
-          @change="updateShadowMapRefreshRate"
-        />
-        <SwitchField
-          :object="generator"
-          property="depthClamp"
-          :label="$t('component.shadows.DepthClamp')"
-          @change="updateShadowMapRefreshRate"
-        />
-        <SwitchField
-          :object="generator"
-          property="autoCalcDepthBounds"
-          :label="$t('component.shadows.AutoCalcDepthBounds')"
-          @change="
+        <SwitchField :object="generator" property="stabilizeCascades" :label="$t('component.shadows.StabilizeCascades')"
+          @change="updateShadowMapRefreshRate" />
+        <SwitchField :object="generator" property="depthClamp" :label="$t('component.shadows.DepthClamp')"
+          @change="updateShadowMapRefreshRate" />
+        <SwitchField :object="generator" property="autoCalcDepthBounds"
+          :label="$t('component.shadows.AutoCalcDepthBounds')" @change="
             () => {
               updateShadowMapRefreshRate();
             }
-          "
-        />
-        <template
-          v-if="
-            generatorType === 'cascaded' &&
-            (generator as CascadedShadowGenerator).autoCalcDepthBounds
-          "
-        >
-          <EditorInspectorNumberField
-            :object="generator"
-            property="autoCalcDepthBoundsRefreshRate"
-            :step="1"
-            :min="0"
-            :max="60"
-            :label="$t('component.shadows.AutoCalcDepthBoundsRefreshRate')"
-            @change="updateShadowMapRefreshRate"
-          />
+          " />
+        <template v-if="
+          generatorType === 'cascaded' &&
+          (generator as CascadedShadowGenerator).autoCalcDepthBounds
+        ">
+          <EditorInspectorNumberField :object="generator" property="autoCalcDepthBoundsRefreshRate" :step="1" :min="0"
+            :max="60" :label="$t('component.shadows.AutoCalcDepthBoundsRefreshRate')"
+            @change="updateShadowMapRefreshRate" />
         </template>
-        <NumberField
-          :object="generator"
-          property="lambda"
-          :min="0"
-          :max="1"
-          :label="$t('component.shadows.Lambda')"
-          @change="updateShadowMapRefreshRate"
-        />
-        <NumberField
-          :object="generator"
-          property="cascadeBlendPercentage"
-          :min="0"
-          :max="1"
-          :label="$t('component.shadows.BlendPercentage')"
-          @change="updateShadowMapRefreshRate"
-        />
-        <NumberField
-          :object="generator"
-          property="penumbraDarkness"
-          :min="0"
-          :max="1"
-          :label="$t('component.shadows.PenumbraDarkness')"
-          @change="updateShadowMapRefreshRate"
-        />
+        <NumberField :object="generator" property="lambda" :min="0" :max="1" :label="$t('component.shadows.Lambda')"
+          @change="updateShadowMapRefreshRate" />
+        <NumberField :object="generator" property="cascadeBlendPercentage" :min="0" :max="1"
+          :label="$t('component.shadows.BlendPercentage')" @change="updateShadowMapRefreshRate" />
+        <NumberField :object="generator" property="penumbraDarkness" :min="0" :max="1"
+          :label="$t('component.shadows.PenumbraDarkness')" @change="updateShadowMapRefreshRate" />
       </template>
-          <template v-if="generator">
-<Field :title="$t('component.shadows.SoftShadowType')">
+      <template v-if="generator">
+        <Field :title="$t('component.shadows.SoftShadowType')">
           <el-select v-model="softShadowType" @change="onSoftShadowTypeChange" class="flex-1">
-            <el-option
-              v-for="item in softShadowItems"
-              :key="item.value"
-              :label="item.text"
-              :value="item.value"
-            />
+            <el-option v-for="item in softShadowItems" :key="item.value" :label="item.text" :value="item.value" />
           </el-select>
-</Field>
+        </Field>
         <template v-if="softShadowType === 'usePoissonSampling'">
-          <NumberField
-            :object="generator"
-            property="blurScale"
-            :step="0.1"
-            :min="0"
-            :max="10"
-            :label="$t('component.shadows.BlurScale')"
-          />
+          <NumberField :object="generator" property="blurScale" :step="0.1" :min="0" :max="10"
+            :label="$t('component.shadows.BlurScale')" />
         </template>
 
         <template v-if="softShadowType === 'usePercentageCloserFiltering'">
-          <Field :title="$t('component.shadows.FilteringQuality')"> 
+          <Field :title="$t('component.shadows.FilteringQuality')">
             <el-select v-model="filteringQuality" @change="onFilteringQualityChange" class="flex-1">
               <el-option :label="$t('component.shadows.Low')" :value="ShadowGenerator.QUALITY_LOW" />
               <el-option :label="$t('component.shadows.Medium')" :value="ShadowGenerator.QUALITY_MEDIUM" />
@@ -191,17 +103,11 @@
         </template>
 
         <template v-if="softShadowType === 'useContactHardeningShadow'">
-          <NumberField
-            :object="(generator as ShadowGenerator).contactHardeningLightSizeUVRatio"
-            property="blurScale"
-            :step="0.001"
-            :min="0"
-            :max="1"
-            :label="$t('component.shadows.LightSizeUVRatio')"
-            @change="updateShadowMapRefreshRate"
-          />
+          <NumberField :object="(generator as ShadowGenerator).contactHardeningLightSizeUVRatio" property="blurScale"
+            :step="0.001" :min="0" :max="1" :label="$t('component.shadows.LightSizeUVRatio')"
+            @change="updateShadowMapRefreshRate" />
         </template>
-    </template>
+      </template>
     </SectionField>
 
 
@@ -281,19 +187,19 @@ const softShadowItems = computed(() => {
 });
 
 const refreshShadowGenerator = () => {
- if (isDirectionalLight(props.light) || isPointLight(props.light) || isSpotLight(props.light)) {
+  if (isDirectionalLight(props.light) || isPointLight(props.light) || isSpotLight(props.light)) {
     console.log(props.light.uuid);
-    
- const gen = Editor.Instance.shadow.getShadowGenerator(props.light);
-  generatorType.value = !gen ? 'none' : isCascadedShadowGenerator(gen) ? 'cascaded' : 'classic';
-  softShadowType.value = getSoftShadowType(gen);
-  generatorSize.value = gen?.getShadowMap()?.getSize().width ?? 1024;
-  generator.value = gen;
-  
-  if (gen?.getShadowMap()) {
-    shadowMapRefreshRate.value = gen.getShadowMap().refreshRate;
+
+    const gen = Editor.Instance.shadow.getShadowGenerator(props.light);
+    generatorType.value = !gen ? 'none' : isCascadedShadowGenerator(gen) ? 'cascaded' : 'classic';
+    softShadowType.value = getSoftShadowType(gen);
+    generatorSize.value = gen?.getShadowMap()?.getSize().width ?? 1024;
+    generator.value = gen;
+
+    if (gen?.getShadowMap()) {
+      shadowMapRefreshRate.value = gen.getShadowMap().refreshRate;
+    }
   }
- }
 };
 
 const getSoftShadowType = (gen: IShadowGenerator | null): SoftShadowType => {
@@ -312,10 +218,10 @@ const createShadowGenerator = (type: 'none' | 'classic' | 'cascaded') => {
   const mapSize = generator.value?.getShadowMap()?.getSize();
   const renderList = generator.value?.getShadowMap()?.renderList?.slice(0).filter((item) => item.castShadows);
   generator.value?.dispose();
-    
+
 
   if (isDirectionalLight(props.light) || isPointLight(props.light) || isSpotLight(props.light)) {
-        Editor.Instance.shadow.closeShadow(props.light);
+    Editor.Instance.shadow.closeShadow(props.light);
     if (type === 'none') {
       return refreshShadowGenerator();
     }
@@ -323,9 +229,8 @@ const createShadowGenerator = (type: 'none' | 'classic' | 'cascaded') => {
     if (!isDirectionalLight(props.light)) {
       type = 'classic';
     }
-    
-    const gen =  Editor.Instance.shadow.openShadow(props.light, type, mapSize);    
-    //console.log(gen);
+
+    const gen = Editor.Instance.shadow.openShadow(props.light, type, mapSize);
     if (isCascadedShadowGenerator(gen)) {
       gen.lambda = 1;
       gen.depthClamp = true;
@@ -348,24 +253,23 @@ const createShadowGenerator = (type: 'none' | 'classic' | 'cascaded') => {
     } else {
       gen.getShadowMap()?.renderList?.push(...gen.getLight().getScene().meshes.filter((item) => item.castShadows));
     }
-     
- if (isDirectionalLight(props.light) || isPointLight(props.light) || isSpotLight(props.light)) {
+
+    if (isDirectionalLight(props.light) || isPointLight(props.light) || isSpotLight(props.light)) {
       gen.getLight().getScene().meshes.forEach((item) => {
         if (item.castShadows) {
-           // console.log(item);
           Editor.Instance.shadow.addMeshToShadowGenerator(item, props.light as DirectionalLight | PointLight | SpotLight);
         }
       });
     }
 
-}
-//Editor.Instance.Scene
+  }
+  //Editor.Instance.Scene
 
-refreshShadowGenerator();
+  refreshShadowGenerator();
 };
 
 const resizeShadowGenerator = (size: number) => {
-    console.log(generator);
+  console.log(generator);
   const shadowMap = generator.value?.getShadowMap();
   if (shadowMap) {
     const refreshRate = shadowMap.refreshRate;
@@ -449,8 +353,8 @@ watch(() => props.light, (newLight, oldLight) => {
   if (newLight) {
     refreshShadowGenerator();
   }
-}, { 
-  immediate: true, 
-  deep: true 
+}, {
+  immediate: true,
+  deep: true
 });
 </script>

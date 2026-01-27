@@ -71,13 +71,10 @@ import { Node as BJS_Node } from '@babylonjs/core';
 import { registerKeyDown, registerKeyUp, unregisterKeyDown, unregisterkeyUp } from '@/utils/ShortcutKey';
 import { nodeCRUD } from '@/3d/core/utils/nodeCRUD';
 import { registerUndoRedo } from '@/tools/undoredo';
-import { TreeProps } from 'element-plus/es/components/table/src/table/defaults.mjs';
 const searchText = ref('');
 const treeProps: TreeOptionProps = {
     label: 'name',
     class(data, node) {
-        console.log(12313);
-
         return selectedList.value.includes(node) ? 'tree-node-active' : '';
     },
 }
