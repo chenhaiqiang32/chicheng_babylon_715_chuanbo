@@ -36,6 +36,7 @@
                                 draggable @node-drag-start="handleNodeDragStart" @node-drop="handleNodeDrop"
                                 :data="hierarchy" highlight-current :props="treeProps" node-key="id"
                                 :default-expanded="true" :default-active="true" :expand-on-click-node="false"
+                                lazy :load="loadNode"
                                 @node-click="handleNodeClick">
                                 <!-- 节点类型图标 + 节点名 -->
                                 <template #default="{ node, data }">
@@ -77,6 +78,7 @@ const treeProps: TreeOptionProps = {
     class(data, node) {
         return selectedList.value.includes(node) ? 'tree-node-active' : '';
     },
+    isLeaf: 'isLeaf' // 判断是否为叶子节点
 }
 
 const { hierarchy, currentSelected, sceneInfoList, currentScene } = storeToRefs(useScene());
@@ -211,7 +213,6 @@ const handleNodeClick = (node: HierarchyNode) => {
         handleMultiSelect();
     } else if (!multiSelectBegin) {
         multiSelectBegin = node;
-        selectedList.value?.forEach((x) => x.data.isSelected = false);
         selectedList.value = [];
     }
 }
@@ -237,7 +238,6 @@ function handleMultiSelect() {
     }
     // 填充多选选中节点的数组
     selectedList.value = nodes.splice(min, max - min + 1);
-    // selectedList.forEach((x) => x.data.isSelected = true);
     multiSelectBegin = null;
     multiSelectEnd = null;
 }
@@ -294,7 +294,6 @@ const handleNodeDrop = (
     ev: DragEvent
 ) => {
     if (!draggingNode || !dropNode) return;
-
     // 多选拖拽
     if (selectedList.value?.length > 0) {
         const drop = Editor.Instance.getNodeById(dropNode.data.id);
@@ -400,6 +399,17 @@ async function onKeydown(e: KeyboardEvent) {
             })
         }
     }
+}
+
+// 懒加载
+const loadNode = (node: Node, resolve: any) => {
+    let data:HierarchyNode[] = [];
+    // 获取当前node的子节点然后填充ElTreeNode
+    for(var i=0; i<node.data.children?.length; i++) {
+        const cur = node.data.children[i];
+        data.push(cur);
+    }
+    resolve(data);
 }
 
 async function onKeyup(e: KeyboardEvent) {

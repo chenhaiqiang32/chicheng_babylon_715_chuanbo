@@ -24,6 +24,7 @@ function buildHierarchy(node: Node): HierarchyNode {
     id: node.uuid,
     children: node.getChildren()?.map(buildHierarchy).filter((x) => x != null) ?? [], // 如果是null则不加到数组里面
     isActive: isActive,
+    isLeaf: node.getChildren()?.length == 0 ?? true
   };
 }
 

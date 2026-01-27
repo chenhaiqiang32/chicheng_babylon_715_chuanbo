@@ -5,6 +5,7 @@ declare interface HierarchyNode {
   children?: HierarchyNode[];
   isActive: boolean;
   isSelected?: boolean;
+  isLeaf?: boolean;   // 是否为叶子节点
 }
 declare interface Vector {
   x?: number;
