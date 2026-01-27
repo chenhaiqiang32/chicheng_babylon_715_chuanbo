@@ -80,7 +80,6 @@ export class OutlinePass extends PostProcess {
       ['maskSampler'],
       1.0,
       camera,
-      Texture.BILINEAR_SAMPLINGMODE,
     );
     const scene = camera.getScene();
     const engine = scene.getEngine();

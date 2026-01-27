@@ -9,4 +9,5 @@ interface Window {
     getFileArrayBuffer: (name: string, dir?: string) => any;
     getFileText: (name: string, dir?: string) => any;
   };
+  registry: boolean;
 }

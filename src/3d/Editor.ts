@@ -69,22 +69,11 @@ import {
 } from '@/tools/guards/nodes';
 import { isVector3 } from '@/tools/guards/math';
 import { ParticleContainer } from './core/Extension/ParticleContainer';
-import { useEditor } from '@/store/useEditor';
 import { ControlMode } from '@/store/useSceneModule/useControl';
 import { Shadow } from './Shadow';
-
-import HavokPhysics from '@babylonjs/havok';
 import { OutlinePass } from './rendering/OutlinePass';
 import { UniqueNumber } from '@/tools/tools';
-
-Object.defineProperty(Node.prototype, 'active', {
-  get: function () {
-    return this._nodeDataStorage._isVisible;
-  },
-  set: function (v: boolean) {
-    this._nodeDataStorage._isVisible = v;
-  },
-});
+import './Extension';
 
 interface EditorEvent {
   nameChanged: { newName: string; id: string };
@@ -287,40 +276,19 @@ export class Editor extends Dispatch<EditorEvent> {
         lightGizmo.light = light;
         lightGizmo.scaleRatio = 0;
         light.gizmo = lightGizmo;
-        console.log(Editor.Instance.shadow.getShadowGeneratorMap());
-
-        //TODO DefaultScene
-        // if (isDirectionalLight(light)) {
-        //   const sg = Editor.Instance.shadow.openShadow(light, "cascaded") as CascadedShadowGenerator;
-        //   sg.lambda = 1;
-        //   sg.bias = 0.0005;
-        //   sg.depthClamp = true;
-        //   sg.autoCalcDepthBounds = true;
-        //   sg.autoCalcDepthBoundsRefreshRate = 60;
-        //   sg.usePercentageCloserFiltering = true;
-        //   sg.filteringQuality = ShadowGenerator.QUALITY_HIGH;
-        //   sg.transparencyShadow = true;
-        //   sg.enableSoftTransparentShadow = true;
-        //   sg.getShadowMap()?.renderList?.push(...sg.getLight().getScene().meshes);
-        //   sg.getLight().getScene().meshes.forEach((item) => {
-        //    console.log('castShadows:', item.castShadows); // true
-        //    console.log('receiveShadows:', item.receiveShadows); // true
-        //     Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
-        //   });
-        // }
         //阴影只能场景加载完创建
         if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
           {
             const sg = Editor.Instance.shadow.getShadowGenerator(light);
-            sg.getLight()
-              .getScene()
-              .meshes.forEach((item) => {
-                if (item.castShadows) {
-                  console.log(item.name);
-
-                  Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
-                }
-              });
+            if (sg) {
+              sg.getLight()
+                .getScene()
+                .meshes.forEach((item) => {
+                  if (item.castShadows) {
+                    Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
+                  }
+                });
+            }
           }
         }
 
@@ -343,53 +311,8 @@ export class Editor extends Dispatch<EditorEvent> {
     this.outlinePass = new OutlinePass(0.003, new Vector3(1, 64 / 255, 0), this.scene.activeCamera);
     useScene().setCurrentViewFlagsMode(ViewFlagsMode.Gizmos, ViewFlagsMode.Mask);
     this.dispatch('onSceneChanged', { scene });
-    //开启物理引擎
-    // const havokInstance = await HavokPhysics({
-    //   locateFile: () => {
-    //     return '/lib/havok/HavokPhysics.wasm';
-    //   },
-    // });
-    // const havokPlugin = new HavokPlugin(true, havokInstance);
-    // scene.enablePhysics(undefined, havokPlugin);
-    // const box = MeshBuilder.CreateSphere('sphere');
-    // box.position.y = 10;
-    // const ground = MeshBuilder.CreateGround('ground', { width: 10, height: 10 }, scene);
-    // new PhysicsAggregate(
-    //   box,
-    //   PhysicsShapeType.MESH,
-    //   { mass: 50, friction: 0.5, restitution: 0.8 },
-    //   scene,
-    // );
-    // const groundShape = new PhysicsShapeBox(
-    //   new Vector3(0, 0, 0), // center
-    //   Quaternion.Identity(),
-    //   new Vector3(5, 0.1, 5), // extents (width/2, height/2, depth/2)
-    //   scene,
-    // );
-
-    // const groundBody = new PhysicsBody(
-    //   ground, // 绑 mesh
-    //   PhysicsMotionType.DYNAMIC, // ✅ 关键：手动控制
-    //   false,
-    //   scene,
-    // );
-    // groundBody.shape = groundShape;
-    // groundBody.setMassProperties({ mass: 0 }); // 模拟无限质量
-
     useScene().setHierarchy(scene.rootNodes);
   }
-
-  // update = () => {
-  //   const parent = this.scene.getNodeByName('康方楼') as TransformNode;
-  //   if (!parent) {
-  //     return;
-  //   }
-  //   const angle = 0.001 * this.Scene.getAnimationRatio();
-  //   const rotationQuaternion = Quaternion.RotationAxis(Vector3.UpReadOnly, angle);
-  //   parent.rotationQuaternion = parent.rotationQuaternion ? parent.rotationQuaternion.multiply(rotationQuaternion) : rotationQuaternion;
-  //   this.requestId = requestAnimationFrame(this.update);
-  // };
-
   getRaycastPoint(x?: number, y?: number) {
     // 1. 创建拾取射线
     const ray = this.scene.createPickingRay(
@@ -529,9 +452,9 @@ export class Editor extends Dispatch<EditorEvent> {
     camera.inertia = 0.4;
     camera.panningInertia = 0.5;
 
-    const ground = MeshBuilder.CreateGround('New Ground', { width: 1024, height: 1024 });
+    const ground = MeshBuilder.CreateGround('New Ground', { width: 100, height: 100 });
     ground.rotationQuaternion = new Quaternion(0, 0, 0);
-    ground.flipFaces();
+    // ground.flipFaces();
     this.configureAddedMesh(scene, ground);
 
     ground.name = 'ground';
@@ -550,7 +473,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
     const box = MeshBuilder.CreateBox('New Box', { width: 10, depth: 10, height: 10 });
     box.rotationQuaternion = new Quaternion(0, 0, 0);
-    box.flipFaces();
+    // box.flipFaces();
     this.configureAddedMesh(scene, box);
     box.name = 'box';
     box.position.y = 5;
@@ -810,11 +733,10 @@ export class Editor extends Dispatch<EditorEvent> {
     if (!node) {
       return;
     }
+    console.log('focusTransformNode', node);
     let min: Vector3, max: Vector3;
     if (node.particleSystems) {
       const firstSystem = node.particleSystems.systems[0];
-      console.log(firstSystem.emitter);
-
       if (isAbstractMesh(firstSystem.emitter)) {
         console.log('firstSystem.emitter');
         const boundingInfo = firstSystem.emitter.getBoundingInfo();
