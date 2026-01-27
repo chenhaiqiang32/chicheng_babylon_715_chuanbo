@@ -86,11 +86,9 @@ export const useScene = defineStore('scene', () => {
     // 模块化(兼容以前代码所以没有直接导出 Module)
     // hierarchy
     hierarchy: hierarchyModule.hierarchy,
-    hierarchyMap: hierarchyModule.hierarchyMap,
     setHierarchy: hierarchyModule.setHierarchy,
     addHierarchy: hierarchyModule.addHierarchy,
-    removeHierarchy: hierarchyModule.removeHierarchy,
-    getNode: hierarchyModule.getNode,
+    updateHierarchy: hierarchyModule.updateHierarchy,
     // control
     currentControlMode: controlModule.currentControlMode,
     currentViewFlagsMode: controlModule.currentViewFlagsMode,

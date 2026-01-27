@@ -6,25 +6,6 @@ import { useScene } from '@/store/useScene';
 import { ArrayUtils } from '@/utils/Array';
 import { Node, TransformNode } from '@babylonjs/core';
 
-class deletedSerializedNodeClass{
-  constructor(_rawNode:Node, _serializedNode: CC.ObjectNode, _parent: Node | null) {
-    this.rawNode = _rawNode;
-    this.serializedNode = _serializedNode;
-    this.parent = _parent;
-    // setEnabled和parent保证clone体不显示在Scene中,remove保证保存时不序列化进去
-    this.rawNode.setEnabled(false);
-    this.rawNode.parent = null;
-    this.rawNode._removeFromSceneRootNodes();
-  }
-
-  public rawNode: Node | null = null;
-  public serializedNode : CC.ObjectNode | null = null;
-  public parent: Node | null = null;
-  public index: number = -1;
-}
-
-let deletedSerializedNode : deletedSerializedNodeClass | null;
-
 /**
  * BJS和Hierarchy中Node的增删改查
  */
@@ -87,43 +68,24 @@ export function nodeCRUD() {
     //}
     // hierarchy层面添加
     useScene().addHierarchy(clonedNode, parentNode || null);
-    // 更新位置，如果是拷贝的话，默认直接放到最后面，如果是删除后复原，则需要复原到指定位置
-    switchNodePosInParentByIndex(clonedNode, parentNode, index);
     return clonedNode;
   }
 
   /**
-   * 在BJS和Hierarchy中删除该Node
+   * BJS里面没有真正将其移除是因为加回来很麻烦，需要记录parent和具体位置index
    */
   async function deleteNode(node: Node) {
-    // 1. 先把删除的Node序列化保存，方便redo
-    deletedSerializedNode = new deletedSerializedNodeClass(node.clone(node.name, node.parent), await copyNode(node), node.parent);
-    const list = node.parent ? node.parent._children : Editor.Instance.Scene.rootNodes;
-    deletedSerializedNode.index = list.findIndex((x) => x.uuid == node.uuid);
-    // 2.在层级面板删除
-    useScene().removeHierarchy(node);
-    // 3.在bjs中删除该Node
-    Editor.Instance.Scene.getNodes()
-      .find((x) => x.uuid == node.uuid)
-      ?.dispose();
+    node.setEnabled(false);
+    node.isDeleted = true;
+    useScene().updateHierarchy(node.parent);
   }
 
-  /**
-   * 将删除的节点重新弄回来
-   * 现在做法是删除的时候clone源数据然后序列化，redo时候反序列化
-   * warning:有可能自定义数据没有被clone或者序列化进去
-   */
-  async function restoreNode():Promise<Node> {
-    // 反序列化之前保存的删除节点的数据
-    if(deletedSerializedNode) {
-      // todo:顺序
-      const node = await pasteNode(deletedSerializedNode.serializedNode, deletedSerializedNode.parent, deletedSerializedNode.index);
-      deletedSerializedNode.rawNode.dispose();
-      deletedSerializedNode = null;
-      useScene().setHierarchy(Editor.Instance.Scene.rootNodes);
-      return node;
-    }
+  function restoreNode(node: Node) {
+    node.setEnabled(true);
+    node.isDeleted = false;
+    useScene().updateHierarchy(node.parent);
   }
+
   /**
    * 更新 Node 的新层级
    */
@@ -131,6 +93,7 @@ export function nodeCRUD() {
     node: Node,
     targetPosNode: Node | null,
     type: 'before' | 'after' | 'inner',
+    updateView = true
   ) {
     const nodeNewParent = ['before', 'after'].includes(type) ? targetPosNode.parent : targetPosNode;
     if(node instanceof TransformNode){
@@ -139,11 +102,19 @@ export function nodeCRUD() {
     else {
       node.parent = nodeNewParent;
     }
-    // 由于 ElTree的源数据是BJS结构树的映射，而不是结构树本身，所以还是需要手动修改BJS结构树来改变顺序
-    // 保证下次进来的顺序和 ElTree 一样
+    // 第一层节点无法通过 rootNodes 来修改顺序，会导致该节点从 rootNodes 中消失;所以目前第一层无法确定顺序
     // @ts-ignore
-    const children = nodeNewParent ? nodeNewParent._children : Editor.Instance.Scene.rootNodes;
-    switchNodePosInParent(node, targetPosNode, type, children);
+    const children = nodeNewParent ? nodeNewParent._children : null;
+    if(children){
+      switchNodePosInParent(node, targetPosNode, type, children);
+      if(updateView){
+        useScene().updateHierarchy(nodeNewParent.parent);
+      }
+    } else {
+      if(updateView){
+        useScene().updateHierarchy(null);
+      }
+    }
   }
 
   function switchNodePosInParent(from: Node, to: Node, type: 'before' | 'after' | 'inner', children: Node[]) {
@@ -171,15 +142,6 @@ export function nodeCRUD() {
     }
     // 插入元素
     children.splice(toIndex, 0, item);
-  }
-
-  function switchNodePosInParentByIndex(node:Node, parentNode:Node, index:number) {
-    const targetPosNode = parentNode.getChildren()[index];
-    if(index == -1 || !targetPosNode || targetPosNode.uuid == node.uuid) return;
-
-    //console.log(parentNode.getChildren());
-    //console.log(`${node.name} insert to ${targetPosNode.name} before`);
-    switchNodePosInParent(node, targetPosNode, "before", parentNode._children);
   }
 
   return {

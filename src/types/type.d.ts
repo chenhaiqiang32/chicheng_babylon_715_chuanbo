@@ -4,6 +4,7 @@ declare interface HierarchyNode {
   name: string;
   children?: HierarchyNode[];
   isActive: boolean;
+  isSelected?: boolean;
 }
 declare interface Vector {
   x?: number;
