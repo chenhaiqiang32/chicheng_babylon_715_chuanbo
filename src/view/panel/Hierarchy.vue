@@ -399,6 +399,56 @@ async function onKeydown(e: KeyboardEvent) {
             })
         }
     }
+    else {
+        switch(key){
+            case 'arrowup': {
+                handleHierarchyUpDown(e, "arrowup")
+                break;
+            }
+            case 'arrowdown': {
+                handleHierarchyUpDown(e, "arrowdown")
+                break;
+            }
+            case 'arrowleft': {
+                treeRef.value.store.getCurrentNode()?.collapse();
+                break;
+            }
+            case 'arrowright': {
+                treeRef.value.store.getCurrentNode()?.expand();
+                break;
+            }
+        }
+    }
+}
+
+// 上下键移动hierarchy当前选中节点
+// https://github1s.com/element-plus/element-plus/blob/dev/packages/components/tree/src/model/useKeydown.ts
+// 仿照 eltree 的上下键处理逻辑
+function handleHierarchyUpDown(e:KeyboardEvent, keyType:"arrowup" | "arrowdown"){
+    // 获取当前元素
+    const curItem = e.target as HTMLDivElement;
+    const treeItems: HTMLElement[] = Array.from(treeRef.value.$el.querySelectorAll('.el-tree-node'));
+    const curIndex = treeItems.indexOf(curItem);
+    // 找到下一个元素
+    let nextIndex;
+    if(keyType === "arrowup"){
+        nextIndex = curIndex === -1
+            ? 0 
+            : curIndex !== 0
+                ? curIndex - 1 
+                : treeItems.length - 1;
+    } else if(keyType === "arrowdown") {
+        nextIndex = curIndex === -1
+            ? 0 
+            : curIndex < treeItems.length - 1
+                ? curIndex + 1 
+                : 0
+    }
+    // 视觉层和逻辑层修改当前选中节点
+    const next = treeItems[nextIndex];
+    const nextNode = treeRef.value.getNode(next.dataset.key);
+    treeRef.value.store.setCurrentNode(nextNode);
+    handleNodeClick(nextNode.data as HierarchyNode);
 }
 
 // 懒加载
