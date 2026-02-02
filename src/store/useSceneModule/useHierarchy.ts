@@ -14,11 +14,17 @@ function buildHierarchy(node: Node): HierarchyNode {
   if (node.getClassName() === 'ArcRotateCamera' || node.getClassName() === 'UniversalCamera') {
     isActive = Editor.Instance.Scene.activeCamera.uuid === node.uuid;
   }
+  
+  // 递归构建子节点，过滤掉标记为 isIgnore 的节点（如 CollisionMesh）
+  const children = node.getChildren()
+    ?.filter(child => !(child as any).isIgnore)
+    .map(buildHierarchy) ?? [];
+  
   return {
     name: node.name,
     type: node.getClassName(),
     id: node.uuid,
-    children: node.getChildren()?.map(buildHierarchy) ?? [],
+    children: children,
     isActive: isActive,
   };
 }
