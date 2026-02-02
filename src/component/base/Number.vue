@@ -51,6 +51,10 @@ const onBlur = () => {
 		oldValue.value = newValue
 	}
 }
+
+defineExpose({
+	syncFromObject,
+})
 </script>
 
 <style scoped>
