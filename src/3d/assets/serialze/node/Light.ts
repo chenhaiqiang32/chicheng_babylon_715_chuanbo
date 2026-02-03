@@ -7,28 +7,16 @@ import { isCascadedShadowGenerator } from '@/tools/light/shadows';
 export function serializeLight(light: Light, node: CC.LightNode, assetsManager: ICollectAssets) {
   node.type = 'light';
   node.data = light.serialize();
-  console.log(222);
-  
   const shadowGenerator = light.getShadowGenerator();
   if (shadowGenerator) {
     node.shadowGenerator = shadowGenerator.serialize();
     node.isShadowGenerator = !isCascadedShadowGenerator(shadowGenerator);
-    console.log(node.isShadowGenerator);
   }
 }
 
 export function deserializeLight(node: CC.LightNode, scene: Scene, assetsManager: ILoaderAssets) {
   const light = Light.Parse(node.data, scene);
-  console.log(333);
-  
-  if (node.shadowGenerator) {
-    const generator = node.isShadowGenerator
-      ? ShadowGenerator.Parse(node.shadowGenerator, scene)
-      : CascadedShadowGenerator.Parse(node.shadowGenerator, scene);
-    Editor.Instance.shadow.addShadowGeneratorMap(node.uuid, generator);
-  }
-  
+  light.shadowGenerator = node.shadowGenerator;
+  light.isShadowGenerator = node.isShadowGenerator;
   return light;
 }
-
-

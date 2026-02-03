@@ -262,7 +262,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
     const scene = new Scene(this.engine);
     // 等待场景完全加载完成
-    useScene().getScene(
+    await useScene().getScene(
       uuid,
       (percent) => {
         loading?.(percent);
@@ -280,6 +280,12 @@ export class Editor extends Dispatch<EditorEvent> {
         lightGizmo.light = light;
         lightGizmo.scaleRatio = 0;
         light.gizmo = lightGizmo;
+        if (light.shadowGenerator) {
+          const generator = light.isShadowGenerator
+            ? ShadowGenerator.Parse(light.shadowGenerator, scene)
+            : CascadedShadowGenerator.Parse(light.shadowGenerator, scene);
+          this.shadow.addShadowGeneratorMap(light.uuid, generator);
+        }
         //阴影只能场景加载完创建
         if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
           {
@@ -296,21 +302,7 @@ export class Editor extends Dispatch<EditorEvent> {
               });
           }
         }
-
-        // const generator = new CascadedShadowGenerator(4096, light as DirectionalLight);
-        // generator.bias = 0.00268;
-        // generator.lambda = 1;
-        // generator.depthClamp = true;
-        // generator.autoCalcDepthBounds = true;
-        // generator.autoCalcDepthBoundsRefreshRate = 60;
-        // generator.transparencyShadow = true;
-        // generator.enableSoftTransparentShadow = true;
-        // generator.getShadowMap()?.renderList?.push(...generator.getLight().getScene().meshes);
-        // console.log(generator.getClassName?.());
       });
-      // scene.meshes.forEach((item) => {
-      //   item.receiveShadows = true;
-      // });
     }
     this.scene = scene;
     this.outlinePass = new OutlinePass(0.003, new Vector3(1, 64 / 255, 0), this.scene.activeCamera);
@@ -512,7 +504,6 @@ export class Editor extends Dispatch<EditorEvent> {
     light.direction = new Vector3(-1, -2, -1);
     light.intensity = 3.43;
     light.name = 'sun';
-    light.createDefaultShadowGenerator = true;
     // const sg = Editor.Instance.shadow.openShadow(light, "cascaded") as CascadedShadowGenerator;
     // sg.lambda = 1;
     // sg.bias = 0.0005;
@@ -731,19 +722,17 @@ export class Editor extends Dispatch<EditorEvent> {
     this.gizmoManager.scaleGizmoEnabled = false;
   }
 
-  focusTransformNode(node?: ParticleContainer) {
+  focusTransformNode(node?: Node) {
     if (!node && !this._selectNodes[0]) {
       return;
     }
-    // if (!node) {
-    //   node = this._selectNodes[0] instanceof ParticleContainer ? this._selectNodes[0] : null;
-    // }
-    let min: Vector3, max: Vector3;
-    if (this._selectNodes[0] instanceof ParticleContainer) {
+    if (!node) {
       node = this._selectNodes[0];
+    }
+    let min: Vector3, max: Vector3;
+    if (node instanceof ParticleContainer) {
       const firstSystem = node.particleSystems.systems[0];
       if (isAbstractMesh(firstSystem.emitter)) {
-        console.log('firstSystem.emitter');
         const boundingInfo = firstSystem.emitter.getBoundingInfo();
         min = boundingInfo.boundingBox.minimumWorld;
         max = boundingInfo.boundingBox.maximumWorld;
@@ -754,19 +743,23 @@ export class Editor extends Dispatch<EditorEvent> {
       }
     } else {
       const node1 = this._selectNodes[0];
-      console.log(node1);
-
       min = node1.getHierarchyBoundingVectors(true).min;
       max = node1.getHierarchyBoundingVectors(true).max;
     }
 
     //const { min, max } = node.getHierarchyBoundingVectors(true);
-    const center = new Vector3().add(min).add(max).scale(0.5);
-    console.log('max' + max + 'min' + min);
-
+    let center = new Vector3().add(min).add(max).scale(0.5);
     const size = new Vector3().add(max).subtract(min);
-    const radius = Math.max(size.x, size.y, size.z) * 2;
-    console.log('center' + center + 'radius' + radius);
+    let radius = Math.max(size.x, size.y, size.z) * 2;
+    const v = min.x * min.y * min.z * max.x * max.y * max.z;
+    if (v === Infinity || v === -Infinity) {
+      if (node instanceof Camera) {
+        return;
+      }
+      const trans = node as TransformNode;
+      center = trans.getAbsolutePosition();
+      radius = 1;
+    }
 
     let currentDirectionToCenter = center.subtract(this.scene.activeCamera.globalPosition);
     const currentDistance = currentDirectionToCenter.length();

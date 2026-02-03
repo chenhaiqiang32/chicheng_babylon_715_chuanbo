@@ -10,6 +10,7 @@
 <script setup lang='ts'>
 import BasePanel from '@/component/common/BasePanel.vue'
 import Common from './inspector/Common.vue'
+import Physics from './inspector/Physics.vue'
 import { watch, shallowRef, computed, provide, toRaw } from 'vue'
 import { storeToRefs } from 'pinia';
 import { useScene } from '@/store/useScene';
@@ -98,7 +99,7 @@ const comps = computed(() => {
     }
     if (selectedObject.value instanceof Mesh) {
         arr.push(MaterialInspectorRouter)
-
+        arr.push(Physics)
     }
     if (selectedObject.value instanceof Camera) {
         arr.push(CameraComp)

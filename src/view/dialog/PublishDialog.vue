@@ -1,5 +1,5 @@
 <template>
-    <ElDialog :title="$t(`dialog.publish.title`)" v-model="model" @close="close" width="450">
+    <ElDialog :title="$t(`dialog.publish.title`)" v-model="model" @close="close" width="500">
         <div class="dialog-content">
             <Field :title="$t('dialog.publish.selectScene')">
                 <Grid :data="sceneInfoList" :minWidth="100" :rowHeight="20" :gap="10" :dense="true">

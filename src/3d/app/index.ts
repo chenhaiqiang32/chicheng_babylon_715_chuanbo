@@ -1,24 +1,30 @@
 import {
   AbstractEngine,
   ActionManager,
+  CascadedShadowGenerator,
   Color3,
   Color4,
   Engine,
   ExecuteCodeAction,
   Mesh,
   Scene,
+  ShadowGenerator,
   WebGPUEngine,
 } from '@babylonjs/core';
 import { AppAssets } from '../assets/PublishLibrary';
 import { Animator } from '../animation/animator';
 import { Timer } from '@/utils/Time';
 import { ArrayUtils } from '@/utils/Array';
+import { Shadow } from '../Shadow';
+import { isDirectionalLight, isPointLight, isSpotLight } from '@/tools/guards/nodes';
+import { Editor } from '../Editor';
 
 export class App {
   private engine: AbstractEngine;
   private static instance: App;
   private assets: AppAssets;
   scene: Scene;
+  private shadow: Shadow;
   private canvas: HTMLCanvasElement;
   static get Instance(): App {
     if (!this.instance) {
@@ -53,6 +59,7 @@ export class App {
     this.engine.runRenderLoop(() => {
       this.scene?.render();
     });
+    this.shadow = new Shadow();
     window.addEventListener('resize', this.resize);
   }
 
@@ -89,6 +96,30 @@ export class App {
       await Timer.sleep(10);
       onProgress?.(index / (group.length - 1));
     }
+    scene.lights.forEach((light) => {
+      if (light.shadowGenerator) {
+        const generator = light.isShadowGenerator
+          ? ShadowGenerator.Parse(light.shadowGenerator, scene)
+          : CascadedShadowGenerator.Parse(light.shadowGenerator, scene);
+        this.shadow.addShadowGeneratorMap(light.uuid, generator);
+      }
+      if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
+        {
+          const sg = Editor.Instance.shadow.getShadowGenerator(light);
+          if (!sg) {
+            return;
+          }
+          sg.getLight()
+            .getScene()
+            .meshes.forEach((item) => {
+              if (item.castShadows) {
+                Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
+              }
+            });
+        }
+      }
+    });
+
     return scene;
   }
 

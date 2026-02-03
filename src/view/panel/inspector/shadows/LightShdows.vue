@@ -188,8 +188,6 @@ const softShadowItems = computed(() => {
 
 const refreshShadowGenerator = () => {
   if (isDirectionalLight(props.light) || isPointLight(props.light) || isSpotLight(props.light)) {
-    console.log(props.light.uuid);
-
     const gen = Editor.Instance.shadow.getShadowGenerator(props.light);
     generatorType.value = !gen ? 'none' : isCascadedShadowGenerator(gen) ? 'cascaded' : 'classic';
     softShadowType.value = getSoftShadowType(gen);

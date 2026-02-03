@@ -5,22 +5,24 @@
             <Color :label="$t('component.sceneSetting.ambientColor')" :object="scene" property="ambientColor" />
             <Field :title="$t('component.sceneSetting.backgroundType')">
                 <el-select v-model="bgType" style="margin-left: auto; width: 100px;">
-                    <el-option @click="onSelectSyncEnv" :label="'同步环境'"      :value = bgTypeEnum.SyncEnv />
-                    <el-option :label="'图片'"          :value= bgTypeEnum.Texture />
-                    <el-option :label="'全景图'"        :value= bgTypeEnum.EnvTexture />
-                    <el-option :label="'颜色'"          :value= bgTypeEnum.Color />
+                    <el-option @click="onSelectSyncEnv" :label="'同步环境'" :value=bgTypeEnum.SyncEnv />
+                    <el-option :label="'图片'" :value=bgTypeEnum.Texture />
+                    <el-option :label="'全景图'" :value=bgTypeEnum.EnvTexture />
+                    <el-option :label="'颜色'" :value=bgTypeEnum.Color />
                 </el-select>
             </Field>
-            <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')" :object="scene"
-                property="bgTexture" @change="onSelectBgImage" />
-            <Texture v-if="bgType == 3" :acceptCubeTexture="true" :title="$t('component.sceneSetting.background360Image')" :object="scene" type="envTexture"
+            <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')"
+                :object="scene" property="bgTexture" @change="onSelectBgImage" />
+            <Texture v-if="bgType == 3" :acceptCubeTexture="true"
+                :title="$t('component.sceneSetting.background360Image')" :object="scene" type="envTexture"
                 property="bgTexture" @change="onSelectEnvTexture" />
-            <Color v-if="bgType == 4":label="$t('component.sceneSetting.clearColor')" @change="onSelectClearColor" :object="scene" property="clearColor"/>
+            <Color v-if="bgType == 4" :label="$t('component.sceneSetting.clearColor')" @change="onSelectClearColor"
+                :object="scene" property="clearColor" />
         </SectionField>
 
         <SectionField :title="$t('component.sceneSetting.environment')">
-            <Texture :acceptCubeTexture="true" :title="$t('component.sceneSetting.environmentTexture')" :object="scene" type="envTexture"
-                property="environmentTexture" @change="onSelectEnvTex" />
+            <Texture :acceptCubeTexture="true" :title="$t('component.sceneSetting.environmentTexture')" :object="scene"
+                type="envTexture" property="environmentTexture" @change="onSelectEnvTex" />
             <Slider :label="$t('component.sceneSetting.iblIntensity')" :object="scene" property="iblIntensity"
                 @change="force" :min="0" :max="5" />
         </SectionField>
@@ -400,7 +402,6 @@ onMounted(() => {
     toneMappingType.value = renderingPipeline.value?.imageProcessing?.toneMappingType ?? TonemappingOperator.Hable;
     ssr.value = Editor.Instance.getSSRRenderingPipeline(false);
     ssrConfig.value = !!ssr.value;
-    console.log(ssaoConfig.value);
 
     motionBlur.value = Editor.Instance.getMotionBlurPostProcess(false);
     motionBlurConfig.value.enabled = !!motionBlur.value;
@@ -601,7 +602,7 @@ const onSelectBgImage = async (tex: BJS_Texture) => {
     saveBgType(bgTypeEnum.Texture);
 }
 
-const onSelectEnvTexture = async (tex:BJS_Texture) => {
+const onSelectEnvTexture = async (tex: BJS_Texture) => {
     await loadSkyBox(Editor.Instance.Scene, tex);
     saveBgType(bgTypeEnum.EnvTexture);
 }
@@ -618,11 +619,11 @@ const saveBgType = (v: number) => {
 }
 
 // ----- 环境
-const onSelectEnvTex = async (tex:BJS_Texture) => {
+const onSelectEnvTex = async (tex: BJS_Texture) => {
     const envTex = await RuntimeLibrary.Instance.getEnvTexture(tex.sourceUUID);
     Editor.Instance.Scene.environmentTexture = envTex;
     // 如果选择了同步环境，则需要同步修改天空盒
-    if(bgType.value == bgTypeEnum.SyncEnv){
+    if (bgType.value == bgTypeEnum.SyncEnv) {
         loadSkyBox(Editor.Instance.Scene, envTex);
     }
 }

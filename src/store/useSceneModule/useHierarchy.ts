@@ -5,7 +5,7 @@ import { ref, toRef } from 'vue';
 
 function buildHierarchy(node: Node): HierarchyNode {
   // 过滤掉
-  if(node.isIgnore || node.isDeleted){
+  if (node.isIgnore || node.isDeleted) {
     return null;
   }
   if (!node.uuid) {
@@ -18,13 +18,25 @@ function buildHierarchy(node: Node): HierarchyNode {
   if (node.getClassName() === 'ArcRotateCamera' || node.getClassName() === 'UniversalCamera') {
     isActive = Editor.Instance.Scene.activeCamera.uuid === node.uuid;
   }
+
+  // 递归构建子节点，过滤掉标记为 isIgnore 的节点（如 CollisionMesh）
+  const children =
+    node
+      .getChildren()
+      ?.filter((child) => !(child as any).isIgnore)
+      .map(buildHierarchy) ?? [];
+
   return {
     name: node.name,
     type: node.getClassName(),
     id: node.uuid,
-    children: node.getChildren()?.map(buildHierarchy).filter((x) => x != null) ?? [], // 如果是null则不加到数组里面
+    children:
+      node
+        .getChildren()
+        ?.map(buildHierarchy)
+        .filter((x) => x != null) ?? [], // 如果是null则不加到数组里面
     isActive: isActive,
-    isLeaf: node.getChildren()?.length == 0 ?? true
+    isLeaf: node.getChildren()?.length == 0,
   };
 }
 
@@ -32,7 +44,7 @@ export function useHierarchyModule() {
   const hierarchy = ref<HierarchyNode[]>([]);
 
   // uuid -> HierarchyNode
-  const hierarchyMap:Map<string, HierarchyNode> = new Map();
+  const hierarchyMap: Map<string, HierarchyNode> = new Map();
 
   // 递归构建映射
   function buildMap(nodes: HierarchyNode[]) {
@@ -45,7 +57,7 @@ export function useHierarchyModule() {
   }
 
   function setHierarchy(rootNodes: Node[]) {
-    hierarchy.value = rootNodes.map(buildHierarchy).filter((x) => x!=null);
+    hierarchy.value = rootNodes.map(buildHierarchy).filter((x) => x != null);
     rootNodes.forEach((x) => {
       if (x.name == 'SubemitterSystemEmitter') {
         x.isIgnore = true;
@@ -56,7 +68,7 @@ export function useHierarchyModule() {
   }
 
   function updateHierarchy(parentNode: Node) {
-    if(parentNode){
+    if (parentNode) {
       let hNode = hierarchyMap.get(parentNode.uuid);
       const newhNode = buildHierarchy(parentNode);
       // 直接赋值会导致hierarchy引用断开

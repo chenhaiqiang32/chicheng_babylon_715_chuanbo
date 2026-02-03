@@ -35,9 +35,8 @@
                             <ElTree :filter-node-method="filterHierarchy" ref="treeRef" @click="handleNodeClick(null)"
                                 draggable @node-drag-start="handleNodeDragStart" @node-drop="handleNodeDrop"
                                 :data="hierarchy" highlight-current :props="treeProps" node-key="id"
-                                :default-expanded="true" :default-active="true" :expand-on-click-node="false"
-                                lazy :load="loadNode"
-                                @node-click="handleNodeClick">
+                                :default-expanded="true" :default-active="true" :expand-on-click-node="false" lazy
+                                :load="loadNode" @node-click="handleNodeClick">
                                 <!-- 节点类型图标 + 节点名 -->
                                 <template #default="{ node, data }">
                                     <!-- 节点上也可以右键新增 -->
@@ -159,7 +158,7 @@ async function addScene() {
     })
     if (value) {
         const scene = await Editor.Instance.createNewScene(value);
-        useScene().addScene(scene);
+        await useScene().addScene(scene);
         Editor.Instance.setCurrentScene(scene.uuid);
     }
 }
@@ -409,7 +408,7 @@ async function onKeydown(e: KeyboardEvent) {
         }
     }
     else {
-        switch(key){
+        switch (key) {
             case 'arrowup': {
                 handleHierarchyUpDown(e, "arrowup")
                 break;
@@ -433,24 +432,24 @@ async function onKeydown(e: KeyboardEvent) {
 // 上下键移动hierarchy当前选中节点
 // https://github1s.com/element-plus/element-plus/blob/dev/packages/components/tree/src/model/useKeydown.ts
 // 仿照 eltree 的上下键处理逻辑
-function handleHierarchyUpDown(e:KeyboardEvent, keyType:"arrowup" | "arrowdown"){
+function handleHierarchyUpDown(e: KeyboardEvent, keyType: "arrowup" | "arrowdown") {
     // 获取当前元素
     const curItem = e.target as HTMLDivElement;
     const treeItems: HTMLElement[] = Array.from(treeRef.value.$el.querySelectorAll('.el-tree-node')).filter(el => el.offsetParent !== null);
     const curIndex = treeItems.indexOf(curItem);
     // 找到下一个元素
     let nextIndex;
-    if(keyType === "arrowup"){
+    if (keyType === "arrowup") {
         nextIndex = curIndex === -1
-            ? 0 
+            ? 0
             : curIndex !== 0
-                ? curIndex - 1 
+                ? curIndex - 1
                 : treeItems.length - 1;
-    } else if(keyType === "arrowdown") {
+    } else if (keyType === "arrowdown") {
         nextIndex = curIndex === -1
-            ? 0 
+            ? 0
             : curIndex < treeItems.length - 1
-                ? curIndex + 1 
+                ? curIndex + 1
                 : 0
     }
     // 视觉层和逻辑层修改当前选中节点
@@ -462,9 +461,9 @@ function handleHierarchyUpDown(e:KeyboardEvent, keyType:"arrowup" | "arrowdown")
 
 // 懒加载
 const loadNode = (node: Node, resolve: any) => {
-    let data:HierarchyNode[] = [];
+    let data: HierarchyNode[] = [];
     // 获取当前node的子节点然后填充ElTreeNode
-    for(var i=0; i<node.data.children?.length; i++) {
+    for (var i = 0; i < node.data.children?.length; i++) {
         const cur = node.data.children[i];
         data.push(cur);
     }
