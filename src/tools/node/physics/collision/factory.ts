@@ -18,8 +18,8 @@ import { arrayToVector } from "./utils";
 
 /**
  * 碰撞体形状工厂类
- * @description 提供统一的形状对象创建和序列化接口
- * 使用工厂模式简化形状对象的创建流程
+ * 提供统一的形状对象创建和序列化接口
+ * 简化形状对象的创建流程
  */
 export class CollisionShapeFactory {
 	/**
@@ -28,20 +28,18 @@ export class CollisionShapeFactory {
 	 * @returns 具体的形状实例
 	 * 
 	 * @example
-	 * ```ts
-	 * // 创建手动配置的立方体
+	 * //创建手动配置的立方体
 	 * const cube = CollisionShapeFactory.create({
 	 *   type: 'cube',
 	 *   center: new Vector3(0, 1, 0)
 	 * });
 	 * 
-	 * // 创建自动计算尺寸的球体
+	 * //创建自动计算尺寸的球体
 	 * const sphere = CollisionShapeFactory.create({
 	 *   type: 'sphere',
 	 *   autoSize: true,
 	 *   sourceMesh: myMesh
 	 * });
-	 * ```
 	 */
 	static create(config: CollisionShapeConfig): ICollisionShape {
 		const center = config.center || Vector3.Zero();
@@ -72,7 +70,7 @@ export class CollisionShapeFactory {
 				return new NoneCollisionShape(center);
 		}
 		
-		// 如果启用自动尺寸，根据源网格计算碰撞体尺寸
+		//如果启用自动尺寸，根据源网格计算碰撞体尺寸
 		if (config.autoSize && config.sourceMesh) {
 			shape.calculateAutoSize(config.sourceMesh);
 		}
@@ -85,8 +83,7 @@ export class CollisionShapeFactory {
 	 * @param data - 序列化的形状数据
 	 * @returns 反序列化的形状实例
 	 * 
-	 * @description
-	 * 用于从保存的场景文件或网络传输的数据中恢复形状对象
+	 * 用于从保存的场景文件的数据中恢复形状对象
 	 * 每个形状类都实现了自己的 fromJSON 静态方法
 	 */
 	static fromJSON(data: AnyShapeJSON): ICollisionShape {
@@ -112,17 +109,14 @@ export class CollisionShapeFactory {
 	/**
 	 * 创建默认形状（自动计算尺寸）
 	 * @param type - 形状类型
-	 * @param sourceMesh - 源网格（可选）
+	 * @param sourceMesh - 源网格
 	 * @returns 形状实例
 	 * 
-	 * @description
-	 * 便捷方法，如果提供源网格则自动计算尺寸
+	 * 如果提供源网格则自动计算尺寸
 	 * 
 	 * @example
-	 * ```ts
-	 * // 创建自动匹配网格的碰撞体
+	 * //创建自动匹配网格的碰撞体
 	 * const shape = CollisionShapeFactory.createDefault('cube', myMesh);
-	 * ```
 	 */
 	static createDefault(type: CollisionMeshType, sourceMesh?: AbstractMesh): ICollisionShape {
 		return this.create({

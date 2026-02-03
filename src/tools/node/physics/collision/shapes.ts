@@ -35,16 +35,14 @@ import {
 } from "./types";
 import {
 	getAxisRotation,
-	getAxisScaling,
 	vectorToArray,
 	arrayToVector,
 } from "./utils";
 import QuickHull from "quickhull3d";
 
-// ==================== 可视化细分配置 ====================
 /**
  * 可视化细分配置常量
- * @description 仅影响编辑器中碰撞体线框/网格的显示精度，不影响运行时物理引擎的碰撞检测精度
+ * 影响碰撞体网格的精度
  */
 const VISUALIZATION_DETAIL = {
 	SPHERE: { low: 12, medium: 18, high: 32 },
@@ -58,8 +56,7 @@ const VISUALIZATION_DETAIL = {
 
 /**
  * 根据细分级别获取球体分段数
- * @param detail - 细分级别（low/medium/high）
- * @returns 球体的经纬线分段数
+ * 球体的经纬线分段数
  */
 function getSphereSegments(detail: CollisionDetailLevel | undefined): number {
 	return VISUALIZATION_DETAIL.SPHERE[detail || "medium"];
@@ -67,8 +64,7 @@ function getSphereSegments(detail: CollisionDetailLevel | undefined): number {
 
 /**
  * 根据细分级别获取圆柱体细分数
- * @param detail - 细分级别（low/medium/high）
- * @returns 圆柱体圆周的细分数
+ * 圆柱体圆周的细分数
  */
 function getCylinderTessellation(detail: CollisionDetailLevel | undefined): number {
 	return VISUALIZATION_DETAIL.CYLINDER[detail || "medium"];
@@ -76,23 +72,20 @@ function getCylinderTessellation(detail: CollisionDetailLevel | undefined): numb
 
 /**
  * 根据细分级别获取胶囊体细分配置
- * @param detail - 细分级别（low/medium/high）
- * @returns 胶囊体的圆周和端盖细分数配置
+ * 胶囊体的圆周和端盖细分数配置
  */
 function getCapsuleTessellation(detail: CollisionDetailLevel | undefined): { tessellation: number; capSubdivisions: number } {
 	return VISUALIZATION_DETAIL.CAPSULE[detail || "medium"];
 }
 
-// ==================== 形状基类 ====================
 /**
  * 碰撞体形状抽象基类
- * @description 提供所有碰撞形状的通用接口和基础实现，采用模板模式定义碰撞体创建流程
+ * 提供所有碰撞形状的通用接口和基础实现
  */
 abstract class CollisionShapeBase implements ICollisionShape {
-	/** 形状类型（只读） */
-	public readonly type: CollisionMeshType;
-	
-	/** 形状在本地空间的中心点 */
+	//形状
+	public readonly type: CollisionMeshType;	
+	//形状在本地空间的中心点(不包括缩放)
 	public center: Vector3;
 
 	constructor(type: CollisionMeshType, center: Vector3 = Vector3.Zero()) {
@@ -100,43 +93,30 @@ abstract class CollisionShapeBase implements ICollisionShape {
 		this.center = center.clone();
 	}
 
+	//根据源网格的包围盒自动计算碰撞体尺寸
+	abstract calculateAutoSize(sourceMesh: AbstractMesh): void;	
+
 	/**
-	 * 根据源网格的包围盒自动计算碰撞体尺寸
-	 * @param sourceMesh - 源网格对象
+	 * 创建碰撞体几何体	 
+	 * @param parentScale 父节点的世界缩放
 	 */
-	abstract calculateAutoSize(sourceMesh: AbstractMesh): void;
-	
+
+	abstract createGeometry(scene: Scene, parentScale?: Vector3): Geometry;	
 	/**
-	 * 创建碰撞体几何体
-	 * @param scene - 场景对象
-	 * @param parentScale - 父节点的世界缩放（用于非等比缩放处理）
-	 * @returns 碰撞体几何体对象
-	 */
-	abstract createGeometry(scene: Scene, parentScale?: Vector3): Geometry;
-	
-	/**
-	 * 将形状参数应用到网格（设置位置、旋转、缩放）
+	 * 将形状参数应用到网格(设置位置、旋转、缩放)
 	 * @param mesh - 目标网格对象
 	 */
-	abstract applyToMesh(mesh: AbstractMesh): void;
-	
-	/**
-	 * 克隆形状对象（深拷贝）
-	 * @returns 新的形状对象
-	 */
+
+	abstract applyToMesh(mesh: AbstractMesh): void;	
+
+	//深拷贝
 	abstract clone(): ICollisionShape;
-	
-	/**
-	 * 序列化为 JSON 格式
-	 * @returns JSON 对象
-	 */
 	abstract toJSON(): CollisionShapeJSON;
 }
 
-// ==================== 无碰撞体 ====================
 /**
  * 无碰撞体形状
- * @description 表示物体不参与碰撞检测，用于禁用物理碰撞
+ * 物体不参与碰撞检测，用于禁用物理碰撞
  */
 export class NoneCollisionShape extends CollisionShapeBase implements INoneShape {
 	public readonly type = "none" as const;
@@ -146,11 +126,11 @@ export class NoneCollisionShape extends CollisionShapeBase implements INoneShape
 	}
 
 	calculateAutoSize(_sourceMesh: AbstractMesh): void {
-		// 无碰撞体无需计算尺寸
+
 	}
 
 	createGeometry(_scene: Scene, _parentScale?: Vector3): Geometry {
-		throw new Error("[NoneCollisionShape] Cannot create geometry - none collision type has no visual representation");
+		throw new Error("无碰撞体类型不可创建几何体");
 	}
 
 	applyToMesh(mesh: AbstractMesh): void {
@@ -170,7 +150,7 @@ export class NoneCollisionShape extends CollisionShapeBase implements INoneShape
 	}
 
 	/**
-	 * 从 JSON 数据反序列化创建实例
+	 * 从JSON数据反序列化创建实例
 	 * @param data - JSON 数据对象
 	 * @returns 新的 NoneCollisionShape 实例
 	 */
@@ -179,15 +159,13 @@ export class NoneCollisionShape extends CollisionShapeBase implements INoneShape
 	}
 }
 
-// ==================== 立方体 ====================
 /**
- * 立方体（长方体）碰撞体形状
- * @description 使用三维尺寸向量定义宽高深，适用于箱子、墙壁等规则矩形物体
+ * 长方体碰撞体形状
+ * 使用三维尺寸向量定义宽高深
  */
 export class CubeCollisionShape extends CollisionShapeBase implements ICubeShape {
 	public readonly type = "cube" as const;
-	
-	/** 立方体尺寸 */
+	//尺寸x,y,z
 	public size: Vector3;
 
 	constructor(center: Vector3 = Vector3.Zero(), size: Vector3 = Vector3.One()) {
@@ -201,8 +179,8 @@ export class CubeCollisionShape extends CollisionShapeBase implements ICubeShape
 	 */
 	calculateAutoSize(sourceMesh: AbstractMesh): void {
 		sourceMesh.refreshBoundingInfo({
-			applyMorph: true,
-			applySkeleton: true,
+			applyMorph: true,//变形
+			applySkeleton: true,//骨架
 		});
 
 		const bb = sourceMesh.getBoundingInfo();
@@ -259,18 +237,13 @@ export class CubeCollisionShape extends CollisionShapeBase implements ICubeShape
 	}
 }
 
-// ==================== 球体 ====================
 /**
  * 球体碰撞体形状
  * 使用半径定义球体大小，支持非等比缩放时保持正圆
  */
 export class SphereCollisionShape extends CollisionShapeBase implements ISphereShape {
 	public readonly type = "sphere" as const;
-	
-	/** 球体半径 */
 	public radius: number;
-	
-	/** 细分级别（仅影响编辑器可视化） */
 	public detail: CollisionDetailLevel;
 
 	constructor(
@@ -296,7 +269,6 @@ export class SphereCollisionShape extends CollisionShapeBase implements ISphereS
 		const bb = sourceMesh.getBoundingInfo();
 		this.center = bb.boundingBox.center.clone();
 		
-		// 使用最大半径，确保球体能完全包裹住物体
 		const extendSize = bb.boundingBox.extendSize;
 		this.radius = Math.max(extendSize.x, extendSize.y, extendSize.z);
 	}
@@ -325,11 +297,11 @@ export class SphereCollisionShape extends CollisionShapeBase implements ISphereS
 		mesh.position.copyFrom(this.center);
 		
 		if (mesh.parent) {
-			// 获取父节点的世界缩放
+			//获取父节点的世界缩放
 			const parentWorldScale = (mesh.parent as AbstractMesh).absoluteScaling;
 			const maxScale = Math.max(parentWorldScale.x, parentWorldScale.y, parentWorldScale.z);
 			
-			// 计算局部缩放以实现目标世界大小
+			//计算局部缩放以实现目标世界大小
 			const targetSize = this.radius * 2 * maxScale;
 			mesh.scaling.set(
 				targetSize / parentWorldScale.x,
@@ -358,9 +330,6 @@ export class SphereCollisionShape extends CollisionShapeBase implements ISphereS
 		};
 	}
 
-	/**
-	 * 从 JSON 反序列化
-	 */
 	static fromJSON(data: SphereShapeJSON): SphereCollisionShape {
 		return new SphereCollisionShape(
 			arrayToVector(data.center),
@@ -370,7 +339,6 @@ export class SphereCollisionShape extends CollisionShapeBase implements ISphereS
 	}
 }
 
-// ==================== 圆柱体 ====================
 /**
  * 圆柱体碰撞体形状
  * 支持 X/Y/Z 三个轴向，使用内切圆半径确保圆柱在网格内部
@@ -378,16 +346,9 @@ export class SphereCollisionShape extends CollisionShapeBase implements ISphereS
 export class CylinderCollisionShape extends CollisionShapeBase implements ICylinderShape {
 	public readonly type = "cylinder" as const;
 	
-	/** 圆柱半径 */
 	public radius: number;
-	
-	/** 圆柱高度 */
 	public height: number;
-	
-	/** 圆柱轴向 */
 	public axis: CollisionAxis;
-	
-	/** 细分级别（仅影响编辑器可视化） */
 	public detail: CollisionDetailLevel;
 
 	constructor(
@@ -411,13 +372,13 @@ export class CylinderCollisionShape extends CollisionShapeBase implements ICylin
 		});
 
 		const bb = sourceMesh.getBoundingInfo();
-		// 使用本地坐标，因为碰撞网格是源网格的子节点
+		//使用本地坐标，因为碰撞网格是源网格的子节点
 		this.center = bb.boundingBox.center.clone();
-
 		const boxSize = bb.boundingBox.extendSize.scale(2);
+
 		switch (this.axis) {
 			case "x":
-				// 使用内切圆半径，确保圆柱在网格内部
+				//使用内切圆半径，确保圆柱在网格内部
 				this.radius = Math.min(boxSize.y, boxSize.z) / 2;
 				this.height = boxSize.x;
 				break;
@@ -437,14 +398,13 @@ export class CylinderCollisionShape extends CollisionShapeBase implements ICylin
 	 * 实际方向和大小通过 applyToMesh 中的旋转和缩放来实现
 	 */
 	createGeometry(scene: Scene, _parentScale?: Vector3): Geometry {
-		const tessellation = getCylinderTessellation(this.detail);
 		return new Geometry(
 			Tools.RandomId(),
 			scene,
 			CreateCylinderVertexData({
 				height: 1,
 				diameter: 1,
-				tessellation,
+				tessellation: getCylinderTessellation(this.detail),
 			})
 		);
 	}
@@ -456,78 +416,74 @@ export class CylinderCollisionShape extends CollisionShapeBase implements ICylin
 	applyToMesh(mesh: AbstractMesh): void {
 		mesh.position.copyFrom(this.center);
 		
-		// 几何体始终是Y轴圆柱（diameter在XZ平面，height在Y方向）
-		// 变换顺序：Scale -> Rotate -> Translate
-		
 		if (mesh.parent && (mesh.parent as AbstractMesh).absoluteScaling) {
 			const parentScale = (mesh.parent as AbstractMesh).absoluteScaling;
 			
-			// 根据旋转后的轴向，确定圆在哪个平面，高度在哪个方向
-			let diameterScales: [number, number];  // 圆所在平面的两个缩放
-			let heightScale: number;                // 高度方向的缩放
+			//根据旋转后的轴向，确定圆在哪个平面，高度在哪个方向
+			let diameterScales: [number, number];//圆所在平面的两个缩放
+			let heightScale: number;//高度方向的缩放
 			
 			switch (this.axis) {
 				case "x":
-					// X轴圆柱：旋转后圆在YZ平面，高度在X方向
+					//X轴圆柱：旋转后圆在YZ平面，高度在X方向
 					diameterScales = [parentScale.y, parentScale.z];
 					heightScale = parentScale.x;
 					break;
 				case "y":
-					// Y轴圆柱：圆在XZ平面，高度在Y方向
+					//Y轴圆柱：XZ平面，高度Y
 					diameterScales = [parentScale.x, parentScale.z];
 					heightScale = parentScale.y;
 					break;
 				case "z":
-					// Z轴圆柱：旋转后圆在XY平面，高度在Z方向
+					//Z轴圆柱：XY平面，高度Z
 					diameterScales = [parentScale.x, parentScale.y];
 					heightScale = parentScale.z;
 					break;
 			}
 			
-			// 圆形截面取最大缩放，保持正圆
+			//圆形截面取最大缩放，保持正圆
 			const maxDiameterScale = Math.max(...diameterScales);
 			const targetWorldDiameter = this.radius * 2 * maxDiameterScale;
 			const targetWorldHeight = this.height * heightScale;
 			
-			// 几何体是Y轴圆柱（圆在XZ平面，高度在Y），需要根据旋转调整局部缩放
-			// 变换顺序：Scale -> Rotate -> Translate
+			//几何体是Y轴圆柱（圆在XZ平面，高度在Y），需要根据旋转调整局部缩放
+			//变换顺序：Scale -> Rotate -> Translate
 			let localScaling: Vector3;
 			
 			switch (this.axis) {
 				case "x":
-					// 绕Z旋转90°：局部X->世界Y, 局部Y->世界X, 局部Z->世界Z
+					//绕Z旋转90°：局部X->世界Y, 局部Y->世界X, 局部Z->世界Z
 					localScaling = new Vector3(
-						targetWorldDiameter / parentScale.y,  // 局部X（圆）->世界Y
-						targetWorldHeight / parentScale.x,    // 局部Y（高）->世界X
-						targetWorldDiameter / parentScale.z   // 局部Z（圆）->世界Z
+						targetWorldDiameter / parentScale.y,  //局部X（圆）->世界Y
+						targetWorldHeight / parentScale.x,    //局部Y（高）->世界X
+						targetWorldDiameter / parentScale.z   //局部Z（圆）->世界Z
 					);
 					break;
 				case "y":
-					// 不旋转：局部X->世界X, 局部Y->世界Y, 局部Z->世界Z
+					//不旋转：局部X->世界X, 局部Y->世界Y, 局部Z->世界Z
 					localScaling = new Vector3(
-						targetWorldDiameter / parentScale.x,  // 局部X（圆）->世界X
-						targetWorldHeight / parentScale.y,    // 局部Y（高）->世界Y
-						targetWorldDiameter / parentScale.z   // 局部Z（圆）->世界Z
+						targetWorldDiameter / parentScale.x,  //局部X（圆）->世界X
+						targetWorldHeight / parentScale.y,    //局部Y（高）->世界Y
+						targetWorldDiameter / parentScale.z   //局部Z（圆）->世界Z
 					);
 					break;
 				case "z":
-					// 绕X旋转90°：局部X->世界X, 局部Y->世界Z, 局部Z->世界Y
+					//绕X旋转90°：局部X->世界X, 局部Y->世界Z, 局部Z->世界Y
 					localScaling = new Vector3(
-						targetWorldDiameter / parentScale.x,  // 局部X（圆）->世界X
-						targetWorldHeight / parentScale.z,    // 局部Y（高）->世界Z
-						targetWorldDiameter / parentScale.y   // 局部Z（圆）->世界Y
+						targetWorldDiameter / parentScale.x,  //局部X（圆）->世界X
+						targetWorldHeight / parentScale.z,    //局部Y（高）->世界Z
+						targetWorldDiameter / parentScale.y   //局部Z（圆）->世界Y
 					);
 					break;
 			}
 			
 			mesh.scaling.copyFrom(localScaling);
 		} else {
-			// 没有父节点，直接设置
 			const diameter = this.radius * 2;
 			mesh.scaling.set(diameter, this.height, diameter);
 		}
 		
-		// 最后设置旋转来控制轴向
+		//最后设置旋转来控制轴向
 		const rotation = getAxisRotation(this.axis);
 		mesh.rotation.copyFrom(rotation);
 	}
@@ -553,9 +509,6 @@ export class CylinderCollisionShape extends CollisionShapeBase implements ICylin
 		};
 	}
 
-	/**
-	 * 从 JSON 反序列化
-	 */
 	static fromJSON(data: CylinderShapeJSON): CylinderCollisionShape {
 		return new CylinderCollisionShape(
 			arrayToVector(data.center),
@@ -567,29 +520,19 @@ export class CylinderCollisionShape extends CollisionShapeBase implements ICylin
 	}
 }
 
-// ==================== 胶囊体 ====================
 /**
  * 胶囊体碰撞体形状
  * 胶囊 = 圆柱 + 顶部半球 + 底部半球
  * 
- * 参数说明：
- * - height: 总高度（包括两个半球）
- * - radius: 圆柱和两个半球的半径
- * - 圆柱高度 = height - 2 * radius（当 height < 2*radius 时，圆柱高度为0）
+ * @param height - 总高度（包括两个半球）
+ * @param radius - 圆柱和两个半球的半径
+ * 圆柱高度 = height - 2 * radius（当 height < 2*radius 时，圆柱高度为0）
  */
 export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsuleShape {
 	public readonly type = "capsule" as const;
-	
-	/** 胶囊半径 */
 	public radius: number;
-	
-	/** 胶囊总高度（包括两个半球） */
 	public height: number;
-	
-	/** 胶囊轴向 */
 	public axis: CollisionAxis;
-	
-	/** 细分级别（仅影响编辑器可视化） */
 	public detail: CollisionDetailLevel;
 
 	constructor(
@@ -613,9 +556,7 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 		});
 
 		const bb = sourceMesh.getBoundingInfo();
-		// 使用本地坐标，因为碰撞网格是源网格的子节点
 		this.center = bb.boundingBox.center.clone();
-
 		const boxSize = bb.boundingBox.extendSize.scale(2);
 		let axisLength: number;
 		let otherDimensions: [number, number];
@@ -635,9 +576,8 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 				break;
 		}
 
-		// 对于1*1*1的Box，高度应该是1，半径应该是0.5
+		//对于1*1*1的Box，高度应该是1，半径应该是0.5
 		this.radius = Math.min(...otherDimensions) / 2;
-		// height 是总高度（包括两个半球）
 		this.height = axisLength;
 	}
 
@@ -653,7 +593,7 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 	createGeometry(scene: Scene, parentScale?: Vector3): Geometry {
 		const safeRadius = Math.max(this.radius, 1e-4);
 
-		// 计算父节点在轴向和垂直方向的缩放
+		//计算父节点在轴向和垂直方向的缩放
 		let axisScale = 1;
 		let diameterScales: [number, number] = [1, 1];
 
@@ -674,21 +614,21 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 			}
 		}
 
-		// 垂直于轴向的缩放：决定世界空间里的“目标半径”
+		//垂直于轴向的缩放：决定世界空间里的"目标半径"
 		const maxDiameterScale = Math.max(...diameterScales);
 		const worldRadius = safeRadius * maxDiameterScale;
 
-		// 轴向缩放：决定世界空间里的“目标总高度”
-		// 规则：
-		// - 基础总高度 = this.height
-		// - 轴向缩放 > 1 时拉长总高度
-		// - 轴向缩放 < 1 时：总高度不会小于 2 * worldRadius（圆柱部分长度不为负）
+		//轴向缩放：决定世界空间里的“目标总高度”
+		//规则：
+		//基础总高度 = this.height
+		//轴向缩放 > 1 时拉长总高度
+		//轴向缩放 < 1 时：总高度不会小于 2 * worldRadius（圆柱部分长度不为负）
 		const baseTotalHeight = this.height;
 		const scaledTotalHeight = baseTotalHeight * axisScale;
 		const worldTotalHeight = Math.max(2 * worldRadius, scaledTotalHeight);
 
-		// 归一化高度：以 worldRadius 为 1 时的总高度
-		// 几何体使用 radius=1，后续再用 scaling 把半径缩放到 worldRadius
+		//归一化高度：以 worldRadius 为 1 时的总高度
+		//几何体使用 radius=1，后续再用 scaling 把半径缩放到 worldRadius
 		const normalizedHeight = worldTotalHeight / worldRadius;
 		const { tessellation, capSubdivisions } = getCapsuleTessellation(this.detail);
 		const orientation = this._getAxisDirection();
@@ -722,7 +662,7 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 		if (mesh.parent && (mesh.parent as AbstractMesh).absoluteScaling) {
 			const parentScale = (mesh.parent as AbstractMesh).absoluteScaling;
 
-			// 垂直于轴向的缩放：决定世界空间里的“目标半径”
+			//垂直于轴向的缩放：决定世界空间里的“目标半径”
 			let diameterScales: [number, number];
 			switch (this.axis) {
 				case "x":
@@ -737,7 +677,7 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 			}
 
 			const maxDiameterScale = Math.max(...diameterScales);
-			const targetWorldRadius = safeRadius * maxDiameterScale; // 几何体 radius=1，对应的世界半径
+			const targetWorldRadius = safeRadius * maxDiameterScale; //几何体 radius=1，对应的世界半径
 
 			mesh.scaling.set(
 				targetWorldRadius / parentScale.x,
@@ -745,14 +685,11 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 				targetWorldRadius / parentScale.z,
 			);
 		} else {
-			// 无父节点：直接用 uniform scale 把 radius=1 的几何体缩放到目标半径
+			//无父节点：直接用 uniform scale 把 radius=1 的几何体缩放到目标半径
 			mesh.scaling.setAll(safeRadius);
 		}
 	}
 
-	/**
-	 * 获取轴向方向向量
-	 */
 	private _getAxisDirection(): Vector3 {
 		switch (this.axis) {
 			case "x": return Vector3.Right();
@@ -782,20 +719,13 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 		};
 	}
 
-	/**
-	 * 从 JSON 反序列化
-	 * 兼容旧数据格式（使用 startPoint 和 endPoint）
-	 */
 	static fromJSON(data: CapsuleShapeJSON): CapsuleCollisionShape {
 		let height: number;
 		
 		if (data.height !== undefined) {
 			height = data.height;
-		} else if ((data as any).startPoint !== undefined && (data as any).endPoint !== undefined) {
-			// 旧数据格式兼容
-			const cylinderHeight = Math.max(0, Math.abs((data as any).endPoint - (data as any).startPoint));
-			height = cylinderHeight + data.radius * 2;
-		} else {
+		}
+		else {
 			height = 1;
 		}
 		
@@ -809,11 +739,9 @@ export class CapsuleCollisionShape extends CollisionShapeBase implements ICapsul
 	}
 }
 
-// ==================== 凸包 ====================
 /**
  * 凸包碰撞体形状
- * 使用 QuickHull 算法从源网格顶点计算凸包
- * 适用于复杂形状的简化碰撞
+ * Havok拿不到凸包算法，使用 QuickHull 算法从源网格计算凸包
  */
 export class ConvexHullCollisionShape extends CollisionShapeBase implements IConvexHullShape {
 	public readonly type = "convexHull" as const;
@@ -835,19 +763,14 @@ export class ConvexHullCollisionShape extends CollisionShapeBase implements ICon
 	}
 
 	createGeometry(_scene: Scene, _parentScale?: Vector3): Geometry {
-		throw new Error("[ConvexHullCollisionShape] Cannot create geometry without source mesh - use createGeometryFromMesh() instead");
+		throw new Error("[ConvexHullCollisionShape] 凸包几何的生成必须有网格[Mesh]");
 	}
 
-	/**
-	 * 从源网格创建凸包几何体
-	 * 使用Havok的凸包算法简化网格
-	 */
 	async createGeometryFromMesh(sourceMesh: Mesh): Promise<Geometry | null> {
 		if (!sourceMesh.geometry) {
 			return null;
 		}
 
-		// 使用Havok的凸包算法创建简化的凸包几何体
 		const convexHullMesh = await this._createConvexHullMesh(sourceMesh);
 		if (!convexHullMesh || !convexHullMesh.geometry) {
 			return null;
@@ -862,9 +785,6 @@ export class ConvexHullCollisionShape extends CollisionShapeBase implements ICon
 		return geometry;
 	}
 
-	/**
-	 * 创建凸包网格（内部方法）
-	 */
 	private async _createConvexHullMesh(sourceMesh: Mesh): Promise<Mesh | null> {
 		try {
 			const positions = sourceMesh.getVerticesData("position");
@@ -872,16 +792,16 @@ export class ConvexHullCollisionShape extends CollisionShapeBase implements ICon
 				return null;
 			}
 
-			// 将顶点数组转换为 Vector3 数组
+			//将顶点数组转换为 Vector3 数组
 			const vertices: Vector3[] = [];
 			for (let i = 0; i < positions.length; i += 3) {
 				vertices.push(new Vector3(positions[i], positions[i + 1], positions[i + 2]));
 			}
 
-			// 计算凸包
+			//计算凸包
 			const convexHull = this._computeConvexHull(vertices);
 			
-			// 创建凸包网格
+			//创建凸包网格
 			const convexMesh = new Mesh(Tools.RandomId(), sourceMesh.getScene());
 			const vertexData = new VertexData();
 			vertexData.positions = convexHull.positions;
@@ -890,7 +810,7 @@ export class ConvexHullCollisionShape extends CollisionShapeBase implements ICon
 			
 			return convexMesh;
 		} catch (error) {
-			console.error("[ConvexHullCollisionShape] Failed to create convex hull mesh:", error);
+			console.error("[ConvexHullCollisionShape] 创建凸包碰撞网格失败:", error);
 			return null;
 		}
 	}
@@ -901,19 +821,19 @@ export class ConvexHullCollisionShape extends CollisionShapeBase implements ICon
 	 */
 	private _computeConvexHull(vertices: Vector3[]): { positions: Float32Array; indices: Uint32Array } {
 		try {
-			// 将 Vector3 数组转换为 quickhull3d 需要的格式
+			//将 Vector3 数组转换为 quickhull3d 需要的格式
 			const points = vertices.map(v => new Float32Array([v.x, v.y, v.z]));
 
-			// 使用 quickhull3d 计算凸包，返回面的索引数组 [[i1,i2,i3], ...]
+			//使用 quickhull3d 计算凸包，返回面的索引数组 [[i1,i2,i3], ...]
 			const faces = QuickHull(points);
 
-			// 构建索引数组（每个面有3个顶点索引）
+			//构建索引数组（每个面有3个顶点索引）
 			const indices: number[] = [];
 			faces.forEach(face => {
 				indices.push(face[0], face[1], face[2]);
 			});
 
-			// 构建顶点位置数组
+			//构建顶点位置数组
 			const positions = new Float32Array(vertices.length * 3);
 			vertices.forEach((v, i) => {
 				positions[i * 3] = v.x;
@@ -926,9 +846,8 @@ export class ConvexHullCollisionShape extends CollisionShapeBase implements ICon
 				indices: new Uint32Array(indices),
 			};
 		} catch (error) {
-			console.warn("[ConvexHullCollisionShape] QuickHull algorithm failed, falling back to bounding box:", error);
+			console.warn("[ConvexHullCollisionShape] QuickHull算法失败，回退到边界框算法:", error);
 			
-			// 降级方案：使用边界框（简单但可靠）
 			let minX = Infinity, maxX = -Infinity;
 			let minY = Infinity, maxY = -Infinity;
 			let minZ = Infinity, maxZ = -Infinity;
@@ -992,19 +911,16 @@ export class ConvexHullCollisionShape extends CollisionShapeBase implements ICon
 		};
 	}
 
-	/**
-	 * 从 JSON 反序列化
-	 */
 	static fromJSON(data: ConvexHullShapeJSON): ConvexHullCollisionShape {
 		return new ConvexHullCollisionShape(arrayToVector(data.center));
 	}
 }
 
-// ==================== 精确网格 ====================
 /**
  * 精确网格碰撞体形状
  * 直接使用源网格的完整几何体，提供最精确的碰撞检测
- * 注意：不能作为触发器，且性能开销较大
+ * 不作为触发器，且性能开销较大
+ * (TODO:我查了一下其实babylon的Havok支持凹多边形的触发器但是性能开销较大，后续考虑把触发器移植到RigidBody中。这里对于复杂的凹多边形计算不开放触发器)
  */
 export class MeshCollisionShape extends CollisionShapeBase implements IMeshShape {
 	public readonly type = "mesh" as const;
@@ -1029,9 +945,6 @@ export class MeshCollisionShape extends CollisionShapeBase implements IMeshShape
 		throw new Error("MeshCollisionShape cannot create geometry without source mesh");
 	}
 
-	/**
-	 * 从源网格创建几何体（克隆源网格的几何体）
-	 */
 	async createGeometryFromMesh(sourceMesh: Mesh): Promise<Geometry | null> {
 		const tempMesh = sourceMesh.clone(Tools.RandomId());
 		if (tempMesh && tempMesh.geometry) {
@@ -1061,9 +974,6 @@ export class MeshCollisionShape extends CollisionShapeBase implements IMeshShape
 		};
 	}
 
-	/**
-	 * 从 JSON 反序列化
-	 */
 	static fromJSON(data: MeshShapeJSON): MeshCollisionShape {
 		return new MeshCollisionShape(arrayToVector(data.center));
 	}

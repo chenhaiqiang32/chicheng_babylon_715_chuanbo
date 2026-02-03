@@ -306,10 +306,10 @@ import {
   RuntimePhysicsFactory,
 } from "@/tools/node/physics";
 
-// ==================== 组件属性 ====================
+
 const props = defineProps<{ object: AbstractMesh }>();
 
-// ==================== 计算属性 ====================
+
 /**
  * 获取实际的网格对象
  * @description 处理实例化网格，返回源网格对象用于物理配置
@@ -346,10 +346,9 @@ const rigidbodyProps = reactive<IRigidBodyProperties>({
 const runtimePhysicsBodies = ref<any[]>([]);
 
 
-// ==================== 数据同步工具函数 ====================
 /**
  * 将碰撞网格同步到源网格对象
- * @description 碰撞网格配置存储在源网格的 collisionMesh 属性中，供序列化和运行时使用
+ * 碰撞网格配置存储在源网格的 collisionMesh 属性中，供序列化和运行时使用
  */
 const syncCollisionMeshToMesh = (): void => {
   (mesh.value as any).collisionMesh = collisionMesh.value;
@@ -357,7 +356,7 @@ const syncCollisionMeshToMesh = (): void => {
 
 /**
  * 从源网格加载碰撞网格配置
- * @description 在切换选中对象或初始化时调用
+ * 在切换选中对象或初始化时调用
  */
 const loadCollisionMeshFromMesh = (): void => {
   if (!mesh.value) {
@@ -369,7 +368,7 @@ const loadCollisionMeshFromMesh = (): void => {
 
 /**
  * 从源网格的 metadata 加载刚体配置
- * @description 刚体配置（质量、阻尼等）存储在 mesh.metadata.rigidbody 中
+ * 刚体配置（质量、阻尼等）存储在 mesh.metadata.rigidbody 中
  */
 const loadRigidbodyFromMesh = (): void => {
   if (!mesh.value) {
@@ -386,16 +385,15 @@ const loadRigidbodyFromMesh = (): void => {
 
 /**
  * 将刚体配置保存到源网格的 metadata
- * @description 每次修改刚体属性时调用
+ * 每次修改刚体属性时调用
  */
 const saveRigidbodyToMesh = (): void => {
   new RigidBody(mesh.value, rigidbodyProps);
 };
 
-// ==================== 可视化控制工具函数 ====================
 /**
  * 设置碰撞网格的可见性
- * @description 统一控制主网格、实例和线框的可见性
+ * 统一控制主网格、实例和线框的可见性
  */
 const setCollisionMeshVisible = (visible: boolean): void => {
   if (!collisionMesh.value) return;
@@ -404,7 +402,7 @@ const setCollisionMeshVisible = (visible: boolean): void => {
 
 /**
  * 销毁碰撞网格及其资源
- * @description 在切换碰撞体类型或禁用物理时调用
+ * 在切换碰撞体类型或禁用物理时调用
  */
 const disposeCollisionMesh = (): void => {
   if (collisionMesh.value) {
@@ -414,10 +412,9 @@ const disposeCollisionMesh = (): void => {
   }
 };
 
-// ==================== 事件处理器 ====================
 /**
  * 物理启用状态改变处理
- * @description 当用户切换 "Enable Physics" 开关时触发
+ * 当用户切换 "Enable Physics" 开关时触发
  */
 const onPhysicsEnabledChanged = async (enabled: boolean): Promise<void> => {
   isPhysicsEnabled.value = enabled;
@@ -426,19 +423,18 @@ const onPhysicsEnabledChanged = async (enabled: boolean): Promise<void> => {
     if (collisionMesh.value && collisionMesh.value.type !== 'none') {
       setCollisionMeshVisible(true);
     } else if (!collisionMesh.value) {
-      // 首次启用物理：创建默认碰撞体（cube）
+      //首次启用物理：创建默认碰撞体（cube）
       await onCollisionTypeChanged(selectedCollisionType.value);
     }
   } else {
-    // 禁用物理：隐藏碰撞体可视化（但保留配置）
+    //禁用物理：隐藏碰撞体可视化（但保留配置）
     setCollisionMeshVisible(false);
   }
 };
 
 /**
  * 碰撞体类型改变处理
- * @description 当用户在下拉框中选择不同的碰撞体类型时触发
- * @param type - 新的碰撞体类型
+ * 在下拉框中选择不同的碰撞体类型时触发
  */
 const onCollisionTypeChanged = async (type: CollisionMeshType): Promise<void> => {
   // 处理"无碰撞"类型
@@ -447,64 +443,65 @@ const onCollisionTypeChanged = async (type: CollisionMeshType): Promise<void> =>
     return;
   }
 
-  // 如果类型未变化，无需重建
+  //如果类型未变化，无需重建
   if (collisionMesh.value?.type === type) {
     return;
   }
 
   computingCollisionMesh.value = true;
 
-  // 清理旧的碰撞网格
+  //清理旧的碰撞网格
   if (collisionMesh.value) {
     collisionMesh.value.dispose(false, false);
   }
   
-  // 创建新的碰撞网格
+  //创建新的碰撞网格
   const cm = new CollisionMesh(`${mesh.value.name} Collider`, mesh.value.getScene(), mesh.value);
   cm.id = Tools.RandomId();
   cm.uniqueId = UniqueNumber.Get();
   collisionMesh.value = cm;
   syncCollisionMeshToMesh();
   
-  // 设置碰撞体类型并自动计算尺寸
+  //设置碰撞体类型并自动计算尺寸
   await cm.setType(type, mesh.value, true);
   
-  // mesh 类型碰撞体不支持触发器功能
+  //mesh 类型碰撞体不支持触发器功能
   if (type === 'mesh') {
     cm.isTrigger = false;
   }
   
-  // 确保刚体配置已初始化（新建碰撞体时自动创建默认刚体配置）
+  //确保刚体配置已初始化（新建碰撞体时自动创建默认刚体配置）
   if (!mesh.value.metadata?.rigidbody) {
     saveRigidbodyToMesh();
   }
   
   computingCollisionMesh.value = false;
 
-  // 如果物理已启用，显示碰撞网格
+  //如果物理已启用，显示碰撞网格
   if (mesh.value.checkCollisions) {
     setCollisionMeshVisible(true);
   }
   
-  // 确保 DOM 更新后再应用线框状态
+  //确保 DOM 更新后再应用线框状态
   await nextTick();
   reapplyWireframeState();
 };
 
 /**
  * 形状中心点更新处理
- * @description 中心点改变只需要更新位置，不需要重建几何体
+ * 中心点改变只需要更新位置，不需要重建几何体
  */
 const onShapeCenterChanged = (): void => {
   if (!collisionMesh.value) return;
   
   const shapeType = collisionMesh.value.shape.type;
   
+  collisionMesh.value.position.copyFrom(collisionMesh.value.shape.center);
   if (shapeType === 'cube' || shapeType === 'sphere' || shapeType === 'cylinder' || shapeType === 'capsule') {
-    // 简单形状：只更新位置即可
+    //简单形状：只更新位置即可
     collisionMesh.value.position.copyFrom(collisionMesh.value.shape.center);
   } else if (shapeType === 'mesh' || shapeType === 'convexHull') {
-    // 复杂形状：应用完整变换
+    //复杂形状：完整变换
     collisionMesh.value.shape.applyToMesh(collisionMesh.value as unknown as AbstractMesh);
   }
   
@@ -514,7 +511,7 @@ const onShapeCenterChanged = (): void => {
 
 /**
  * 形状参数更新处理
- * @description 处理尺寸、半径、高度、轴向、细分等参数的变化
+ * 处理尺寸、半径、高度、轴向、细分等参数的变化
  * 这些参数改变需要重建几何体来反映新的形状
  */
 const onShapeParamsChanged = (): void => {
@@ -534,7 +531,7 @@ const onShowFullWireframeChanged = (show: boolean): void => {
 
 /**
  * 重新应用线框状态
- * @description 在碰撞体类型改变后恢复线框显示设置
+ * 在碰撞体类型改变后恢复线框显示设置
  */
 const reapplyWireframeState = (): void => {
   if (!collisionMesh.value || !wireframeSettings.value.showFullWireframe) return;
@@ -543,7 +540,7 @@ const reapplyWireframeState = (): void => {
 
 /**
  * 触发器状态改变处理
- * @description 触发器不产生物理响应，只触发碰撞事件
+ * 触发器不产生物理响应，只触发碰撞事件
  */
 const onTriggerChanged = (): void => {
   syncCollisionMeshToMesh();
@@ -551,7 +548,7 @@ const onTriggerChanged = (): void => {
 
 /**
  * 刚体属性改变处理
- * @description 处理质量、阻尼、摩擦力、弹性系数等属性的变化
+ * 处理质量、阻尼、摩擦力、弹性系数等属性的变化
  */
 const onRigidbodyChanged = (): void => {
   saveRigidbodyToMesh();
@@ -559,7 +556,7 @@ const onRigidbodyChanged = (): void => {
 
 /**
  * 测试运行时物理系统
- * @description 遍历场景中所有配置了物理的网格，创建 Babylon.js 物理对象
+ * 遍历场景中所有配置了物理的网格，创建 Babylon.js 物理对象
  * 这是一个测试功能，用于在编辑器中预览物理效果
  * 实际游戏运行时由游戏引擎自动初始化物理系统
  */
@@ -571,7 +568,7 @@ const onTestRuntimePhysics = async (): Promise<void> => {
     
     // 1. 初始化物理引擎（如果尚未初始化）
     if (!scene.getPhysicsEngine()) {
-      console.log('[Physics] Initializing Havok physics engine...');
+      console.log('[Physics] 正在初始化物理引擎...');
       ElMessage.info('正在初始化物理引擎...');
       
       const havokInstance = await HavokPhysics({
@@ -580,10 +577,10 @@ const onTestRuntimePhysics = async (): Promise<void> => {
       const havokPlugin = new HavokPlugin(true, havokInstance);
       scene.enablePhysics(undefined, havokPlugin);
       
-      console.log('[Physics] Havok physics engine initialized successfully');
+      console.log('[Physics] 物理引擎初始化成功');
       ElMessage.success('物理引擎初始化成功');
     } else {
-      console.log('[Physics] Physics engine already initialized');
+      console.log('[Physics] 物理引擎已经初始化了');
     }
     
     // 2. 清理之前的物理对象
@@ -594,21 +591,21 @@ const onTestRuntimePhysics = async (): Promise<void> => {
     let successCount = 0;
     let failCount = 0;
     
-    console.log(`[Physics] Found ${meshes.length} meshes in scene, scanning for physics configurations...`);
+    console.log(`[Physics] 在场景中找到 ${meshes.length} 个网格, 正在扫描物理配置...`);
     ElMessage.info(`开始初始化物理系统，共 ${meshes.length} 个网格...`);
     
     for (const sceneMesh of meshes) {
-      // 检查是否启用了物理（Enable Physics 必须为 true）
+      //检查是否启用了物理（Enable Physics 必须为 true）
       if (!sceneMesh.checkCollisions) {
         continue;
       }
       
-      // 检查是否配置了碰撞体和刚体
+      //检查是否配置了碰撞体和刚体
       const collisionMeshData = (sceneMesh as any).collisionMesh;
       const rigidbodyData = sceneMesh.metadata?.rigidbody;
       
       if (!collisionMeshData || !rigidbodyData) {
-        console.warn(`[Physics] Mesh "${sceneMesh.name}" has physics enabled but missing configuration`);
+        console.warn(`[Physics] 网格 "${sceneMesh.name}" 物理启用的 但是没有物理的配置`);
         continue;
       }
       
@@ -627,19 +624,19 @@ const onTestRuntimePhysics = async (): Promise<void> => {
         if (physicsBody) {
           runtimePhysicsBodies.value.push(physicsBody);
           successCount++;
-          console.log(`[Physics] ✓ Created physics body for "${sceneMesh.name}" (${collisionMeshData.shape.type}, ${rigidbodyData.motionType})`);
+          console.log(`[Physics] 创建刚体成功 "${sceneMesh.name}" (${collisionMeshData.shape.type}, ${rigidbodyData.motionType})`);
         } else {
           failCount++;
-          console.warn(`[Physics] ✗ Failed to create physics body for "${sceneMesh.name}"`);
+          console.warn(`[Physics] 创建刚体失败 "${sceneMesh.name}"`);
         }
       } catch (error) {
         failCount++;
-        console.error(`[Physics] ✗ Error creating physics body for "${sceneMesh.name}":`, error);
+        console.error(`[Physics] 创建刚体失败 "${sceneMesh.name}":`, error);
       }
     }
     
     // 4. 显示结果
-    console.log(`[Physics] Test complete: ${successCount} succeeded, ${failCount} failed`);
+    console.log(`[Physics] 测试完成: ${successCount} succeeded, ${failCount} failed`);
     
     if (successCount > 0) {
       ElMessage.success(`物理系统启动成功！已创建 ${successCount} 个物理对象${failCount > 0 ? `，${failCount} 个失败` : ''}`);
@@ -647,21 +644,19 @@ const onTestRuntimePhysics = async (): Promise<void> => {
       ElMessage.warning('没有找到配置了物理的网格');
     }
   } catch (error) {
-    console.error('[Physics] Fatal error during physics initialization:', error);
+    console.error('[Physics] 物理系统初始化失败:', error);
     ElMessage.error('物理系统初始化失败：' + (error as Error).message);
   }
 };
 
 /**
  * 停止运行时物理系统
- * @description 清理所有测试创建的物理对象
+ * 清理所有测试创建的物理对象
  */
 const onStopRuntimePhysics = (): void => {
   if (runtimePhysicsBodies.value.length === 0) {
     return;
   }
-  
-  console.log(`[Physics] Stopping physics test, disposing ${runtimePhysicsBodies.value.length} physics bodies...`);
   
   try {
     let disposeCount = 0;
@@ -674,40 +669,40 @@ const onStopRuntimePhysics = (): void => {
         disposeCount++;
       } catch (error) {
         failCount++;
-        console.warn(`[Physics] Failed to dispose physics body #${index}:`, error);
+        console.warn(`[Physics] 卸载physicsbody失败 #${index}:`, error);
       }
     });
     
     runtimePhysicsBodies.value = [];
     
-    console.log(`[Physics] Physics test stopped: ${disposeCount} disposed, ${failCount} failed`);
+    console.log(`[Physics] 物理系统已停止: ${disposeCount} disposed, ${failCount} failed`);
     ElMessage.info('物理系统已停止');
   } catch (error) {
-    console.error('[Physics] Failed to stop physics:', error);
+    console.error('[Physics] 停止物理系统失败:', error);
     ElMessage.error('停止物理系统失败');
   }
 };
 
-// ==================== 监听器 ====================
+
 /**
  * 监听网格对象变化，加载配置
- * @description 当用户在场景中选择不同对象时触发
+ * 在场景中选择不同对象时触发
  */
 watch(() => mesh.value, (newMesh, oldMesh) => {
-  // 切换对象时，先隐藏旧对象的碰撞体可视化
+  //切换对象时，先隐藏旧对象的碰撞体可视化
   const oldCollisionMesh = collisionMesh.value;
   if (oldCollisionMesh) {
     oldCollisionMesh.setVisibility(false);
   }
   
-  // 加载新对象的配置
+  //加载新对象的配置
   loadCollisionMeshFromMesh();
   loadRigidbodyFromMesh();
   
   selectedCollisionType.value = collisionMesh.value?.type ?? 'cube';
   isPhysicsEnabled.value = mesh.value?.checkCollisions ?? false;
   
-  // 如果没有选中对象，不显示任何碰撞体
+  //如果没有选中对象，不显示任何碰撞体
   if (!newMesh) {
     return;
   }
@@ -722,7 +717,6 @@ watch(() => mesh.value, (newMesh, oldMesh) => {
 
 /**
  * 监听碰撞网格变化，同步类型选择
- * @description 确保下拉框显示的类型与实际碰撞体类型一致
  */
 watch(() => collisionMesh.value, () => {
   selectedCollisionType.value = collisionMesh.value?.type ?? 'cube';
@@ -730,7 +724,7 @@ watch(() => collisionMesh.value, () => {
 
 /**
  * 监听物理检测开关，更新可见性
- * @description 响应用户在其他面板或代码中修改 checkCollisions 属性
+ * 响应用户在其他面板或代码中修改 checkCollisions 属性
  */
 watch(() => mesh.value?.checkCollisions, (enabled) => {
   isPhysicsEnabled.value = enabled ?? false;
@@ -744,7 +738,7 @@ watch(() => mesh.value?.checkCollisions, (enabled) => {
 
 /**
  * 监听碰撞体类型，强制约束规则
- * @description Mesh 类型的碰撞体不支持触发器功能
+ * Mesh类型的碰撞体不支持触发器功能
  */
 watch(() => collisionMesh.value?.type, (type) => {
   if (type === 'mesh' && collisionMesh.value) {
@@ -757,12 +751,12 @@ watch(() => collisionMesh.value?.type, (type) => {
  * 组件卸载前的清理工作
  */
 onBeforeUnmount(() => {
-  // 隐藏碰撞体可视化
+  //隐藏碰撞体可视化
   if (collisionMesh.value) {
     collisionMesh.value.setVisibility(false);
   }
   
-  // 清理测试创建的运行时物理对象
+  //清理测试创建的运行时物理对象
   onStopRuntimePhysics();
 });
 </script>

@@ -1,4 +1,3 @@
-// ==================== RigidBody Module Entry Point ====================
 /**
  * 刚体模块入口
  * @module rigidbody
@@ -10,7 +9,6 @@
  * - 材质属性：摩擦力、弹性系数
  * 
  * @example
- * ```ts
  * import { RigidBody, DEFAULT_RIGIDBODY_PROPERTIES } from '@/tools/node/physics/rigidbody';
  * 
  * // 创建默认动态刚体
@@ -24,13 +22,10 @@
  * 
  * // 从metadata加载
  * const rb = RigidBody.fromMetadata(mesh);
- * ```
  */
 
-// ==================== 类型定义 ====================
-// 刚体类型、接口、默认值、类型守卫
+// 刚体类型、接口、默认值
 export * from "./types";
 
-// ==================== 刚体类 ====================
 // 刚体属性管理类
 export { RigidBody } from "./rigidbody";

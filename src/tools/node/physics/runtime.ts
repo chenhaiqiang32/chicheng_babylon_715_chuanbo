@@ -8,7 +8,6 @@ import {
 	PhysicsMotionType as BabylonPhysicsMotionType,
 	Mesh,
 	Tools,
-	Geometry,
 	Vector3,
 } from "@babylonjs/core";
 import { RigidBodyJSON, PhysicsMotionType } from "./rigidbody";
@@ -22,11 +21,10 @@ import { MeshCollisionShape, ConvexHullCollisionShape } from "./collision/shapes
  * 负责将编辑器中配置的碰撞器和刚体转换为 Babylon.js 运行时物理对象
  * 
  * 核心原理：
- * - 编辑器中：CollisionMesh 作为 sourceMesh 的子节点，继承父节点缩放
- * - 运行时：PhysicsShapeMesh 固化顶点数据，需要手动应用源网格缩放
- * - 不同形状类型有不同的缩放策略以保持几何特征（如球体保持球形）
+ *  编辑器中：CollisionMesh 作为 sourceMesh 的子节点，继承父节点缩放
+ *  运行时：PhysicsShapeMesh 固化顶点数据，需要手动应用源网格缩放
+ *  不同形状类型有不同的缩放策略以保持几何特征（如球体保持球形）
  * 
- * @remarks
  * - convexHull: 使用 PhysicsShapeConvexHull + 原始源网格
  * - 其他类型: 使用 PhysicsShapeMesh + 重新生成的几何体
  */
@@ -55,24 +53,21 @@ export class RuntimePhysicsFactory {
 				return null;
 			}
 			
-			// mesh 类型直接使用源网格
 			if (shapeData.type === "mesh") {
 				return this._validateAndReturnSourceMesh(sourceMesh);
 			}
 			
-			// 反序列化 shape 对象
 			const shape = this._deserializeShape(shapeData);
-			
-			// convexHull 和 mesh 类型需要特殊处理
+			//convexHull 和 mesh 类型需要特殊处理
 			if (shape instanceof ConvexHullCollisionShape || shape instanceof MeshCollisionShape) {
 				return null;
 			}
 			
-			// 创建并配置物理网格
+			//创建并配置物理网格
 			return this._createPhysicsMeshFromShape(shape, sourceMesh, scene);
 			
 		} catch (error) {
-			console.error(`Failed to create collision mesh for ${sourceMesh.name}:`, error);
+			console.error(`创建碰撞器网格失败 ${sourceMesh.name}:`, error);
 			return null;
 		}
 	}
@@ -96,12 +91,12 @@ export class RuntimePhysicsFactory {
 				return null;
 			}
 
-			// convexHull 使用 Babylon.js 内置的凸包算法
+			//convexHull 使用 Babylon.js 内置的凸包算法
 			if (shapeType === "convexHull") {
 				return this._createConvexHullShape(sourceMesh, scene);
 			}
 
-			// 其他类型使用网格形状
+			//其他类型使用网格形状
 			const collisionMesh = await this.getCollisionMeshForPhysics(collisionMeshData, sourceMesh, scene);
 			if (!collisionMesh) {
 				return null;
@@ -110,7 +105,7 @@ export class RuntimePhysicsFactory {
 			return this._createMeshShape(collisionMesh, sourceMesh, scene);
 			
 		} catch (error) {
-			console.error("Failed to create physics shape:", error);
+			console.error("创建物理形状失败:", error);
 			return null;
 		}
 	}
@@ -121,8 +116,6 @@ export class RuntimePhysicsFactory {
 	 * @param mesh - 网格对象
 	 * @param collisionMeshData - 碰撞体配置数据
 	 * @param rigidbodyJSON - 刚体属性配置
-	 * @param isTrigger - 是否为触发器
-	 * @param scene - 场景对象
 	 * @returns PhysicsBody 实例或 null
 	 */
 	static async createPhysicsBody(
@@ -173,14 +166,12 @@ export class RuntimePhysicsFactory {
 		return this.createPhysicsBody(mesh, collisionMeshData, rigidbodyConfig, isTrigger, scene);
 	}
 	
-	// ==================== 私有辅助方法 ====================
-	
 	/**
 	 * 验证并返回源网格（用于 mesh 类型碰撞体）
 	 */
 	private static _validateAndReturnSourceMesh(sourceMesh: AbstractMesh): Mesh | null {
 		if (sourceMesh.getClassName() !== "Mesh") {
-			console.warn("mesh collision requires a Mesh, not", sourceMesh.getClassName());
+			console.warn("网格碰撞体必须要有[Mesh],", sourceMesh.getClassName());
 			return null;
 		}
 		return sourceMesh as Mesh;
@@ -191,11 +182,11 @@ export class RuntimePhysicsFactory {
 	 * 兼容编辑器会话中的对象和序列化后的 JSON
 	 */
 	private static _deserializeShape(shapeData: any): any {
-		// 检查是否已经是 shape 对象
+		//检查是否已经是 shape 对象
 		if (shapeData.center && typeof shapeData.center.x === 'number') {
 			return shapeData;
 		}
-		// 否则从 JSON 反序列化
+		//否则从 JSON 反序列化
 		return CollisionShapeFactory.fromJSON(shapeData);
 	}
 	
@@ -207,25 +198,25 @@ export class RuntimePhysicsFactory {
 		sourceMesh: AbstractMesh,
 		scene: Scene
 	): Mesh {
-		// 创建几何体（胶囊需要父节点缩放信息来烘焙轴向缩放）
+		//创建几何体（胶囊需要父节点缩放信息来烘焙轴向缩放）
 		const sourceScaling = sourceMesh.scaling;
 		const geometry = shape.type === 'capsule' 
 			? shape.createGeometry(scene, sourceScaling)
 			: shape.createGeometry(scene);
 		
-		// 创建临时网格
+		//创建临时网格
 		const tempMesh = new Mesh(`${sourceMesh.name}_physics`, scene);
 		tempMesh.id = Tools.RandomId();
 		tempMesh.uniqueId = UniqueNumber.Get();
 		
-		// 应用几何体和 shape 变换
+		//应用几何体和 shape 变换
 		geometry.applyToMesh(tempMesh);
 		shape.applyToMesh(tempMesh);
 		
-		// 根据形状类型应用源网格缩放
+		//根据形状类型应用源网格缩放
 		this._applySourceScaling(tempMesh, shape, sourceScaling);
 		
-		// 烘焙变换到顶点并重置变换矩阵
+		//烘焙变换到顶点并重置变换矩阵
 		this._bakeAndResetTransform(tempMesh);
 		
 		return tempMesh;
@@ -304,7 +295,7 @@ export class RuntimePhysicsFactory {
 		const axis = shape.axis || 'y';
 		const { diameterScale, heightScale } = this._getCylinderScales(axis, sourceScaling);
 		
-		// 在本地坐标系中应用缩放（Y轴圆柱：X,Z=圆，Y=高度）
+		//在本地坐标系中应用缩放（Y轴圆柱：X,Z=圆，Y=高度）
 		const currentScaling = tempMesh.scaling.clone();
 		tempMesh.scaling.set(
 			currentScaling.x * diameterScale,
@@ -332,7 +323,7 @@ export class RuntimePhysicsFactory {
 		const safeRadius = Math.max(shape.radius, 1e-4);
 		const diameterScale = this._getMaxDiameterScale(axis, sourceScaling);
 		
-		// 统一缩放到目标世界半径
+		//统一缩放到目标世界半径
 		const targetWorldRadius = safeRadius * diameterScale;
 		tempMesh.scaling.setAll(targetWorldRadius);
 		tempMesh.position.multiplyInPlace(sourceScaling);
@@ -411,7 +402,7 @@ export class RuntimePhysicsFactory {
 		scene: Scene
 	): PhysicsShape | null {
 		if (sourceMesh.getClassName() !== "Mesh") {
-			console.warn("[RuntimePhysicsFactory] ConvexHull requires a Mesh, got:", sourceMesh.getClassName());
+			console.warn("[RuntimePhysicsFactory] 凸包形状必须依赖[Mesh]:", sourceMesh.getClassName());
 			return null;
 		}
 		return new PhysicsShapeConvexHull(sourceMesh as any, scene);
@@ -420,10 +411,6 @@ export class RuntimePhysicsFactory {
 	/**
 	 * 创建网格形状并处理临时网格清理
 	 * @description PhysicsShapeMesh 会复制顶点数据，临时网格可以安全删除
-	 * @private
-	 * 
-	 * @remarks
-	 * 延迟100ms删除临时网格，确保物理引擎完成数据提取
 	 */
 	private static _createMeshShape(
 		collisionMesh: Mesh,
@@ -432,11 +419,13 @@ export class RuntimePhysicsFactory {
 	): PhysicsShape {
 		const physicsShape = new PhysicsShapeMesh(collisionMesh, scene);
 		
-		// 临时网格在物理引擎提取数据后可以安全删除
+		//临时网格在物理引擎提取数据后可以安全删除
 		if (collisionMesh !== sourceMesh) {
-			setTimeout(() => {
+			collisionMesh.dispose(false, true);
+
+			/*setTimeout(() => {
 				collisionMesh.dispose(false, true);
-			}, 100);
+			}, 100);*/
 		}
 		
 		return physicsShape;
@@ -444,13 +433,12 @@ export class RuntimePhysicsFactory {
 	
 	/**
 	 * 转换运动类型枚举
-	 * @description 将编辑器的运动类型转换为 Babylon.js 的枚举值
-	 * @private
+	 * 将编辑器的运动类型转换为 Babylon.js 的枚举值
 	 * 
 	 * @remarks
-	 * - static -> STATIC: 静态物体，不受力影响
-	 * - dynamic -> DYNAMIC: 动态物体，完全受物理模拟控制
-	 * - kinematic -> ANIMATED: 运动学物体，可通过代码控制但不受力影响
+	 *  static -> STATIC: 静态物体，不受力影响
+	 *  dynamic -> DYNAMIC: 动态物体，完全受物理模拟控制
+	 *  kinematic -> ANIMATED: 运动学物体，可通过代码控制但不受力影响
 	 */
 	private static _convertMotionType(motionType: PhysicsMotionType): number {
 		switch (motionType) {
@@ -467,29 +455,28 @@ export class RuntimePhysicsFactory {
 	
 	/**
 	 * 配置刚体物理属性
-	 * @description 设置质量、阻尼、重力等动力学参数
-	 * @private
+	 * 设置质量、阻尼、重力等动力学参数
 	 */
 	private static _configureBodyProperties(
 		body: PhysicsBody,
 		config: RigidBodyJSON
 	): void {
-		// 设置质量（静态物体无需质量）
+		//设置质量（静态物体无需质量）
 		if (config.motionType !== "static") {
 			body.setMassProperties({ mass: config.mass });
 		}
 		
-		// 设置线性和角阻尼（模拟空气阻力等效果）
+		//设置线性和角阻尼
 		body.setLinearDamping(config.linearDamping);
 		body.setAngularDamping(config.angularDamping);
 		
-		// 设置重力
+		//设置重力
 		if (config.useGravity) {
 			body.setGravityFactor(1);
 			body.disablePreStep = false;
 		} else {
 			body.setGravityFactor(0);
-			body.disablePreStep = true;  // 禁用重力时跳过预处理步骤
+			body.disablePreStep = true;  //禁用重力时跳过预处理步骤
 		}
 	}
 	
@@ -503,8 +490,8 @@ export class RuntimePhysicsFactory {
 		config: RigidBodyJSON
 	): void {
 		shape.material = {
-			friction: config.material.friction,        // 摩擦力系数 (0-1)
-			restitution: config.material.restitution,  // 弹性系数 (0-1)
+			friction: config.material.friction,        //摩擦力系数 (0-1)
+			restitution: config.material.restitution,  //弹性系数 (0-1)
 		};
 	}
 }
