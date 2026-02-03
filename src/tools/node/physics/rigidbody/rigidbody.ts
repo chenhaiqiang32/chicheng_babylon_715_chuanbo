@@ -103,12 +103,24 @@ export class RigidBody implements IRigidBody {
 	/**
 	 * 设置运动类型
 	 * 静态物体自动禁用重力
+	 * 切换到动态/运动学时自动设置合理的质量
 	 */
 	setMotionType(type: "static" | "dynamic" | "kinematic"): void {
+		const oldType = this.properties.motionType;
 		this.properties.motionType = type;
 		
 		if (type === "static") {
 			this.properties.useGravity = false;
+			this.properties.mass = 0;
+		} else if (oldType === "static" && (type === "dynamic" || type === "kinematic")) {
+			//从静态切换到动态/运动学时，恢复合理的默认质量
+			if (this.properties.mass === 0) {
+				this.properties.mass = DEFAULT_RIGIDBODY_PROPERTIES.mass;
+			}
+			//动态物体默认启用重力
+			if (type === "dynamic") {
+				this.properties.useGravity = true;
+			}
 		}
 		
 		this._saveToMetadata();

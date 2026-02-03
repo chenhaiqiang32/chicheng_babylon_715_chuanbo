@@ -459,6 +459,11 @@ const onCollisionTypeChanged = async (type: CollisionMeshType): Promise<void> =>
   const cm = new CollisionMesh(`${mesh.value.name} Collider`, mesh.value.getScene(), mesh.value);
   cm.id = Tools.RandomId();
   cm.uniqueId = UniqueNumber.Get();
+  
+  //标记为编辑器辅助工具，不参与场景逻辑
+  (cm as any).isIgnore = true;
+  cm.doNotSerialize = true;
+  
   collisionMesh.value = cm;
   syncCollisionMeshToMesh();
   
@@ -551,6 +556,18 @@ const onTriggerChanged = (): void => {
  * 处理质量、阻尼、摩擦力、弹性系数等属性的变化
  */
 const onRigidbodyChanged = (): void => {
+  //切换到动态/运动学时，如果质量为0，自动设置默认值
+  if ((rigidbodyProps.motionType === 'dynamic' || rigidbodyProps.motionType === 'kinematic') 
+      && rigidbodyProps.mass === 0) {
+    rigidbodyProps.mass = DEFAULT_RIGIDBODY_PROPERTIES.mass;
+  }
+  
+  //静态物体强制质量为0并禁用重力
+  if (rigidbodyProps.motionType === 'static') {
+    rigidbodyProps.mass = 0;
+    rigidbodyProps.useGravity = false;
+  }
+  
   saveRigidbodyToMesh();
 };
 
@@ -561,14 +578,13 @@ const onRigidbodyChanged = (): void => {
  * 实际游戏运行时由游戏引擎自动初始化物理系统
  */
 const onTestRuntimePhysics = async (): Promise<void> => {
-  console.log('[Physics] Starting runtime physics test...');
+  console.log('[Physics] 运行时物理模拟开始...');
   
   try {
     const scene = mesh.value.getScene();
     
-    // 1. 初始化物理引擎（如果尚未初始化）
+    //1. 初始化物理引擎（如果尚未初始化）
     if (!scene.getPhysicsEngine()) {
-      console.log('[Physics] 正在初始化物理引擎...');
       ElMessage.info('正在初始化物理引擎...');
       
       const havokInstance = await HavokPhysics({
@@ -577,21 +593,26 @@ const onTestRuntimePhysics = async (): Promise<void> => {
       const havokPlugin = new HavokPlugin(true, havokInstance);
       scene.enablePhysics(undefined, havokPlugin);
       
-      console.log('[Physics] 物理引擎初始化成功');
       ElMessage.success('物理引擎初始化成功');
     } else {
       console.log('[Physics] 物理引擎已经初始化了');
     }
     
-    // 2. 清理之前的物理对象
+    //2. 清理之前的物理对象
     onStopRuntimePhysics();
     
-    // 3. 遍历场景中的所有网格，创建物理对象
-    const meshes = scene.meshes.filter(m => isMesh(m) && !isInstancedMesh(m));
+    //3. 遍历场景中的所有网格，创建物理对象
+    const meshes = scene.meshes.filter(m => {
+      if (!isMesh(m) || isInstancedMesh(m)) return false;
+      //排除编辑器辅助工具（如 CollisionMesh）
+      if ((m as any).isIgnore) return false;
+      //排除已标记为不序列化的网格
+      if (m.doNotSerialize) return false;
+      return true;
+    });
     let successCount = 0;
     let failCount = 0;
     
-    console.log(`[Physics] 在场景中找到 ${meshes.length} 个网格, 正在扫描物理配置...`);
     ElMessage.info(`开始初始化物理系统，共 ${meshes.length} 个网格...`);
     
     for (const sceneMesh of meshes) {
@@ -612,7 +633,7 @@ const onTestRuntimePhysics = async (): Promise<void> => {
       try {
         const isTrigger = collisionMeshData.isTrigger === true;
         
-        // 创建物理对象
+        //创建物理对象
         const physicsBody = await RuntimePhysicsFactory.createPhysicsBody(
           sceneMesh as AbstractMesh,
           collisionMeshData,
@@ -644,7 +665,6 @@ const onTestRuntimePhysics = async (): Promise<void> => {
       ElMessage.warning('没有找到配置了物理的网格');
     }
   } catch (error) {
-    console.error('[Physics] 物理系统初始化失败:', error);
     ElMessage.error('物理系统初始化失败：' + (error as Error).message);
   }
 };
@@ -669,16 +689,13 @@ const onStopRuntimePhysics = (): void => {
         disposeCount++;
       } catch (error) {
         failCount++;
-        console.warn(`[Physics] 卸载physicsbody失败 #${index}:`, error);
       }
     });
     
     runtimePhysicsBodies.value = [];
     
-    console.log(`[Physics] 物理系统已停止: ${disposeCount} disposed, ${failCount} failed`);
     ElMessage.info('物理系统已停止');
   } catch (error) {
-    console.error('[Physics] 停止物理系统失败:', error);
     ElMessage.error('停止物理系统失败');
   }
 };

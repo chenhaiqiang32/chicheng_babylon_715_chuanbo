@@ -410,7 +410,7 @@ export class RuntimePhysicsFactory {
 	
 	/**
 	 * 创建网格形状并处理临时网格清理
-	 * @description PhysicsShapeMesh 会复制顶点数据，临时网格可以安全删除
+	 * PhysicsShapeMesh 构造时同步复制顶点数据
 	 */
 	private static _createMeshShape(
 		collisionMesh: Mesh,
@@ -419,15 +419,9 @@ export class RuntimePhysicsFactory {
 	): PhysicsShape {
 		const physicsShape = new PhysicsShapeMesh(collisionMesh, scene);
 		
-		//临时网格在物理引擎提取数据后可以安全删除
 		if (collisionMesh !== sourceMesh) {
 			collisionMesh.dispose(false, true);
-
-			/*setTimeout(() => {
-				collisionMesh.dispose(false, true);
-			}, 100);*/
 		}
-		
 		return physicsShape;
 	}
 	
