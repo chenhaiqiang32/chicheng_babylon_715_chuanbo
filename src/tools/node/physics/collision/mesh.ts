@@ -176,24 +176,30 @@ export class CollisionMesh extends Mesh implements ICollisionMesh {
 				this._occludedLinesMesh = null;
 			}
 
-			//创建双层线框（实现透视效果）
-			//第一层：被遮挡部分（半透明，depthFunction=GREATER）
-			this._occludedLinesMesh = CreateLineSystem(
-				`${this.name}_lines_occluded`,
-				{ lines: lines, updatable: true },
-				this._scene
-			) as LinesMesh;
+		//创建双层线框（实现透视效果）
+		//第一层：被遮挡部分（半透明，depthFunction=GREATER）
+		this._occludedLinesMesh = CreateLineSystem(
+			`${this.name}_lines_occluded`,
+			{ lines: lines, updatable: true },
+			this._scene
+		) as LinesMesh;
+		
+		//第二层：未被遮挡部分（不透明，depthFunction=LEQUAL）
+		this._linesMesh = CreateLineSystem(
+			`${this.name}_lines`,
+			{ lines: lines, updatable: true },
+			this._scene
+		) as LinesMesh;
+		
+		if (this._occludedLinesMesh && this._linesMesh) {
+			//标记为编辑器辅助工具，不参与场景逻辑
+			(this._occludedLinesMesh as any).isIgnore = true;
+			this._occludedLinesMesh.doNotSerialize = true;
+			(this._linesMesh as any).isIgnore = true;
+			this._linesMesh.doNotSerialize = true;
 			
-			//第二层：未被遮挡部分（不透明，depthFunction=LEQUAL）
-			this._linesMesh = CreateLineSystem(
-				`${this.name}_lines`,
-				{ lines: lines, updatable: true },
-				this._scene
-			) as LinesMesh;
-			
-			if (this._occludedLinesMesh && this._linesMesh) {
-				//配置双层透视材质
-				this._configureLinesMeshMaterial();
+			//配置双层透视材质
+			this._configureLinesMeshMaterial();
 				
 				//恢复可见性状态
 				this._linesMesh.isVisible = wasLinesVisible;
@@ -835,24 +841,30 @@ export class CollisionMesh extends Mesh implements ICollisionMesh {
 			this._occludedLinesMesh = null;
 		}
 
-		try {
-			//创建被遮挡的线条网格（半透明）
-			this._occludedLinesMesh = CreateLineSystem(
-				`${this.name}_lines_occluded`,
-				{ lines: lines, updatable: true },
-				this._scene
-			) as LinesMesh;
+	try {
+		//创建被遮挡的线条网格（半透明）
+		this._occludedLinesMesh = CreateLineSystem(
+			`${this.name}_lines_occluded`,
+			{ lines: lines, updatable: true },
+			this._scene
+		) as LinesMesh;
+		
+		//创建未被遮挡的线条网格（不透明）
+		this._linesMesh = CreateLineSystem(
+			`${this.name}_lines`,
+			{ lines: lines, updatable: true },
+			this._scene
+		) as LinesMesh;
+		
+		if (this._occludedLinesMesh && this._linesMesh) {
+			//标记为编辑器辅助工具，不参与场景逻辑
+			(this._occludedLinesMesh as any).isIgnore = true;
+			this._occludedLinesMesh.doNotSerialize = true;
+			(this._linesMesh as any).isIgnore = true;
+			this._linesMesh.doNotSerialize = true;
 			
-			//创建未被遮挡的线条网格（不透明）
-			this._linesMesh = CreateLineSystem(
-				`${this.name}_lines`,
-				{ lines: lines, updatable: true },
-				this._scene
-			) as LinesMesh;
-			
-			if (this._occludedLinesMesh && this._linesMesh) {
-				//配置材质
-				this._configureLinesMeshMaterial();
+			//配置材质
+			this._configureLinesMeshMaterial();
 				
 				//强制更新变换矩阵
 				this.computeWorldMatrix(true);
@@ -965,23 +977,29 @@ export class CollisionMesh extends Mesh implements ICollisionMesh {
 		}
 
 		try {
-			//创建被遮挡的线条网格（半透明，显示在后面）
-			this._occludedLinesMesh = CreateLineSystem(
-				`${this.name}_lines_occluded`,
-				{ lines: points, updatable: true },
-				this._scene
-			) as LinesMesh;
+		//创建被遮挡的线条网格（半透明，显示在后面）
+		this._occludedLinesMesh = CreateLineSystem(
+			`${this.name}_lines_occluded`,
+			{ lines: points, updatable: true },
+			this._scene
+		) as LinesMesh;
+		
+		// 创建未被遮挡的线条网格（不透明，显示在前面）
+		this._linesMesh = CreateLineSystem(
+			`${this.name}_lines`,
+			{ lines: points, updatable: true },
+			this._scene
+		) as LinesMesh;
+		
+		if (this._occludedLinesMesh && this._linesMesh) {
+			//标记为编辑器辅助工具，不参与场景逻辑
+			(this._occludedLinesMesh as any).isIgnore = true;
+			this._occludedLinesMesh.doNotSerialize = true;
+			(this._linesMesh as any).isIgnore = true;
+			this._linesMesh.doNotSerialize = true;
 			
-			// 创建未被遮挡的线条网格（不透明，显示在前面）
-			this._linesMesh = CreateLineSystem(
-				`${this.name}_lines`,
-				{ lines: points, updatable: true },
-				this._scene
-			) as LinesMesh;
-			
-			if (this._occludedLinesMesh && this._linesMesh) {
-				//配置材质
-				this._configureLinesMeshMaterial();
+			//配置材质
+			this._configureLinesMeshMaterial();
 				
 				this.computeWorldMatrix(true);
 				this._occludedLinesMesh.computeWorldMatrix(true);
