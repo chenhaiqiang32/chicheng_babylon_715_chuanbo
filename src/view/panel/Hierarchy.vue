@@ -239,6 +239,11 @@ function handleMultiSelect() {
     selectedList.value = nodes.splice(min, max - min + 1);
     multiSelectBegin = null;
     multiSelectEnd = null;
+    //let toAddList = [];
+    //toAddList = selectedList.value.filter((x) => x.data.id != currentSelected.value);
+    //toAddList.forEach((x) => {
+    //    currentSelected.value.push(x.data.id);
+    //})
 }
 
 watch(currentSelected, (val) => {
@@ -351,6 +356,10 @@ const handleNodeDrop = (
             }
         })
     }
+    // 由于懒加载可能导致原本没有子节点的Node不显示下拉箭头，所以直接调用 expand 让其展开更新一下
+    if(dropType === 'inner'){
+        dropNode.expand();
+    }
 }
 
 async function onKeydown(e: KeyboardEvent) {
@@ -426,7 +435,7 @@ async function onKeydown(e: KeyboardEvent) {
 function handleHierarchyUpDown(e: KeyboardEvent, keyType: "arrowup" | "arrowdown") {
     // 获取当前元素
     const curItem = e.target as HTMLDivElement;
-    const treeItems: HTMLElement[] = Array.from(treeRef.value.$el.querySelectorAll('.el-tree-node'));
+    const treeItems: HTMLElement[] = Array.from(treeRef.value.$el.querySelectorAll('.el-tree-node')).filter(el => el.offsetParent !== null);
     const curIndex = treeItems.indexOf(curItem);
     // 找到下一个元素
     let nextIndex;

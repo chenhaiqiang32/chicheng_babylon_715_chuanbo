@@ -9,6 +9,9 @@ import {
   Texture,
   HDRCubeTexture,
   SceneLoader,
+  StandardMaterial,
+  Scalar,
+  Color3,
 } from '@babylonjs/core';
 import { Editor } from '../Editor';
 import { Dispatch } from '@/utils/dispatch';
@@ -548,13 +551,39 @@ function imgToBlob(img: HTMLImageElement | ImageBitmap) {
 }
 
 function fixMaterial(node: TransformNode) {
-  // const map = new WeakMap<Material, PBRMaterial>();
-  // const meshes = node.getChildMeshes(true);
-  // meshes.forEach((mesh) => {
-  //   const mat = new PBRMaterial(mesh.material.name);
-  //   mesh.material = mat;
-  //   mat.cullBackFaces = false;
-  // });
+  if(!node.name.includes("pbr")) return;
+  const meshes = node.getChildMeshes(true);
+  meshes.forEach((mesh) => {
+    const mat = mesh.material;
+    if(mat instanceof StandardMaterial) {
+      mesh.material = standardToPBR(mat);
+    }
+    mat.cullBackFaces = false;
+  });
+}
+
+// 标准材质 -> BPR材质
+function standardToPBR(standard:StandardMaterial) {
+  const pbr = new PBRMaterial(standard.name);
+  pbr.albedoColor = standard.diffuseColor.clone();
+  pbr.albedoTexture = standard.diffuseTexture;
+
+  pbr.roughness = Scalar.Clamp(
+    1.0 - (standard.specularPower || 64) / 128.0,
+    0.05,
+    1.0
+  );
+
+  const spec = standard.specularColor || Color3.Black();
+  const avg = (spec.r + spec.g + spec.b) / 3;
+  pbr.metallic = Scalar.Clamp(avg, 0, 0.3);
+
+  pbr.emissiveColor = standard.emissiveColor?.clone() || Color3.Black();
+  pbr.emissiveTexture = standard.emissiveTexture;
+
+  pbr.alpha = standard.alpha;
+
+  return pbr;
 }
 
 function promiseEvery<T>(events: Promise<T>[], callback: (percent: number) => void) {
