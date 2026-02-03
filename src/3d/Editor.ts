@@ -722,19 +722,17 @@ export class Editor extends Dispatch<EditorEvent> {
     this.gizmoManager.scaleGizmoEnabled = false;
   }
 
-  focusTransformNode(node?: ParticleContainer) {
+  focusTransformNode(node?: Node) {
     if (!node && !this._selectNodes[0]) {
       return;
     }
-    // if (!node) {
-    //   node = this._selectNodes[0] instanceof ParticleContainer ? this._selectNodes[0] : null;
-    // }
-    let min: Vector3, max: Vector3;
-    if (this._selectNodes[0] instanceof ParticleContainer) {
+    if (!node) {
       node = this._selectNodes[0];
+    }
+    let min: Vector3, max: Vector3;
+    if (node instanceof ParticleContainer) {
       const firstSystem = node.particleSystems.systems[0];
       if (isAbstractMesh(firstSystem.emitter)) {
-        console.log('firstSystem.emitter');
         const boundingInfo = firstSystem.emitter.getBoundingInfo();
         min = boundingInfo.boundingBox.minimumWorld;
         max = boundingInfo.boundingBox.maximumWorld;
@@ -745,19 +743,23 @@ export class Editor extends Dispatch<EditorEvent> {
       }
     } else {
       const node1 = this._selectNodes[0];
-      console.log(node1);
-
       min = node1.getHierarchyBoundingVectors(true).min;
       max = node1.getHierarchyBoundingVectors(true).max;
     }
 
     //const { min, max } = node.getHierarchyBoundingVectors(true);
-    const center = new Vector3().add(min).add(max).scale(0.5);
-    console.log('max' + max + 'min' + min);
-
+    let center = new Vector3().add(min).add(max).scale(0.5);
     const size = new Vector3().add(max).subtract(min);
-    const radius = Math.max(size.x, size.y, size.z) * 2;
-    console.log('center' + center + 'radius' + radius);
+    let radius = Math.max(size.x, size.y, size.z) * 2;
+    const v = min.x * min.y * min.z * max.x * max.y * max.z;
+    if (v === Infinity || v === -Infinity) {
+      if (node instanceof Camera) {
+        return;
+      }
+      const trans = node as TransformNode;
+      center = trans.getAbsolutePosition();
+      radius = 1;
+    }
 
     let currentDirectionToCenter = center.subtract(this.scene.activeCamera.globalPosition);
     const currentDistance = currentDirectionToCenter.length();
