@@ -1,8 +1,8 @@
 <template>
   <Field :title="label" v-if="label">
-    <el-switch style="margin-left: auto;" v-model="value" @change="change" />
+    <el-switch style="margin-left: auto;" v-model="value" @change="change" :disabled="disabled" />
   </Field>
-  <el-switch @click.stop v-else style="margin-left: auto; height: auto;" v-model="value" @change="change" />
+  <el-switch @click.stop v-else style="margin-left: auto; height: auto;" v-model="value" @change="change" :disabled="disabled" />
 </template>
 
 <script setup lang="ts">
@@ -15,7 +15,8 @@ const props = defineProps<{
   object: any;
   property: string;
   label?: any;
-  noUndoRedo?: boolean
+  noUndoRedo?: boolean;
+  disabled?: boolean;
 }>()
 const emit = defineEmits<{
   (e: "change", newV: boolean, oldV: boolean): void
@@ -56,6 +57,12 @@ function getValue() {
 }
 
 const change = () => {
+  if (props.disabled) {
+    // 如果禁用，恢复原值
+    value.value = oldValue;
+    return;
+  }
+  
   const _newValue = value.value;
   const _oldValue = oldValue;
 
