@@ -1,9 +1,6 @@
 import {
   CascadedShadowGenerator,
-  Color3,
   DirectionalLight,
-  Light,
-  Mesh,
   AbstractMesh,
   PointLight,
   ShadowGenerator,
@@ -72,7 +69,6 @@ export class Shadow {
     //  shadowGenerator.useExponentialShadowMap = true;
     const id = light.uuid;
     this.shadowGeneratorMap.set(id, shadowGenerator);
-    console.log(id);
 
     return shadowGenerator;
   }

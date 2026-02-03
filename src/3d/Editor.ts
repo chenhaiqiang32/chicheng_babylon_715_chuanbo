@@ -262,7 +262,7 @@ export class Editor extends Dispatch<EditorEvent> {
 
     const scene = new Scene(this.engine);
     // 等待场景完全加载完成
-    useScene().getScene(
+    await useScene().getScene(
       uuid,
       (percent) => {
         loading?.(percent);
@@ -280,6 +280,12 @@ export class Editor extends Dispatch<EditorEvent> {
         lightGizmo.light = light;
         lightGizmo.scaleRatio = 0;
         light.gizmo = lightGizmo;
+        if (light.shadowGenerator) {
+          const generator = light.isShadowGenerator
+            ? ShadowGenerator.Parse(light.shadowGenerator, scene)
+            : CascadedShadowGenerator.Parse(light.shadowGenerator, scene);
+          this.shadow.addShadowGeneratorMap(light.uuid, generator);
+        }
         //阴影只能场景加载完创建
         if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
           {
@@ -296,21 +302,7 @@ export class Editor extends Dispatch<EditorEvent> {
               });
           }
         }
-
-        // const generator = new CascadedShadowGenerator(4096, light as DirectionalLight);
-        // generator.bias = 0.00268;
-        // generator.lambda = 1;
-        // generator.depthClamp = true;
-        // generator.autoCalcDepthBounds = true;
-        // generator.autoCalcDepthBoundsRefreshRate = 60;
-        // generator.transparencyShadow = true;
-        // generator.enableSoftTransparentShadow = true;
-        // generator.getShadowMap()?.renderList?.push(...generator.getLight().getScene().meshes);
-        // console.log(generator.getClassName?.());
       });
-      // scene.meshes.forEach((item) => {
-      //   item.receiveShadows = true;
-      // });
     }
     this.scene = scene;
     this.outlinePass = new OutlinePass(0.003, new Vector3(1, 64 / 255, 0), this.scene.activeCamera);
@@ -512,7 +504,6 @@ export class Editor extends Dispatch<EditorEvent> {
     light.direction = new Vector3(-1, -2, -1);
     light.intensity = 3.43;
     light.name = 'sun';
-    light.createDefaultShadowGenerator = true;
     // const sg = Editor.Instance.shadow.openShadow(light, "cascaded") as CascadedShadowGenerator;
     // sg.lambda = 1;
     // sg.bias = 0.0005;

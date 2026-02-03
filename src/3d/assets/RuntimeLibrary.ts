@@ -96,6 +96,7 @@ export class RuntimeLibrary
     Texture.UseSerializedUrlIfAny = true;
     Texture.SerializeBuffers = false;
     Texture.ForceSerializeBuffers = false;
+    Texture._SerializeInternalTextureUniqueId = true;
     SceneLoader.RegisterPlugin(new FBXLoader());
   }
   getTexturelData(uuid: string) {
@@ -248,7 +249,7 @@ export class RuntimeLibrary
       return texData;
     }
     texture.isDirty = false;
-    const data = texture.serialize();
+    const data = texture.serialize(true);
     data.uuid = texture.uuid;
     delete data.url;
     data.sourceUUID = texture.sourceUUID;

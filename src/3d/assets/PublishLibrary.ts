@@ -143,6 +143,9 @@ export class PublishAssets {
       // 同步环境或环境贴图模式需要保存环境贴图文件
       if (item.background.type == 1 || item.background.type == 3) {
         const env = this.getBufferSystem.getEnvTextureData(item.background.texture.sourceUUID);
+        if (!env) {
+          continue;
+        }
         this.envTexture.push(env);
       }
     }
@@ -151,6 +154,9 @@ export class PublishAssets {
       files.push(texture);
     }
     for (const envTexture of this.envTexture) {
+      if (!envTexture) {
+        continue;
+      }
       const buffer = await this.getBufferSystem.getEnvTextureBuffer(envTexture.sourceUUID);
       files.push([envTexture.sourceUUID + '.envTex', buffer]);
     }

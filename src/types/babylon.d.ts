@@ -44,7 +44,8 @@ declare module '@babylonjs/core' {
   }
   interface Light {
     gizmo: LightGizmo;
-    createDefaultShadowGenerator: Boolean;
+    shadowGenerator: any;
+    isShadowGenerator: boolean;
   }
   interface TransformNode {
   }
