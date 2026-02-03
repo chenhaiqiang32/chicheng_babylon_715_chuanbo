@@ -198,8 +198,10 @@ export class RuntimePhysicsFactory {
 		sourceMesh: AbstractMesh,
 		scene: Scene
 	): Mesh {
+		//使用世界缩放（考虑整个父节点链），而不是本地缩放
+		const sourceScaling = sourceMesh.absoluteScaling;
+		
 		//创建几何体（胶囊需要父节点缩放信息来烘焙轴向缩放）
-		const sourceScaling = sourceMesh.scaling;
 		const geometry = shape.type === 'capsule' 
 			? shape.createGeometry(scene, sourceScaling)
 			: shape.createGeometry(scene);
@@ -224,10 +226,10 @@ export class RuntimePhysicsFactory {
 	
 	/**
 	 * 根据形状类型应用源网格缩放
-	 * @description 将编辑器中的缩放应用到运行时物理网格
+	 * @description 将编辑器中的世界缩放应用到运行时物理网格
 	 * @param tempMesh - 临时物理网格
 	 * @param shape - 碰撞形状对象
-	 * @param sourceScaling - 源网格的缩放
+	 * @param sourceScaling - 源网格的世界缩放（absoluteScaling，考虑父节点链）
 	 * @private
 	 * 
 	 * @remarks
@@ -237,7 +239,8 @@ export class RuntimePhysicsFactory {
 	 * - **cylinder**: 圆形截面保持正圆，高度方向独立缩放
 	 * - **capsule**: 圆形部分保持正圆，轴向缩放已烘焙进几何体
 	 * 
-	 * 编辑器中碰撞体继承父节点缩放，运行时需要固化到顶点数据
+	 * **重要**：必须使用世界缩放（absoluteScaling）而不是本地缩放（scaling）
+	 * 因为有父子嵌套时，本地缩放 ≠ 实际世界大小
 	 */
 	private static _applySourceScaling(
 		tempMesh: Mesh,
