@@ -550,7 +550,6 @@ function imgToBlob(img: HTMLImageElement | ImageBitmap) {
 }
 
 function fixMaterial(node: TransformNode) {
-  if(!node.name.includes("pbr")) return;
   const meshes = node.getChildMeshes(true);
   meshes.forEach((mesh) => {
     const mat = mesh.material;
