@@ -551,11 +551,11 @@ function imgToBlob(img: HTMLImageElement | ImageBitmap) {
 }
 
 function fixMaterial(node: TransformNode) {
-  if(!node.name.includes("pbr")) return;
+  // if(!node.name.includes("pbr")) return;
   const meshes = node.getChildMeshes(true);
   meshes.forEach((mesh) => {
     const mat = mesh.material;
-    if(mat instanceof StandardMaterial) {
+    if (mat instanceof StandardMaterial) {
       mesh.material = standardToPBR(mat);
     }
     mat.cullBackFaces = false;
@@ -563,16 +563,12 @@ function fixMaterial(node: TransformNode) {
 }
 
 // 标准材质 -> BPR材质
-function standardToPBR(standard:StandardMaterial) {
+function standardToPBR(standard: StandardMaterial) {
   const pbr = new PBRMaterial(standard.name);
   pbr.albedoColor = standard.diffuseColor.clone();
   pbr.albedoTexture = standard.diffuseTexture;
 
-  pbr.roughness = Scalar.Clamp(
-    1.0 - (standard.specularPower || 64) / 128.0,
-    0.05,
-    1.0
-  );
+  pbr.roughness = Scalar.Clamp(1.0 - (standard.specularPower || 64) / 128.0, 0.05, 1.0);
 
   const spec = standard.specularColor || Color3.Black();
   const avg = (spec.r + spec.g + spec.b) / 3;
