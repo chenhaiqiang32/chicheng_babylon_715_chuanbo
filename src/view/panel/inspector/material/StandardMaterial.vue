@@ -65,16 +65,15 @@
 </template>
 
 <script setup lang="ts">
-import { inject, onMounted, ref, watch, } from "vue"
+import { onMounted } from "vue"
 import SectionField from "@/component/common/SectionField.vue"
 import StringField from "@/component/base/StringField.vue"
 import Switch from "@/component/base/Switch.vue"
 import Texture from "@/component/base/Texture.vue"
 import Color from "@/component/base/Color.vue"
 import Slider from "@/component/base/Slider.vue"
-import { useDialog } from "@/view/dialog"
-import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary"
 import { StandardMaterial } from "@babylonjs/core"
+import { useMaterialActions } from "@/store/useMaterialActions"
 
 const props = defineProps<{ mesh?: any; material: StandardMaterial; }>()
 const force = () => { }
@@ -82,40 +81,14 @@ const emit =defineEmits<{
   (e: 'matChanged'): void
 }>()
 
-async function shareMaterial() {
-  props.material.share = true;
-  props.material.isDirty = true;
-  RuntimeLibrary.Instance.addMaterial(props.material);
-}
-
-async function changeMaterial() {
-  const ChooseResDialog = (await import('@/view/dialog/ChooseResDialog.vue')).default
-  useDialog(ChooseResDialog, {
-    choose: async (res: any) => {
-      if (res) {
-        const material = await RuntimeLibrary.Instance.getMaterial(res.uuid)
-        if (material) {
-          props.mesh.material = material
-          emit('matChanged');
-        }
-      }
-    },
-    type: 'material'
-  })
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', (k) => {
-    console.log(props.material.roughness);
-  })
+const {changeProperty, changeMaterial, shareMaterial} = useMaterialActions({
+  material: props.material,
+  mesh: props.mesh,
+  emitMatChanged: () => emit('matChanged')
 })
 
-const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')
 
-function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
-  propertyChanged?.('material.' + property, newValue, oldValue, type);
-  // 更新材质球的效果
-  RuntimeLibrary.Instance.dispatch('onMaterialChanged', { useCache: false });
-}
+onMounted(() => {
+})
 
 </script>

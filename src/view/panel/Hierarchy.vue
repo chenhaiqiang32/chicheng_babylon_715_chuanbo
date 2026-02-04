@@ -435,7 +435,7 @@ async function onKeydown(e: KeyboardEvent) {
 function handleHierarchyUpDown(e: KeyboardEvent, keyType: "arrowup" | "arrowdown") {
     // 获取当前元素
     const curItem = e.target as HTMLDivElement;
-    const treeItems: HTMLElement[] = Array.from(treeRef.value.$el.querySelectorAll('.el-tree-node')).filter(el => el.offsetParent !== null);
+    const treeItems: HTMLElement[] = Array.from(treeRef.value.$el.querySelectorAll('.el-tree-node'));
     const curIndex = treeItems.indexOf(curItem);
     // 找到下一个元素
     let nextIndex;
