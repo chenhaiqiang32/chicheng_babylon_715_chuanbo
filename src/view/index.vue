@@ -79,19 +79,19 @@ const { editorLayout } = storeToRefs(useEditor());
 const { loading, edit } = storeToRefs(useEditor());
 
 async function loadProject(name: string) {
-    await EditorFileSystem.Instance.init(FileMode.NET, name);
+    await EditorFileSystem.Instance.init(FileMode.ZIP, name);
     const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
 
     });
     if (sceneList.length > 0) {
         useScene().setSceneList(sceneList);
-        Editor.Instance.setCurrentScene(sceneList[0].uuid, (v) => {
+        await Editor.Instance.setCurrentScene(sceneList[0].uuid, (v) => {
             loading.value = v;
         });
     } else {
         const scene = await Editor.Instance.createNewScene('默认场景');
         await useScene().addScene(scene);
-        Editor.Instance.setCurrentScene(scene.uuid);
+        await Editor.Instance.setCurrentScene(scene.uuid);
     }
     if (!edit.value) {
         const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera;

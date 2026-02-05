@@ -105,7 +105,7 @@ export class App {
       }
       if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
         {
-          const sg = Editor.Instance.shadow.getShadowGenerator(light);
+          const sg = this.shadow.getShadowGenerator(light);
           if (!sg) {
             return;
           }
@@ -113,7 +113,7 @@ export class App {
             .getScene()
             .meshes.forEach((item) => {
               if (item.castShadows) {
-                Editor.Instance.shadow.addMeshToShadowGenerator(item, light);
+                this.shadow.addMeshToShadowGenerator(item, light);
               }
             });
         }

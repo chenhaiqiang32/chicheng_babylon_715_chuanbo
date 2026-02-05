@@ -1,7 +1,7 @@
 import { IFile } from './IFile';
 
 const rootPath = 'http://192.168.5.188:3000/upload';
-const rootPaths = 'http://192.168.5.188:3000/download';
+const rootPaths = 'https://oss.czy3d.com/czy/temp';
 export class UploadFileSystem implements IFile {
   name: string;
   async init(arg?: string): Promise<void> {

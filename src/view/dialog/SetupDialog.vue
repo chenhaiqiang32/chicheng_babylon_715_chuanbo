@@ -52,23 +52,8 @@ import { useEditor } from '@/store/useEditor';
 const { projects } = storeToRefs(useIndexDBProject());
 
 const model = ref(true);
-const creating = ref(false);
-const recentProjects = ref<Array<{ name: string; time: number }>>(JSON.parse(localStorage.getItem('recentProjects') || '[]'));
 const props = defineProps<{ close: () => void }>();
 const { loading } = storeToRefs(useEditor());
-
-
-async function createProject() {
-    try {
-        await EditorFileSystem.Instance.check();
-        const scene = await Editor.Instance.createNewScene('默认场景');
-        await useScene().addScene(scene);
-        Editor.Instance.setCurrentScene(scene.uuid);
-        props.close();
-    } finally {
-    }
-}
-
 
 async function openProject(mode: FileMode) {
     try {
@@ -117,7 +102,6 @@ async function openIndexDBProject(p: { name: string; time: string; type: string 
         const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
             loading.value = v * 0.2;
         });
-
         if (sceneList.length > 0) {
             useScene().setSceneList(sceneList);
             Editor.Instance.setCurrentScene(sceneList[0].uuid, (v) => {

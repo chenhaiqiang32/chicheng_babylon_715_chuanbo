@@ -8,7 +8,6 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import path from 'path';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
-
 export default defineConfig({
   plugins: [
     vue(),
@@ -32,8 +31,9 @@ export default defineConfig({
       iconDirs: [path.resolve(process.cwd(), 'src/assets/svg')],
       // 指定symbolId格式
       symbolId: 'icon-[name]',
-    })
+    }),
   ],
+  base: './',
   css: {
     preprocessorOptions: {
       //@ts-ignore

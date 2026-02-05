@@ -68,7 +68,7 @@ export function serializeScene(
   result.nodes = [];
   for (let index = 0; index < scene.rootNodes.length; index++) {
     const element = scene.rootNodes[index];
-    if(element.isDeleted) continue;
+    if (element.isDeleted) continue;
     const node = serializeNode(element as TransformNode, assets, padding);
     result.nodes.push(node);
   }
@@ -136,6 +136,7 @@ export function deserializeScene(
       const loadEnv = async () => {
         const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false);
         scene.environmentTexture = tex;
+        console.log(tex);
       };
       padding.push(loadEnv);
     } else {
