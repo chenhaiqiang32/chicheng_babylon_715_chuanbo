@@ -148,6 +148,14 @@ export class PublishAssets {
         }
         this.envTexture.push(env);
       }
+      // 环境贴图也要保存
+      if(item.environment) {
+        const env = this.getBufferSystem.getEnvTextureData(item.environment.sourceUUID);
+        if(!env){
+          continue;
+        }
+        this.envTexture.push(env);
+      }
     }
     for (const texture of this.textureMap) {
       texture[0] += '.tex';

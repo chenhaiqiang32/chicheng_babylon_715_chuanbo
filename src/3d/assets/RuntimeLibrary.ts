@@ -301,13 +301,36 @@ export class RuntimeLibrary
     return texture;
   }
 
+  async addEnvUrlTexture(url:string, texture:BaseTexture, force: boolean = true): Promise<BaseTexture> {
+    const name = url.split('/').pop();
+    const ext = name.toLocaleLowerCase().split('.').pop();
+    texture.name = name;
+    texture.sourceUUID = texture.sourceUUID ?? ID.generateUUID();
+    const old = this.envTexture.find((item) => item.sourceUUID === texture.sourceUUID);
+    if(!old || force) {
+      const data = texture.serialize();
+      data.uuid = texture.sourceUUID;
+      data.sourceUUID = texture.sourceUUID;
+      delete data.url;
+      if(old) ArrayUtils.remove(old, this.envTexture);
+      this.envTexture.push(data);
+      this.sceneEnvTexture.set(data.sourceUUID, texture);
+      const res = await fetch(url);
+      const buffer = await res.arrayBuffer();
+      this.fileSystem.saveFile(texture.sourceUUID, new Uint8Array(buffer), 'EnvTexture');
+      console.log(data);
+    }
+    //texture.prevUrl = await renderEnvTexture(texture.sourceUUID);
+    return texture;
+  }
+
   /**
    * 获取环境贴图对象
    * @param sourceUUID
    * @param withPrevUrl 是否需要携带预览图的url，如果需要，则会调用离屏渲染或缓存
    * @returns
    */
-  async getEnvTexture(sourceUUID: string, withPrevUrl = true): Promise<BaseTexture> {
+  async getEnvTexture(sourceUUID: string, withPrevUrl = true, scene=this.resScene): Promise<BaseTexture> {
     if (this.sceneEnvTexture.has(sourceUUID)) {
       const oriTex = this.sceneEnvTexture.get(sourceUUID);
       const texture = oriTex.clone();
@@ -323,7 +346,7 @@ export class RuntimeLibrary
         const blob = new Blob([buffer]);
         const url = URL.createObjectURL(blob);
         const ext = data.name.toLocaleLowerCase().split('.').pop();
-        const texture = await loadSkyboxWithExt(this.resScene, url, ext, ENVPIXEL);
+        const texture = await loadSkyboxWithExt(scene, url, ext, ENVPIXEL);
         texture.sourceUUID = sourceUUID;
         texture.name = data.name;
         this.sceneEnvTexture.set(sourceUUID, texture);

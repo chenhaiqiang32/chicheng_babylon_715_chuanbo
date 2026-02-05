@@ -55,7 +55,7 @@ export function serializeScene(
   result.reflectionProbes = scene.reflectionProbes?.map((item) => item.serialize());
   result.environment = {
     sourceUUID: scene.environmentTexture.sourceUUID,
-    url: (scene.environmentTexture as CubeTexture).url,
+    url: scene.environmentTexture.name,
     intensity: scene.environmentIntensity,
   };
 
@@ -134,7 +134,7 @@ export function deserializeScene(
   if (sceneData.environment) {
     if (sceneData.environment.sourceUUID) {
       const loadEnv = async () => {
-        const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false);
+        const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false, scene);
         scene.environmentTexture = tex;
       };
       padding.push(loadEnv);
