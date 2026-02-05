@@ -462,6 +462,7 @@ export class Editor extends Dispatch<EditorEvent> {
     groundMaterial.roughness = 1;
     const textureUrl = Tools.GetAssetUrl('/DefaultScene/albedo.png');
     const groundAlbedoTexture = new Texture(textureUrl, scene);
+    groundAlbedoTexture.uuid = 'albedo';
     groundAlbedoTexture.uScale = 50;
     groundAlbedoTexture.vScale = 50;
     groundAlbedoTexture.anisotropicFilteringLevel = 4;
@@ -471,7 +472,6 @@ export class Editor extends Dispatch<EditorEvent> {
 
     const box = MeshBuilder.CreateBox('New Box', { width: 10, depth: 10, height: 10 });
     box.rotationQuaternion = new Quaternion(0, 0, 0);
-    // box.flipFaces();
     this.configureAddedMesh(scene, box);
     box.name = 'box';
     box.position.y = 5;
@@ -486,9 +486,9 @@ export class Editor extends Dispatch<EditorEvent> {
     boxMaterial.emissiveColor = new Color3(0, 0, 0);
     boxMaterial.metallic = 0;
     boxMaterial.roughness = 1;
-
     const textureUrl1 = Tools.GetAssetUrl('/DefaultScene/amiga.jpg');
     const albedoTexture = new Texture(textureUrl1, scene);
+    albedoTexture.uuid = 'amiga';
     albedoTexture.uScale = 1;
     albedoTexture.vScale = 1;
     albedoTexture.anisotropicFilteringLevel = 4;
@@ -497,6 +497,8 @@ export class Editor extends Dispatch<EditorEvent> {
     box.material = boxMaterial;
 
     const env = new CubeTexture('/DefaultScene/country.env', scene);
+    env.uuid = 'country';
+    env.sourceUUID = 'country';
     // 将默认环境贴图添加到文件系统中
     RuntimeLibrary.Instance.addEnvUrlTexture('/DefaultScene/country.env', env);
     scene.environmentTexture = env;
@@ -507,19 +509,6 @@ export class Editor extends Dispatch<EditorEvent> {
     light.direction = new Vector3(-1, -2, -1);
     light.intensity = 3.43;
     light.name = 'sun';
-    // const sg = Editor.Instance.shadow.openShadow(light, "cascaded") as CascadedShadowGenerator;
-    // sg.lambda = 1;
-    // sg.bias = 0.0005;
-    // sg.depthClamp = true;
-    // sg.autoCalcDepthBounds = true;
-    // sg.autoCalcDepthBoundsRefreshRate = 60;
-    // sg.getShadowMap()?.renderList?.push(box);
-    // sg.addShadowCaster(box);
-    // sg.usePercentageCloserFiltering = true;
-    // sg.filteringQuality = ShadowGenerator.QUALITY_HIGH;
-    // sg.transparencyShadow = true;
-    // sg.enableSoftTransparentShadow = true;
-    // sg.getShadowMap()?.renderList?.push(...sg.getLight().getScene().meshes);
     const sg = Editor.Instance.shadow.openShadow(light, 'cascaded') as CascadedShadowGenerator;
     sg.lambda = 1;
     sg.bias = 0.0005;
