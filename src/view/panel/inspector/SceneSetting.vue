@@ -8,7 +8,7 @@
                     <el-option @click="onSelectSyncEnv" :label="'同步环境'" :value=bgTypeEnum.SyncEnv />
                     <el-option :label="'图片'" :value=bgTypeEnum.Texture />
                     <el-option :label="'全景图'" :value=bgTypeEnum.EnvTexture />
-                    <el-option :label="'颜色'" :value=bgTypeEnum.Color />
+                    <el-option @click="onSelectClearColor" :label="'颜色'" :value=bgTypeEnum.Color />
                 </el-select>
             </Field>
             <Texture v-if="bgType == 2" :acceptCubeTexture="true" :title="$t('component.sceneSetting.backgroundImage')"

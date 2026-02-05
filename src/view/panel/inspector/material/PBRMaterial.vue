@@ -199,7 +199,7 @@
 </template>
 
 <script setup lang="ts">
-import { inject, onMounted, ref, watch, } from "vue"
+import { onMounted, ref, watch, } from "vue"
 import SectionField from "@/component/common/SectionField.vue"
 import StringField from "@/component/base/StringField.vue"
 import Switch from "@/component/base/Switch.vue"
@@ -208,10 +208,8 @@ import Color from "@/component/base/Color.vue"
 import Slider from "@/component/base/Slider.vue"
 import TransparencyModeField from "@/component/base/TransparencyModeField.vue"
 import AlphaModeField from "@/component/base/AlphaModeField.vue"
-import { useDialog } from "@/view/dialog"
-import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary"
 import { PBRMaterial } from "@babylonjs/core"
-import { Editor } from "@/3d/Editor"
+import { useMaterialActions } from "@/store/useMaterialActions"
 
 const props = defineProps<{ mesh?: any; material: PBRMaterial; }>()
 const force = () => { }
@@ -226,38 +224,14 @@ watch(() => props.material, () => {
   immediate: true
 })
 
+const {changeProperty, changeMaterial, shareMaterial} = useMaterialActions({
+  material: props.material,
+  mesh: props.mesh,
+  emitMatChanged: () => emit('matChanged')
+})
+
 function changeTransparencyMode() {
   transparencyMode.value = props.material.transparencyMode;
-}
-
-const propertyChanged = inject<(property: string, newValue: any, oldValue: any, type: string) => void>('propertyChanged')
-
-function changeProperty(property: string, newValue: any, oldValue: any, type: string) {
-  propertyChanged?.('material.' + property, newValue, oldValue, type);
-  // 更新材质球的效果
-  RuntimeLibrary.Instance.dispatch('onMaterialChanged', { useCache: false });
-}
-
-async function changeMaterial() {
-  const ChooseResDialog = (await import('@/view/dialog/ChooseResDialog.vue')).default
-  useDialog(ChooseResDialog, {
-    choose: async (res: any) => {
-      if (res) {
-        const material = await RuntimeLibrary.Instance.getMaterial(res.uuid)
-        if (material) {
-          props.mesh.material = material
-          emit('matChanged');
-        }
-      }
-    },
-    type: 'material'
-  })
-}
-
-async function shareMaterial() {
-  props.material.share = true
-  props.material.isDirty = true
-  RuntimeLibrary.Instance.addMaterial(props.material)
 }
 
 onMounted(() => {

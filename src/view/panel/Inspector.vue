@@ -19,15 +19,17 @@ import MaterialInspectorRouter from './inspector/material/MaterialRouter.vue'
 import Transform from './inspector/Transform.vue'
 import CameraComp from './inspector/Camera.vue'
 import Event from './inspector/Event.vue'
-import { Camera, Light, Material, Mesh, TransformNode } from '@babylonjs/core';
+import { Camera, Light, Material, Mesh, Node, TransformNode } from '@babylonjs/core';
 import { _EventBus } from '@/utils/dispatch';
 import LightComp from './inspector/Light.vue';
 import CustomData from './inspector/CustomData.vue';
 const { currentSelected, currentSelectResNode } = storeToRefs(useScene());
 import { RuntimeLibrary } from "@/3d/assets/RuntimeLibrary";
+import { MultiSelectedObject } from '@/3d/core/utils/MultiSelectedObject';
 const selectedObject = shallowRef<any>(null);
 const oldSelect = shallowRef<any>(null);
 const oldResSelect = shallowRef<any>(null);
+const multiSelectedObject = new MultiSelectedObject();
 function propertyChanged(property: string, newValue: any, oldValue: any, type: string) {
     _EventBus.dispatch('onPropertyChanged', {
         object: toRaw(selectedObject.value),
@@ -47,6 +49,15 @@ watch(currentSelected, (newSelected) => {
             selectedObject.value = sceneObject;
             oldSelect.value = sceneObject;
         }
+        // if(newSelected.length == 1){
+        //     const cur = Editor.Instance.getNodeById(newSelected[0]);
+        //     selectedObject.value = cur;
+        //     oldSelect.value = cur;
+        // } else {
+        //     let sceneObject: Node[] = [];
+        //     newSelected.forEach((x:string) => {
+        //         sceneObject.push(Editor.Instance.getNodeById(x));
+        //     })
     } else {
         selectedObject.value = null;
         selectedObject.value = oldResSelect.value;
@@ -74,6 +85,9 @@ const comps = computed(() => {
         return []
     }
     const arr = []
+    //multiSelectedObject.Nodes = selectedObject.value;
+    //if(multiSelectedObject.MultiType?.includes("TransformNode"))
+    //    arr.push(Common, Transform);
     if (selectedObject.value instanceof Material) {
         arr.push(MaterialInspectorRouter)
     }

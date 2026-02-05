@@ -101,7 +101,7 @@ function loadEnvSkybox(scene: Scene, url: string): Promise<BaseTexture> {
 function createSkybox(
   texture: BaseTexture,
   scene: Scene,
-  pbr = false,
+  pbr = true,
   scale = 1000,
   blur = 0,
   setGlobalEnvTexture = true,
@@ -119,6 +119,7 @@ function createSkybox(
     hdrSkyboxMaterial.microSurface = 1.0 - blur;
     hdrSkyboxMaterial.disableLighting = true;
     hdrSkyboxMaterial.twoSidedLighting = true;
+    hdrSkyboxMaterial.disableDepthWrite = true; // 关闭深度写入，让模型始终显示在天空盒前面
     hdrSkybox.material = hdrSkyboxMaterial;
   } else {
     const skyboxMaterial = new StandardMaterial('skyBox', scene);

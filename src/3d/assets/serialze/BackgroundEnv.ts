@@ -38,7 +38,7 @@ export class TextureBgEnv implements BackgroundEnv {
   deserialize(scene: Scene, sceneData: CC.Scene, assetsManager: ILoaderAssets) {
     // 从环境中拿取全景图数据
     if(sceneData.environment.sourceUUID){
-      assetsManager.getEnvTexture(sceneData.environment.sourceUUID, false).then((tex) => {
+      assetsManager.getEnvTexture(sceneData.environment.sourceUUID, false, scene).then((tex) => {
         loadSkyBox(scene, tex);
       });
     } else {
@@ -116,6 +116,7 @@ export class BackgroundEnvFactory {
     [1, new TextureBgEnv()],
     [2, new ImageBgEnv()],
     [3, new Image360BgEnv()],
+    [4, new ColorBgEnv()],
     // todo: 添加其他类型
   ]);
 
