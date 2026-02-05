@@ -136,6 +136,7 @@ export function deserializeScene(
       const loadEnv = async () => {
         const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false, scene);
         scene.environmentTexture = tex;
+        scene.environmentIntensity = sceneData.environment.intensity;
       };
       padding.push(loadEnv);
     } else {

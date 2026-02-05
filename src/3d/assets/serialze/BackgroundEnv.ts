@@ -116,6 +116,7 @@ export class BackgroundEnvFactory {
     [1, new TextureBgEnv()],
     [2, new ImageBgEnv()],
     [3, new Image360BgEnv()],
+    [4, new ColorBgEnv()],
     // todo: 添加其他类型
   ]);
 

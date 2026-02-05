@@ -86,7 +86,7 @@ export class App {
     this.assets.deserializeScene(scene, sceneNode, padding);
 
     this.scene = scene;
-    scene.clearColor = new Color4(1, 1, 1, 1);
+    //scene.clearColor = new Color4(1, 1, 1, 1);
     scene.activeCamera.attachControl(this.canvas, true);
     this.registerAction();
     const groupCount = Math.ceil(padding.length / 20);

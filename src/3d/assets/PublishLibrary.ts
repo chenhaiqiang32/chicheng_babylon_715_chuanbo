@@ -329,7 +329,7 @@ export class AppAssets {
     }
   }
   setFileSystrem(fileSystem: IFile) {}
-  async getEnvTexture(sourceUUID: string, withPrevUrl = true): Promise<BaseTexture> {
+  async getEnvTexture(sourceUUID: string, withPrevUrl = true, scene = this.currentScene): Promise<BaseTexture> {
     if (this.sceneEnvTexture.has(sourceUUID)) {
       const oriTex = this.sceneEnvTexture.get(sourceUUID);
       const texture = oriTex.clone();
@@ -345,7 +345,7 @@ export class AppAssets {
         const blob = new Blob([buffer]);
         const url = URL.createObjectURL(blob);
         const ext = data.name.toLocaleLowerCase().split('.').pop();
-        const texture = await loadSkyboxWithExt(this.currentScene, url, ext, ENVPIXEL);
+        const texture = await loadSkyboxWithExt(scene, url, ext, ENVPIXEL);
         texture.sourceUUID = sourceUUID;
         texture.name = data.name;
         this.sceneEnvTexture.set(sourceUUID, texture);
