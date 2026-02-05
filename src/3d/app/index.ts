@@ -91,9 +91,10 @@ export class App {
     this.registerAction();
     const groupCount = Math.ceil(padding.length / 20);
     const group = ArrayUtils.groupArray(padding, groupCount);
-    for (let index = 0; index < group.length; index++) {
-      await Promise.all(group[index].map((x) => x()));
-      await Timer.sleep(10);
+    for (let index = 0; index < padding.length; index++) {
+      await padding[index]();
+      //await Promise.all(group[index].map((x) => x()));
+      //await Timer.sleep(10);
       onProgress?.(index / (group.length - 1));
     }
     scene.lights.forEach((light) => {

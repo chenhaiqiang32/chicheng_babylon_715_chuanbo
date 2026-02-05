@@ -318,7 +318,6 @@ export class RuntimeLibrary
       const res = await fetch(url);
       const buffer = await res.arrayBuffer();
       this.fileSystem.saveFile(texture.sourceUUID, new Uint8Array(buffer), 'EnvTexture');
-      console.log(data);
     }
     //texture.prevUrl = await renderEnvTexture(texture.sourceUUID);
     return texture;

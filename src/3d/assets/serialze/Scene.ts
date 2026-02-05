@@ -128,29 +128,25 @@ export function deserializeScene(
   if (scene) {
     scene.getPhysicsEngine()?.setGravity(new Vector3(...sceneData.physic?.gravity));
   }
-  for (const node of sceneData.nodes) {
-    deserializeNode(node, scene, assets, null, false, padding);
-  }
+
+  // 把environment和background放到一块处理
   if (sceneData.environment) {
     if (sceneData.environment.sourceUUID) {
       const loadEnv = async () => {
         const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false, scene);
         scene.environmentTexture = tex;
         scene.environmentIntensity = sceneData.environment.intensity;
+        if(sceneData.background){
+          scene.bgType = sceneData.background.type;
+          BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene,sceneData,assets,);
+        }
       };
       padding.push(loadEnv);
-    } else {
-      scene.environmentTexture = new CubeTexture(sceneData.environment.url, scene);
-      scene.environmentIntensity = sceneData.environment.intensity;
-    }
-  }
-  if (sceneData.background) {
-    scene.bgType = sceneData.background.type;
-    BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(
-      scene,
-      sceneData,
-      assets,
-    );
+    } 
+  } 
+  // Node的序列化放到env后面，保证先加载env
+  for (const node of sceneData.nodes) {
+    deserializeNode(node, scene, assets, null, false, padding);
   }
   if (sceneData.defaultRenderingPipeline) {
     parseDefaultRenderingPipeline(sceneData.defaultRenderingPipeline, scene);

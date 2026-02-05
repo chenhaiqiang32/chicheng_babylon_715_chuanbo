@@ -164,8 +164,8 @@ async function onChange() {
     for (let index = 0; index < envTextureList.value.length; index++) {
         const element = envTextureList.value[index];
         if (!element.url) {
-            const tex = await RuntimeLibrary.Instance.getEnvTexture(element.sourceUUID);
-            element.url = tex.prevUrl;
+            //const tex = await RuntimeLibrary.Instance.getEnvTexture(element.sourceUUID);
+            //element.url = tex.prevUrl;
         }
     }
 
