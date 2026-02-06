@@ -13,6 +13,9 @@ const router = createRouter({
     },
     {
       path: '/app',
+       props: (route) => ({
+        projectId: route.query.projectId as string,
+      }),
       component: () => import('@/view/app/index.vue'),
     },
   ],

@@ -10,8 +10,12 @@ interface RuntimeClip {
 export class Animator {
   maxTime = 1000;
   constructor(private animation: CC.Animation) {}
-
+  private camera: ArcRotateCamera;
   private clips: RuntimeClip[];
+
+  setCamera(camera: ArcRotateCamera) {
+    this.camera = camera;
+  }
 
   updateClip(getNode: (id: string) => Node) {
     this.clips = [];
@@ -63,7 +67,10 @@ export class Animator {
           setColor3Value(clip.object, clip.clip.property, value);
           break;
         case 'camera':
-          setCameraValue(Editor.Instance.Scene.activeCamera as ArcRotateCamera, value);
+          setCameraValue(
+            this.camera || (Editor.Instance.Scene.activeCamera as ArcRotateCamera),
+            value,
+          );
           break;
       }
     }

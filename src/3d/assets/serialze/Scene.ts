@@ -134,16 +134,21 @@ export function deserializeScene(
     if (sceneData.environment.sourceUUID) {
       const loadEnv = async () => {
         const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false, scene);
+
         scene.environmentTexture = tex;
         scene.environmentIntensity = sceneData.environment.intensity;
-        if(sceneData.background){
+        if (sceneData.background) {
           scene.bgType = sceneData.background.type;
-          BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(scene,sceneData,assets,);
+          BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(
+            scene,
+            sceneData,
+            assets,
+          );
         }
       };
       padding.push(loadEnv);
-    } 
-  } 
+    }
+  }
   // Node的序列化放到env后面，保证先加载env
   for (const node of sceneData.nodes) {
     deserializeNode(node, scene, assets, null, false, padding);

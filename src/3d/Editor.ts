@@ -270,7 +270,6 @@ export class Editor extends Dispatch<EditorEvent> {
       },
       scene,
     );
-
     if (scene) {
       this.initGizmos(scene);
       scene.activeCamera.attachControl();
@@ -497,8 +496,6 @@ export class Editor extends Dispatch<EditorEvent> {
     box.material = boxMaterial;
 
     const env = new CubeTexture('/DefaultScene/country.env', scene);
-    env.uuid = 'country';
-    env.sourceUUID = 'country';
     // 将默认环境贴图添加到文件系统中
     RuntimeLibrary.Instance.addEnvUrlTexture('/DefaultScene/country.env', env);
     scene.environmentTexture = env;

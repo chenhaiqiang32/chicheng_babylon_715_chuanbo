@@ -301,18 +301,21 @@ export class RuntimeLibrary
     return texture;
   }
 
-  async addEnvUrlTexture(url:string, texture:BaseTexture, force: boolean = true): Promise<BaseTexture> {
+  async addEnvUrlTexture(
+    url: string,
+    texture: BaseTexture,
+    force: boolean = true,
+  ): Promise<BaseTexture> {
     const name = url.split('/').pop();
-    const ext = name.toLocaleLowerCase().split('.').pop();
     texture.name = name;
     texture.sourceUUID = texture.sourceUUID ?? ID.generateUUID();
     const old = this.envTexture.find((item) => item.sourceUUID === texture.sourceUUID);
-    if(!old || force) {
+    if (!old || force) {
       const data = texture.serialize();
       data.uuid = texture.sourceUUID;
       data.sourceUUID = texture.sourceUUID;
       delete data.url;
-      if(old) ArrayUtils.remove(old, this.envTexture);
+      if (old) ArrayUtils.remove(old, this.envTexture);
       this.envTexture.push(data);
       this.sceneEnvTexture.set(data.sourceUUID, texture);
       const res = await fetch(url);
@@ -329,7 +332,11 @@ export class RuntimeLibrary
    * @param withPrevUrl 是否需要携带预览图的url，如果需要，则会调用离屏渲染或缓存
    * @returns
    */
-  async getEnvTexture(sourceUUID: string, withPrevUrl = true, scene=this.resScene): Promise<BaseTexture> {
+  async getEnvTexture(
+    sourceUUID: string,
+    withPrevUrl = true,
+    scene = this.resScene,
+  ): Promise<BaseTexture> {
     if (this.sceneEnvTexture.has(sourceUUID)) {
       const oriTex = this.sceneEnvTexture.get(sourceUUID);
       const texture = oriTex.clone();
@@ -352,6 +359,7 @@ export class RuntimeLibrary
         const retTex = texture.clone();
         retTex.sourceUUID = sourceUUID;
         if (withPrevUrl) retTex.prevUrl = await renderEnvTexture(sourceUUID);
+
         return Promise.resolve(retTex);
       }
     }

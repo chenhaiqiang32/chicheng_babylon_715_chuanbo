@@ -2,22 +2,18 @@ import {
   AbstractEngine,
   ActionManager,
   CascadedShadowGenerator,
-  Color3,
-  Color4,
   Engine,
   ExecuteCodeAction,
   Mesh,
   Scene,
+  Node,
   ShadowGenerator,
   WebGPUEngine,
 } from '@babylonjs/core';
 import { AppAssets } from '../assets/PublishLibrary';
-import { Animator } from '../animation/animator';
-import { Timer } from '@/utils/Time';
 import { ArrayUtils } from '@/utils/Array';
 import { Shadow } from '../Shadow';
 import { isDirectionalLight, isPointLight, isSpotLight } from '@/tools/guards/nodes';
-import { Editor } from '../Editor';
 
 export class App {
   private engine: AbstractEngine;
@@ -26,14 +22,13 @@ export class App {
   scene: Scene;
   private shadow: Shadow;
   private canvas: HTMLCanvasElement;
+  weakMap: Map<string, Node> = new Map();
   static get Instance(): App {
     if (!this.instance) {
       this.instance = new App();
     }
     return this.instance;
   }
-
-  animator: Animator;
 
   async init(canvas: HTMLCanvasElement, gpu: boolean) {
     this.canvas = canvas;
@@ -91,10 +86,8 @@ export class App {
     this.registerAction();
     const groupCount = Math.ceil(padding.length / 20);
     const group = ArrayUtils.groupArray(padding, groupCount);
-    for (let index = 0; index < padding.length; index++) {
-      await padding[index]();
-      //await Promise.all(group[index].map((x) => x()));
-      //await Timer.sleep(10);
+    for (let index = 0; index < group.length; index++) {
+      await Promise.all(group[index].map((x) => x()));
       onProgress?.(index / (group.length - 1));
     }
     scene.lights.forEach((light) => {
@@ -120,10 +113,12 @@ export class App {
         }
       }
     });
-
     return scene;
   }
-
+  getNodeById(id: string): Node {
+    let node: Node = getSceneNodeByUUid(this.scene, id, this.weakMap);
+    return node;
+  }
   registerAction() {
     this.scene.rootNodes.forEach((node) => {
       const children = node.getChildren(null, false);
@@ -195,5 +190,39 @@ export class App {
         }
       });
     });
+  }
+}
+
+function getSceneNodeByUUid(scene: Scene, uuid: string, weakMap?: Map<string, Node>) {
+  if (weakMap) {
+    const ret = weakMap.get(uuid);
+    if (ret) {
+      return ret;
+    }
+  }
+  for (const item of scene.rootNodes) {
+    const ret = getNodeByUUid(item, uuid, weakMap);
+    if (ret) {
+      return ret;
+    }
+  }
+}
+function getNodeByUUid(node: Node, uuid: string, weakMap?: Map<string, Node>): Node | null {
+  if (weakMap) {
+    weakMap.set(node.uuid, node);
+  }
+  if (node.uuid === uuid) {
+    if (node.isDeleted) return null;
+    return node;
+  }
+  const children = node.getChildren();
+  if (children?.length > 0) {
+    for (let index = 0; index < children.length; index++) {
+      const ret = getNodeByUUid(children[index], uuid, weakMap);
+      if (ret) {
+        if (node.isDeleted) return null;
+        return ret;
+      }
+    }
   }
 }

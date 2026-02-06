@@ -1,15 +1,13 @@
 import { ref, shallowRef } from 'vue';
 import { defineStore } from 'pinia';
-import { Node, Scene } from '@babylonjs/core';
+import { Scene } from '@babylonjs/core';
 import { ViewFlagsMode } from '@/3d/core/utils/viewFlagsMode';
 import { CC } from '@/3d/assets/BaseRes';
 import { Editor } from '@/3d/Editor';
 import { RuntimeLibrary } from '@/3d/assets/RuntimeLibrary';
 import { serializeScene } from '@/3d/assets/serialze/Scene';
-import { Timer } from '@/utils/Time';
 import { useHierarchyModule } from './useSceneModule/useHierarchy';
 import { useControlModule } from './useSceneModule/useControl';
-import { ArrayUtils } from '@/utils/Array';
 import { _EventBus } from '@/utils/dispatch';
 
 export const useScene = defineStore('scene', () => {
@@ -69,13 +67,9 @@ export const useScene = defineStore('scene', () => {
         ccNode,
         padding,
       );
-
-      const groupPadding = ArrayUtils.groupArray(padding, Math.ceil(padding.length / 40));
-      for (let index = 0; index < groupPadding.length; index++) {
-        const group = groupPadding[index].map((f) => f());
-        await Promise.all(group);
-        await Timer.sleep(0);
-        progressCallback((index + 1) / groupPadding.length);
+      for (let index = 0; index < padding.length; index++) {
+        await padding[index]();
+        progressCallback((index + 1) / padding.length);
       }
       progressCallback(1);
       return scene;
@@ -105,7 +99,7 @@ export const useScene = defineStore('scene', () => {
     currentCopy,
     setCurrentSelect,
     currentSelectResNode,
-    setCurrentSelectResNode
+    setCurrentSelectResNode,
   };
 });
 export { ViewFlagsMode };

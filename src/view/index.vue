@@ -79,7 +79,7 @@ const { editorLayout } = storeToRefs(useEditor());
 const { loading, edit } = storeToRefs(useEditor());
 
 async function loadProject(name: string) {
-    await EditorFileSystem.Instance.init(FileMode.ZIP, name);
+    await EditorFileSystem.Instance.init(FileMode.NET, name);
     const sceneList = await RuntimeLibrary.Instance.loadAssets((v) => {
 
     });
@@ -93,11 +93,7 @@ async function loadProject(name: string) {
         await useScene().addScene(scene);
         await Editor.Instance.setCurrentScene(scene.uuid);
     }
-    if (!edit.value) {
-        const camera = Editor.Instance.Scene.activeCamera as ArcRotateCamera;
-        camera.useAutoRotationBehavior = true;
-        camera.autoRotationBehavior.idleRotationSpeed = -0.5;
-    }
+
 }
 
 

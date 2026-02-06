@@ -9,11 +9,12 @@
 import { App } from '@/3d/app';
 import { onMounted, ref } from 'vue';
 import { AppAssets } from '@/3d/assets/PublishLibrary';
-import { ArcRotateCamera, } from '@babylonjs/core';
 import Loading from '@/component/common/Loading.vue'
+import { ArcRotateCamera } from '@babylonjs/core';
+import '../../ai'
 
 
-
+const props = defineProps<{ projectId: string }>()
 
 const canvas = ref<HTMLCanvasElement>(null);
 const loading = ref<number>(0);
@@ -23,13 +24,16 @@ onMounted(async () => {
         await App.Instance.init(canvas.value, true);
     }
     const assets = new AppAssets();
-    await assets.loadFromUrl('publish.zip', (progress) => {
+    await assets.loadFromUrl(props.projectId || './ship.zip', (progress) => {
         loading.value = progress * 0.4;
     });
     App.Instance.setAssetsLibrary(assets);
-    const scene = await App.Instance.setScene((progress) => {
+    await App.Instance.setScene((progress) => {
         loading.value = progress * 0.6 + 0.4;
     });
+    const camera = App.Instance.scene.activeCamera as ArcRotateCamera;
+    camera.useAutoRotationBehavior = true;
+    camera.autoRotationBehavior.idleRotationSpeed = -0.5;
 });
 
 </script>

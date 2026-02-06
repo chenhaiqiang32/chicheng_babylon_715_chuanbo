@@ -3,6 +3,7 @@ import { Editor } from './3d/Editor';
 import { TimeController } from './utils/Time';
 import { Animator } from './3d/animation/animator';
 import { CC } from './3d/assets/BaseRes';
+import { App } from './3d/app';
 
 const jianzhen = {
   name: '减震系统',
@@ -322,29 +323,27 @@ window.addEventListener(
 
 window.addEventListener('message', (data) => {
   if (data.data?.type === 'disassemble') {
-    if (!Editor.Instance.Scene.runtimeAnimation) {
-      Editor.Instance.Scene.runtimeAnimation = [];
+    if (!App.Instance.scene.runtimeAnimation) {
+      App.Instance.scene.runtimeAnimation = [];
     }
-    const ani = Editor.Instance.Scene.runtimeAnimation.find((x) => x.uuid === jianzhen.uuid);
+    const ani = App.Instance.scene.runtimeAnimation.find((x) => x.uuid === jianzhen.uuid);
     if (ani) {
       playClip(jianzhen.uuid);
       return;
     }
-    Editor.Instance.Scene.runtimeAnimation.push(jianzhen);
+    App.Instance.scene.runtimeAnimation.push(jianzhen);
     playClip(jianzhen.uuid);
-    Editor.Instance.dispatch('animationChange');
   } else if (data.data?.type === 'focus') {
-    if (!Editor.Instance.Scene.runtimeAnimation) {
-      Editor.Instance.Scene.runtimeAnimation = [];
+    if (!App.Instance.scene.runtimeAnimation) {
+      App.Instance.scene.runtimeAnimation = [];
     }
-    const ani = Editor.Instance.Scene.runtimeAnimation.find((x) => x.uuid === zhuliang.uuid);
+    const ani = App.Instance.scene.runtimeAnimation.find((x) => x.uuid === zhuliang.uuid);
     if (ani) {
       playClip(ani.uuid);
       return;
     }
-    Editor.Instance.Scene.runtimeAnimation.push(zhuliang);
+    App.Instance.scene.runtimeAnimation.push(zhuliang);
     playClip(zhuliang.uuid);
-    Editor.Instance.dispatch('animationChange');
   }
 });
 
@@ -354,9 +353,10 @@ function playClip(uuid: string) {
   animator?.dispose();
   timeController?.dispose();
   timeController = null;
-  const anim = Editor.Instance.Scene?.runtimeAnimation.find((x) => x.uuid === uuid) as CC.Animation;
+  const anim = App.Instance.scene.runtimeAnimation.find((x) => x.uuid === uuid) as CC.Animation;
   animator = new Animator(anim);
-  animator.updateClip((s) => Editor.Instance.getNodeById(s));
+  animator.updateClip((s) => App.Instance.getNodeById(s));
+  animator.setCamera(App.Instance.scene.activeCamera as ArcRotateCamera);
   animator.collectInfo();
   const times = anim.clips.flatMap((x) => x.key.map((v) => v.time));
   const maxTime = Math.max(...times) + 0.5;
