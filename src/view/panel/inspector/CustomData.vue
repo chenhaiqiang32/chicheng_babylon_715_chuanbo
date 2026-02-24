@@ -12,11 +12,26 @@
                     <SVG name="delete" @click="removeItem(item)" class="delete-icon"></SVG>
                 </div>
                 <div class="item-value">
-                    <ElInputNumber v-if="item.type === 'number'" v-model="item.value" size="small" :controls="true"
-                        style="width: 100%"></ElInputNumber>
-                    <ElInput v-else-if="item.type === 'string'" v-model="item.value" size="small" placeholder="值">
-                    </ElInput>
-                    <ElSwitch v-else-if="item.type === 'boolean'" v-model="item.value"></ElSwitch>
+                    <ElInputNumber
+                        v-if="item.type === 'number'"
+                        :model-value="item.value as number"
+                        @update:modelValue="(val: number) => item.value = Number(val)"
+                        size="small"
+                        :controls="true"
+                        style="width: 100%"
+                    />
+                    <ElInput
+                        v-else-if="item.type === 'string'"
+                        :model-value="item.value as string"
+                        @update:modelValue="(val: string) => item.value = val"
+                        size="small"
+                        placeholder="值"
+                    />
+                    <ElSwitch
+                        v-else-if="item.type === 'boolean'"
+                        :model-value="item.value as boolean"
+                        @update:modelValue="(val: any) => item.value = !!val"
+                    />
                 </div>
             </div>
         </div>
@@ -40,10 +55,24 @@
                 </ElFormItem>
             </ElSpace>
             <ElFormItem :label="$t('component.customData.value')">
-                <ElInputNumber v-if="formData.type === 'number'" v-model="formData.value" :controls="true"
-                    style="width: 100%"></ElInputNumber>
-                <ElInput v-else-if="formData.type === 'string'" v-model="formData.value" placeholder="请输入值"></ElInput>
-                <ElSwitch v-else-if="formData.type === 'boolean'" v-model="formData.value"></ElSwitch>
+                <ElInputNumber
+                    v-if="formData.type === 'number'"
+                    :model-value="formData.value as number"
+                    @update:modelValue="(val: number) => formData.value = Number(val)"
+                    :controls="true"
+                    style="width: 100%"
+                />
+                <ElInput
+                    v-else-if="formData.type === 'string'"
+                    :model-value="formData.value as string"
+                    @update:modelValue="(val: string) => formData.value = val"
+                    placeholder="请输入值"
+                />
+                <ElSwitch
+                    v-else-if="formData.type === 'boolean'"
+                    :model-value="formData.value as boolean"
+                    @update:modelValue="(val: any) => formData.value = !!val"
+                />
                 <ElInput v-else disabled placeholder="请先选择类型"></ElInput>
             </ElFormItem>
         </ElForm>

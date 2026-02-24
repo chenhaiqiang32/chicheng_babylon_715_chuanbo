@@ -29,6 +29,7 @@ html.dark {
   --el-fill-color-blank: transparent;
   --el-mask-color: rgba(0, 0, 0, 0.8);
   --el-mask-color-extra-light: rgba(0, 0, 0, 0.3);
+  --color: rgb(7, 41, 30);
 }
 
 html.dark .el-button {

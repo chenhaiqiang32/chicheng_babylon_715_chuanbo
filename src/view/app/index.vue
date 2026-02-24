@@ -2,6 +2,10 @@
     <div class="app-container">
         <canvas id="canvas" ref="canvas"></canvas>
     </div>
+    <div class="btn">
+        <div @click="next">下一个</div>
+        <div @click="prev">上一个</div>
+    </div>
     <Loading :progress="loading" v-if="loading > 0 && loading < 1"> </Loading>
 
 </template>
@@ -10,7 +14,6 @@ import { App } from '@/3d/app';
 import { onMounted, ref } from 'vue';
 import { AppAssets } from '@/3d/assets/PublishLibrary';
 import Loading from '@/component/common/Loading.vue'
-import { ArcRotateCamera } from '@babylonjs/core';
 import '../../ai'
 
 
@@ -31,10 +34,25 @@ onMounted(async () => {
     await App.Instance.setScene((progress) => {
         loading.value = progress * 0.6 + 0.4;
     });
-    const camera = App.Instance.scene.activeCamera as ArcRotateCamera;
-    camera.useAutoRotationBehavior = true;
-    camera.autoRotationBehavior.idleRotationSpeed = -0.5;
 });
+
+let currentIndex = ref(0);
+
+const next = () => {
+    if (currentIndex.value < App.Instance.allCount - 1) {
+        currentIndex.value++;
+        App.Instance.setIndex(currentIndex.value);
+    }
+}
+
+const prev = () => {
+    if (currentIndex.value > 0) {
+        currentIndex.value--;
+        App.Instance.setIndex(currentIndex.value);
+    }
+}
+
+
 
 </script>
 <style scoped lang="scss">
@@ -47,5 +65,38 @@ onMounted(async () => {
         width: 100%;
         height: 100%;
     }
+}
+
+.btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    color: #fff;
+
+    div {
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 5px;
+        border-radius: 5px;
+        width: 100px;
+        height: 60px;
+        line-height: 60px;
+        text-align: center;
+        cursor: pointer;
+        transition: background-color 0.3s ease-in-out;
+
+        &:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        &:active {
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+    }
+
 }
 </style>

@@ -149,9 +149,9 @@ export class PublishAssets {
         this.envTexture.push(env);
       }
       // 环境贴图也要保存
-      if(item.environment) {
+      if (item.environment) {
         const env = this.getBufferSystem.getEnvTextureData(item.environment.sourceUUID);
-        if(!env){
+        if (!env) {
           continue;
         }
         this.envTexture.push(env);
@@ -329,7 +329,11 @@ export class AppAssets {
     }
   }
   setFileSystrem(fileSystem: IFile) {}
-  async getEnvTexture(sourceUUID: string, withPrevUrl = true, scene = this.currentScene): Promise<BaseTexture> {
+  async getEnvTexture(
+    sourceUUID: string,
+    withPrevUrl = true,
+    scene = this.currentScene,
+  ): Promise<BaseTexture> {
     if (this.sceneEnvTexture.has(sourceUUID)) {
       const oriTex = this.sceneEnvTexture.get(sourceUUID);
       const texture = oriTex.clone();

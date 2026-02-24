@@ -27,8 +27,10 @@ const props = defineProps<{ object: ParticleContainer }>();
 
 const systems = ref<IParticleSystem[]>();
 const started = ref(false);
-const buttonText = computed(() => started.value ? "Stop" : "Start");
-const buttonType = computed(() => started.value ? "info" : "info");
+const buttonText = computed(() => (started.value ? 'Stop' : 'Start'));
+const buttonType = computed<'' | 'text' | 'default' | 'primary' | 'success' | 'warning' | 'info' | 'danger'>(() =>
+  started.value ? 'info' : 'info',
+);
 const refreshSystems = () => {
     systems.value = props.object?.particleSystems.systems;
     started.value = props.object.particleSystems.systems.every(sys => sys.isStarted());

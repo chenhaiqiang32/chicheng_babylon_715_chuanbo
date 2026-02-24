@@ -115,53 +115,54 @@ export function deserializeScene(
   scene.fogStart = sceneData.fog?.fogStart;
   scene.fogEnd = sceneData.fog?.fogEnd;
   scene.fogDensity = sceneData.fog?.fogDensity;
-  scene.iblIntensity = sceneData.iblIntensity;
-  // await import('@babylonjs/inspector');
-  // scene.debugLayer.show();
-  if (sceneData.physic) {
-    scene.physicsEnabled = sceneData.physic.enabled;
-    if (sceneData.physic.gravity) {
-      scene.getPhysicsEngine()?.setGravity(new Vector3(...sceneData.physic?.gravity));
-    }
-  }
-  scene.physicsEnabled = sceneData.physic?.enabled;
-  if (scene) {
-    scene.getPhysicsEngine()?.setGravity(new Vector3(...sceneData.physic?.gravity));
-  }
-
-  // 把environment和background放到一块处理
-  if (sceneData.environment) {
-    if (sceneData.environment.sourceUUID) {
-      const loadEnv = async () => {
-        const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false, scene);
-
-        scene.environmentTexture = tex;
-        scene.environmentIntensity = sceneData.environment.intensity;
-        if (sceneData.background) {
-          scene.bgType = sceneData.background.type;
-          BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(
-            scene,
-            sceneData,
-            assets,
-          );
-        }
-      };
-      padding.push(loadEnv);
-    }
-  }
-  // Node的序列化放到env后面，保证先加载env
+  scene.iblIntensity = 1;
   for (const node of sceneData.nodes) {
     deserializeNode(node, scene, assets, null, false, padding);
   }
-  if (sceneData.defaultRenderingPipeline) {
-    parseDefaultRenderingPipeline(sceneData.defaultRenderingPipeline, scene);
-  }
-  if (sceneData.ssao2RenderingPipeline) {
-    parseSSAO2RenderingPipeline(sceneData.ssao2RenderingPipeline, scene);
-  }
-  if (sceneData.ssrPostProcess) {
-    parseSSRRenderingPipeline(sceneData.ssrPostProcess, scene);
-  }
+
+  // await import('@babylonjs/inspector');
+  // scene.debugLayer.show();
+  // if (sceneData.physic) {
+  //   scene.physicsEnabled = sceneData.physic.enabled;
+  //   if (sceneData.physic.gravity) {
+  //     scene.getPhysicsEngine()?.setGravity(new Vector3(...sceneData.physic?.gravity));
+  //   }
+  // }
+  // scene.physicsEnabled = sceneData.physic?.enabled;
+  // if (scene) {
+  //   scene.getPhysicsEngine()?.setGravity(new Vector3(...sceneData.physic?.gravity));
+  // }
+
+  // 把environment和background放到一块处理
+  // if (sceneData.environment) {
+  //   if (sceneData.environment.sourceUUID) {
+  //     const loadEnv = async () => {
+  //       const tex = await assets.getEnvTexture?.(sceneData.environment.sourceUUID, false, scene);
+  //       scene.environmentTexture = tex;
+  //       scene.environmentIntensity = sceneData.environment.intensity;
+  //       if (sceneData.background) {
+  //         scene.bgType = sceneData.background.type;
+  //         BackgroundEnvFactory.createFromScene(sceneData.background.type).deserialize(
+  //           scene,
+  //           sceneData,
+  //           assets,
+  //         );
+  //       }
+  //     };
+  //     padding.push(loadEnv);
+  //   }
+  // }
+  // Node的序列化放到env后面，保证先加载env
+
+  // if (sceneData.defaultRenderingPipeline) {
+  //   parseDefaultRenderingPipeline(sceneData.defaultRenderingPipeline, scene);
+  // }
+  // if (sceneData.ssao2RenderingPipeline) {
+  //   parseSSAO2RenderingPipeline(sceneData.ssao2RenderingPipeline, scene);
+  // }
+  // if (sceneData.ssrPostProcess) {
+  //   parseSSRRenderingPipeline(sceneData.ssrPostProcess, scene);
+  // }
   scene.activeCamera =
     scene.cameras.find((x) => x.uuid == sceneData.activeCamera) ?? scene.cameras[0];
   return scene;

@@ -1,4 +1,5 @@
 import {
+  AbstractMesh,
   BaseTexture,
   GaussianSplattingMesh,
   Mesh,
@@ -94,45 +95,49 @@ export function deserializeMeshNode(
     padding.push(getMaterial);
   }
 
-  // 恢复物理配置（collisionMesh）
-  if (data.metadata?.physics?.collider) {
-    const restorePhysics = async () => {
-      try {
-        const colliderData = data.metadata.physics.collider;
+  mesh.freezeWorldMatrix();
+  mesh.doNotSyncBoundingInfo = true;
+  mesh.cullingStrategy = AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
 
-        // 创建 CollisionMesh 实例
-        const collisionMesh = new CollisionMesh(`${mesh.name} Collider`, scene, mesh);
-        collisionMesh.id = Tools.RandomId();
-        collisionMesh.uniqueId = UniqueNumber.Get();
+  // // 恢复物理配置（collisionMesh）
+  // if (data.metadata?.physics?.collider) {
+  //   const restorePhysics = async () => {
+  //     try {
+  //       const colliderData = data.metadata.physics.collider;
 
-        // 标记为编辑器辅助工具，不参与场景逻辑和序列化
-        (collisionMesh as any).isIgnore = true;
-        collisionMesh.doNotSerialize = true;
+  //       // 创建 CollisionMesh 实例
+  //       const collisionMesh = new CollisionMesh(`${mesh.name} Collider`, scene, mesh);
+  //       collisionMesh.id = Tools.RandomId();
+  //       collisionMesh.uniqueId = UniqueNumber.Get();
 
-        // 从 JSON 恢复形状数据并重建几何体
-        await collisionMesh.setType(colliderData.type, mesh, false);
+  //       // 标记为编辑器辅助工具，不参与场景逻辑和序列化
+  //       (collisionMesh as any).isIgnore = true;
+  //       collisionMesh.doNotSerialize = true;
 
-        // 应用保存的形状参数（覆盖默认值）
-        const savedShape = CollisionShapeFactory.fromJSON(colliderData.shape);
-        Object.assign(collisionMesh.shape, savedShape);
+  //       // 从 JSON 恢复形状数据并重建几何体
+  //       await collisionMesh.setType(colliderData.type, mesh, false);
 
-        // 根据恢复的参数重建几何体
-        collisionMesh.rebuildGeometry();
+  //       // 应用保存的形状参数（覆盖默认值）
+  //       const savedShape = CollisionShapeFactory.fromJSON(colliderData.shape);
+  //       Object.assign(collisionMesh.shape, savedShape);
 
-        // 恢复触发器状态
-        collisionMesh.isTrigger = colliderData.isTrigger || false;
+  //       // 根据恢复的参数重建几何体
+  //       collisionMesh.rebuildGeometry();
 
-        // 保存到网格属性（供编辑器和运行时使用）
-        (mesh as any).collisionMesh = collisionMesh;
+  //       // 恢复触发器状态
+  //       collisionMesh.isTrigger = colliderData.isTrigger || false;
 
-        // 默认隐藏碰撞体可视化（用户启用物理时会显示）
-        collisionMesh.setVisibility(false);
-      } catch (error) {
-        console.warn(`恢复物理配置失败 "${mesh.name}":`, error);
-      }
-    };
-    padding.push(restorePhysics);
-  }
+  //       // 保存到网格属性（供编辑器和运行时使用）
+  //       (mesh as any).collisionMesh = collisionMesh;
+
+  //       // 默认隐藏碰撞体可视化（用户启用物理时会显示）
+  //       collisionMesh.setVisibility(false);
+  //     } catch (error) {
+  //       console.warn(`恢复物理配置失败 "${mesh.name}":`, error);
+  //     }
+  //   };
+  //   padding.push(restorePhysics);
+  // }
 
   return mesh;
 }

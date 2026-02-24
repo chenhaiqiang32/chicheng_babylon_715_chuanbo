@@ -18,30 +18,20 @@ import {
   CubeTexture,
   HDRCubeTexture,
   Vector2,
-  ArcRotateCamera,
-  AbstractMesh,
-  SceneOptimizer,
-  SceneOptimizerOptions,
-  HemisphericLight,
-  ReflectionProbe,
-  ParticleSystem,
-  Color4,
-  Path3D,
-  Curve3,
-  Quaternion,
 } from '@babylonjs/core';
 import { AppAssets } from '../assets/PublishLibrary';
 import { ArrayUtils } from '@/utils/Array';
 import { Shadow } from '../Shadow';
+import { isDirectionalLight, isPointLight, isSpotLight } from '@/tools/guards/nodes';
 import { SkyMaterial, WaterMaterial } from '@babylonjs/materials';
 import gsap from 'gsap';
-import '@babylonjs/inspector';
 
 export class App {
   private engine: AbstractEngine;
   private static instance: App;
   private assets: AppAssets;
   scene: Scene;
+  private shadow: Shadow;
   private canvas: HTMLCanvasElement;
   weakMap: Map<string, Node> = new Map();
   private skyMaterial?: SkyMaterial;
@@ -54,32 +44,31 @@ export class App {
     return this.instance;
   }
 
-  private path3D?: Path3D;
-  private meshArray: Mesh[] = [];
-
-  private currentCount = 0;
-  allCount = 18;
-
   async init(canvas: HTMLCanvasElement, gpu: boolean) {
     this.canvas = canvas;
     if (gpu) {
       this.engine = new Engine(canvas, true, {
         antialias: true,
         adaptToDeviceRatio: true,
-        limitDeviceRatio: 1,
+        limitDeviceRatio: 2,
       });
+      // this.engine = new WebGPUEngine(canvas, {
+      //   adaptToDeviceRatio: true,
+      //   limitDeviceRatio: 2,
+      // });
       if (this.engine instanceof WebGPUEngine) {
         await this.engine.initAsync();
       }
     } else {
       this.engine = new Engine(canvas, true, {
         adaptToDeviceRatio: true,
+        limitDeviceRatio: 2,
       });
     }
-    this.engine.setHardwareScalingLevel(2);
     this.engine.runRenderLoop(() => {
       this.scene?.render();
     });
+    this.shadow = new Shadow();
     window.addEventListener('resize', this.resize);
   }
 
@@ -108,6 +97,7 @@ export class App {
     const scene = new Scene(this.engine);
     const padding = new Array<Padding>();
     this.assets.deserializeScene(scene, sceneNode, padding);
+
     this.scene = scene;
     this.scene.fogEnabled = false;
     scene.activeCamera.maxZ = 10000;
@@ -120,28 +110,29 @@ export class App {
       await Promise.all(group[index].map((x) => x()));
       onProgress?.(index / (group.length - 1));
     }
-    onProgress(1);
-    // scene.lights.forEach((light) => {
-    //   if (light.shadowGenerator) {
-    //     const generator = ShadowGenerator.Parse(light.shadowGenerator, scene);
-    //     this.shadow.addShadowGeneratorMap(light.uuid, generator);
-    //   }
-    //   if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
-    //     {
-    //       const sg = this.shadow.getShadowGenerator(light);
-    //       if (!sg) {
-    //         return;
-    //       }
-    //       sg.getLight()
-    //         .getScene()
-    //         .meshes.forEach((item) => {
-    //           if (item.castShadows) {
-    //             this.shadow.addMeshToShadowGenerator(item, light);
-    //           }
-    //         });
-    //     }
-    //   }
-    // });
+    scene.lights.forEach((light) => {
+      if (light.shadowGenerator) {
+        const generator = light.isShadowGenerator
+          ? ShadowGenerator.Parse(light.shadowGenerator, scene)
+          : CascadedShadowGenerator.Parse(light.shadowGenerator, scene);
+        this.shadow.addShadowGeneratorMap(light.uuid, generator);
+      }
+      if (isDirectionalLight(light) || isPointLight(light) || isSpotLight(light)) {
+        {
+          const sg = this.shadow.getShadowGenerator(light);
+          if (!sg) {
+            return;
+          }
+          sg.getLight()
+            .getScene()
+            .meshes.forEach((item) => {
+              if (item.castShadows) {
+                this.shadow.addMeshToShadowGenerator(item, light);
+              }
+            });
+        }
+      }
+    });
     this.setGround();
     return scene;
   }
@@ -223,8 +214,6 @@ export class App {
   }
 
   setGround() {
-    const light = new HemisphericLight('light', new Vector3(0, -1, 0), this.scene);
-
     const box = MeshBuilder.CreateBox(
       'box',
       { width: 1000, height: 1000, depth: 1000 },
@@ -234,7 +223,7 @@ export class App {
     const skyBox = new PBRMaterial('skyBox', this.scene);
     skyBox.backFaceCulling = false;
     box.material = skyBox;
-    const tex = new CubeTexture('environment/512/TropicalSunnyDay', this.scene);
+    const tex = new HDRCubeTexture('bell_park_dawn.hdr', this.scene, 512);
     tex.coordinatesMode = Texture.SKYBOX_MODE;
     skyBox.reflectionTexture = tex;
 
@@ -243,119 +232,45 @@ export class App {
       sun = new DirectionalLight('sunLight', new Vector3(0, -1, 0), this.scene);
       sun.intensity = 1.0;
     }
-    this.skyObserver = this.scene.onBeforeRenderObservable.add(() => {});
-    this.updateSkyByTime();
 
+    this.skyObserver = this.scene.onBeforeRenderObservable.add(() => {
+      this.updateSkyByTime();
+    });
     const waterGround = MeshBuilder.CreateGround(
       'ground',
-      { width: 3000, height: 3000, subdivisions: 1 },
+      { width: 3000, height: 3000 },
       this.scene,
     );
-    const ground = MeshBuilder.CreateGround(
-      'ground',
-      { width: 3000, height: 3000, subdivisions: 1 },
-      this.scene,
-    );
-    const groundMaterial = new PBRMaterial('groundMaterial', this.scene);
-    groundMaterial.roughness = 1;
-    const p = new Texture('OIP-C.webp', this.scene, true, false);
-    p.uScale = 100;
-    p.vScale = 100;
-
-    groundMaterial.albedoTexture = p;
-    ground.material = groundMaterial;
-    ground.position.y = -20;
     const waterMaterial = new WaterMaterial('water', this.scene, new Vector2(1024, 1024));
-    const normal = new Texture('waterbump.png', this.scene, true, false);
-    normal.uScale = 3;
-    normal.vScale = 3;
-    waterMaterial.bumpTexture = normal;
-    waterMaterial.windForce = -4;
-    waterMaterial.waveHeight = 0.1;
-    waterMaterial.bumpHeight = 0.5;
+    waterMaterial.bumpTexture = new Texture('waterbump.png', this.scene, true, false);
+    waterMaterial.bumpTexture.scale(500);
+    waterMaterial.windForce = -8;
+    waterMaterial.waveHeight = 0.25;
+    waterMaterial.bumpHeight = 0.1;
     waterMaterial.waveLength = 0.15;
-    waterMaterial.waveSpeed = 50;
+    waterMaterial.waveSpeed = 0.15;
     waterMaterial.colorBlendFactor = 0.25;
-    waterMaterial.sideOrientation = 1;
-    waterMaterial.waterColor = new Color3(7 / 255, 41 / 255, 30 / 255);
+    waterMaterial.waterColor = new Color3(0.1, 0.1, 0.6);
+    const box2 = MeshBuilder.CreateBox('box', { width: 10, height: 10, depth: 10 }, this.scene);
+    box2.position.y = -15;
+    box2.position.z = 20;
+
+    gsap.to(box2.position, {
+      y: 15,
+      duration: 2,
+      ease: 'power2.inOut',
+      repeat: -1,
+      yoyo: true,
+    });
 
     // 反射/折射对象
-
-    ground.doNotSyncBoundingInfo = true;
-    waterGround.material = waterMaterial;
-    waterGround.position.y = 2;
-
-    const particleSystem = new ParticleSystem('particles', 1000, this.scene);
-    particleSystem.emitter = new Vector3(15.7, 2, -3.5);
-    particleSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
-    const tex2 = new Texture('particle/smoke.png', this.scene, true, false, null);
-    tex2.hasAlpha = true;
-    particleSystem.particleTexture = tex2;
-    particleSystem.isAnimationSheetEnabled = true;
-    particleSystem.spriteCellWidth = 1; // 列数 = 1
-    particleSystem.spriteCellHeight = 5; // 行数 = 5
-    particleSystem.spriteCellLoop = true;
-    particleSystem.spriteCellChangeSpeed = 5;
-
-    particleSystem.minScaleX = 10;
-    particleSystem.minScaleY = 10;
-    particleSystem.startSpriteCellID = 0;
-    particleSystem.endSpriteCellID = 5;
-    particleSystem.spriteCellHeight = 256;
-    particleSystem.spriteCellWidth = 256;
-    particleSystem.spriteCellLoop = true;
-    // 发射速率
-    particleSystem.emitRate = 30; // 每秒发射多少颗
-
-    // // 方向、速度等（示例：向上喷发）
-    particleSystem.minSize = 0.5;
-    particleSystem.minLifeTime = 5;
-    particleSystem.minLifeTime = 5;
-    particleSystem.maxSize = 1.5;
-    particleSystem.direction1 = new Vector3(30, 0, -2);
-    particleSystem.direction2 = new Vector3(30, 0, -2);
-    particleSystem.start();
-    const particleSystem2 = particleSystem.clone('particles2', new Vector3(15.7, 2, 3.5));
-    particleSystem2.direction1 = new Vector3(30, 0, 2);
-    particleSystem2.direction2 = new Vector3(30, 0, 2);
-    this.scene.debugLayer.show();
-
-    const points = [
-      new Vector3(35, 10, 0),
-      new Vector3(50, 10, 0),
-      new Vector3(50, 0, 0),
-      new Vector3(50, -5, 0),
-      new Vector3(50, -50, 0),
-    ];
-    const path = Curve3.CreateCatmullRomSpline(points, 20, false);
-    const line = MeshBuilder.CreateLines('line', { points: path.getPoints() }, this.scene);
-    const line2 = MeshBuilder.CreateLines('line', { points: path.getPoints() }, this.scene);
-    line2.position.z = 3;
-    line.position.z = -3;
-    const path3D = new Path3D(path.getPoints());
-    const boxArray: Mesh[] = [];
-    const mat = new PBRMaterial('boxMaterial', this.scene);
-    mat.roughness = 1;
-    mat.metallic = 0.5;
-    mat.albedoColor = new Color3(0.8, 0.8, 0.8);
-    for (let i = 0; i < this.allCount; i++) {
-      const box = MeshBuilder.CreateCylinder(
-        'box',
-        { height: 6, diameterTop: 2, diameterBottom: 2 },
-        this.scene,
-      );
-      box.material = mat;
-      box.rotate(new Vector3(1, 0, 0), Math.PI / 2);
-      boxArray.push(box);
-    }
-
-    this.path3D = path3D;
-    this.meshArray = boxArray;
     this.scene.meshes.forEach((m) => {
       if (m !== waterGround) {
         waterMaterial.addToRenderList(m);
       }
     });
+    waterGround.material = waterMaterial;
+    waterGround.position.y = 5;
   }
 
   private updateSkyByTime() {
@@ -389,32 +304,6 @@ export class App {
       this.sunLight.direction.copyFrom(dir);
       this.sunLight.intensity = 0.2 + 0.8 * elev;
     }
-  }
-  setIndex(index: number) {
-    const oldIndex = this.currentCount;
-
-    const v = { value: oldIndex / this.allCount };
-    gsap.to(v, {
-      value: index / this.allCount,
-      duration: 1,
-      onUpdate: () => {
-        this.currentCount = v.value * this.allCount;
-        for (let index = 0; index < this.meshArray.length; index++) {
-          const vv = v.value - index / (this.meshArray.length - 1);
-          const boxMesh = this.meshArray[index];
-          if (vv <= 0) {
-            boxMesh.setEnabled(false);
-          } else {
-            boxMesh.setEnabled(true);
-          }
-          const pos = this.path3D.getPointAt(Math.max(vv, 0));
-          boxMesh.position.copyFrom(pos);
-        }
-        // const normal = path3D.getBinormalAt(v.value);
-        // const dir = path3D.getTangentAt(v.value);
-        // box2.rotationQuaternion = Quaternion.FromLookDirectionRH(dir, normal);
-      },
-    });
   }
 }
 

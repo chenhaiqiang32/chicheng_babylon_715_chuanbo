@@ -317,7 +317,9 @@ const props = defineProps<{ object: IParticleSystem; }>();
 const started = ref(props.object?.isStarted());
 const version = ref(0);
 const buttonText = computed(() => started.value ? "Stop" : "Start");
-const buttonType = computed(() => started.value ? "info" : "info");
+const buttonType = computed<'' | 'text' | 'default' | 'primary' | 'success' | 'warning' | 'info' | 'danger'>(() =>
+    started.value ? 'info' : 'info',
+);
 const forceUpdate = () => {
     version.value++;
 };
