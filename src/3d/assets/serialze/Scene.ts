@@ -54,8 +54,8 @@ export function serializeScene(
   result.activeCamera = scene.activeCamera?.uuid;
   result.reflectionProbes = scene.reflectionProbes?.map((item) => item.serialize());
   result.environment = {
-    sourceUUID: scene.environmentTexture.sourceUUID,
-    url: scene.environmentTexture.name,
+    sourceUUID: scene.environmentTexture?.sourceUUID,
+    url: scene.environmentTexture?.name,
     intensity: scene.environmentIntensity,
   };
 
