@@ -77,7 +77,7 @@ export class PublishAssets {
       }
 
       for (let index = 0; index < geometrySet.length; index++) {
-        const geometry = geometryList[index];
+        const geometry = geometrySet[index];
         const buffer = await this.getBufferSystem.getGeometry(geometry);
         if (buffer) {
           const dracoBuffer = await encoder.encodeMeshAsync(buffer, option);
@@ -87,7 +87,7 @@ export class PublishAssets {
       }
     } else {
       for (let index = 0; index < geometrySet.length; index++) {
-        const geometry = geometryList[index];
+        const geometry = geometrySet[index];
         const buffer = await this.getBufferSystem.getGeoBuffer(geometry);
         if (buffer) {
           files.push([geometry + '.mesh', buffer]);
