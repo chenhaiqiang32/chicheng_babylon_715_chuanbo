@@ -5,6 +5,7 @@
     <div class="btn">
         <div @click="next">下一个</div>
         <div @click="prev">上一个</div>
+        <div @click="togglePropellerWave" :class="{ active: propellerWaveOn }">螺旋桨波浪 {{ propellerWaveOn ? '开' : '关' }}</div>
     </div>
     <Loading :progress="loading" v-if="loading > 0 && loading < 1"> </Loading>
 
@@ -37,6 +38,12 @@ onMounted(async () => {
 });
 
 let currentIndex = ref(0);
+const propellerWaveOn = ref(true);
+
+const togglePropellerWave = () => {
+    propellerWaveOn.value = !propellerWaveOn.value;
+    App.Instance.setPropellerWaveEffectEnabled(propellerWaveOn.value);
+};
 
 const next = () => {
     if (currentIndex.value < App.Instance.allCount - 1) {
@@ -95,6 +102,10 @@ const prev = () => {
 
         &:active {
             background-color: rgba(0, 0, 0, 0.6);
+        }
+
+        &.active {
+            background-color: rgba(0, 100, 200, 0.6);
         }
     }
 

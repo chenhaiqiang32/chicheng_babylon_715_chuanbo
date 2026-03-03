@@ -29,13 +29,97 @@ import {
   Path3D,
   Curve3,
   Quaternion,
+  ShaderMaterial,
 } from '@babylonjs/core';
+import {
+  createTimedShaderMaterial,
+  startShaderTimeObserver,
+  createTiledTexture,
+} from '../shader/ShaderMaterialHelper';
 import { AppAssets } from '../assets/PublishLibrary';
 import { ArrayUtils } from '@/utils/Array';
 import { Shadow } from '../Shadow';
 import { SkyMaterial, WaterMaterial } from '@babylonjs/materials';
 import gsap from 'gsap';
 import '@babylonjs/inspector';
+
+// 螺旋桨波浪面片着色器（基于 docs/水面波浪.glsl）
+const PROPELLER_WAVE_VERTEX = `
+precision highp float;
+attribute vec3 position;
+attribute vec2 uv;
+uniform mat4 worldViewProjection;
+varying vec2 vUV;
+void main() {
+  vUV = uv;
+  gl_Position = worldViewProjection * vec4(position, 1.0);
+}
+`;
+
+// 水面波浪片段着色器：仅保留流动部分（iChannel0 噪声 + 双层 flow，无喷溅）
+const PROPELLER_WAVE_FRAGMENT = `
+precision highp float;
+varying vec2 vUV;
+uniform float iTime;
+uniform vec3 iResolution;
+uniform sampler2D iChannel0;
+
+float fbm(vec2 p) {
+  float value = 0.0;
+  float amplitude = 0.5;
+  float frequency = 1.0;
+  for (int i = 0; i < 5; i++) {
+    value += amplitude * texture2D(iChannel0, fract(p * frequency)).r;
+    frequency *= 2.0;
+    amplitude *= 0.5;
+  }
+  return value;
+}
+
+float get_mask(vec2 uv) {
+  uv.x *= iResolution.x / iResolution.y;
+  uv.x += sign(uv.x) * uv.y * 0.2;
+  uv.x = abs(uv.x);
+  return clamp(1.0 - smoothstep(0.2, 0.6, uv.x), 0.0, 1.0);
+}
+
+void main() {
+  vec2 uv = vUV * 2.0 - 1.0;
+
+  vec2 flowuv = uv * 0.06 + vec2(0.0, iTime * 0.04);
+  float n = fbm(flowuv);
+  vec2 flowmap = vec2(0.0, smoothstep(0.2, 1.0, n)) * 0.025;
+  float t = iTime * 2.0;
+  float progressA = fract(t + 0.0);
+  float progressB = fract(t + 0.5);
+  float weightA = 1.0 - abs(progressA * 2.0 - 1.0);
+  float weightB = 1.0 - abs(progressB * 2.0 - 1.0);
+  vec2 uvA = flowuv + flowmap * progressA;
+  vec2 uvB = flowuv + flowmap * progressB;
+  float flowA = fbm(uvA) * weightA;
+  float flowB = fbm(uvB) * weightB;
+  float flow_val = flowA + flowB;
+
+  float waterfall_mask = get_mask(uv);
+  float flow_vis = smoothstep(0.2, 0.8, flow_val);
+  vec3 waterColor = vec3(7.0/255.0, 41.0/255.0, 30.0/255.0);
+  // vec3 waterMid = vec3(0.12, 0.28, 0.82);
+  vec3 waterMid = vec3(0.82, 0.82, 0.8);
+  vec3 foamColor = vec3(0.82, 0.82, 0.8);
+  vec3 col = mix(waterColor, waterMid, 0.5);
+  col = mix(col, foamColor, flow_vis);
+  col *= waterfall_mask;
+
+  float alpha = waterfall_mask * (0.45 + 0.5 * flow_vis);
+  float headFade = smoothstep(0.0, 0.35, vUV.y);
+  float tailFade = 1.0 - smoothstep(0.65, 1.0, vUV.y);
+  alpha *= headFade * tailFade;
+  alpha = clamp(alpha, 0.0, 0.92);
+  if (alpha < 0.02) alpha = 0.0;
+
+  gl_FragColor = vec4(col, alpha);
+}
+`;
 
 export class App {
   private engine: AbstractEngine;
@@ -56,6 +140,20 @@ export class App {
 
   private path3D?: Path3D;
   private meshArray: Mesh[] = [];
+
+  /** 螺旋桨波浪粒子效果（可切换显示） */
+  private propellerWaveParticles: ParticleSystem[] = [];
+  /** 螺旋桨波浪面片+着色器效果（与粒子二选一，当前使用此项） */
+  private propellerWaveMesh: Mesh | null = null;
+  private propellerWaveShaderMaterial: ShaderMaterial | null = null;
+  /** 移除 iTime 每帧更新的观察者，在 dispose 或不再需要时调用 */
+  private propellerWaveRemoveTimeObserver: (() => void) | null = null;
+  private propellerWaveEnabled = true;
+  private static readonly PROPELLER_WAVE_EMIT_RATE = 150;
+  private propellerWaveEmitRateTween: gsap.core.Tween | null = null;
+  /** 关闭时“从后往前”回收粒子的每帧观察者，回收完后移除 */
+  private propellerWaveClosingObserver: ReturnType<Scene['onBeforeRenderObservable']['add']> | null = null;
+  private static readonly PROPELLER_WAVE_RECYCLE_PER_FRAME = 100;
 
   private currentCount = 0;
   allCount = 18;
@@ -270,9 +368,10 @@ export class App {
     normal.uScale = 3;
     normal.vScale = 3;
     waterMaterial.bumpTexture = normal;
-    waterMaterial.windForce = -4;
+    waterMaterial.windForce = 8;
     waterMaterial.waveHeight = 0.1;
     waterMaterial.bumpHeight = 0.5;
+    waterMaterial.windDirection=new Vector2(-1,0);
     waterMaterial.waveLength = 0.15;
     waterMaterial.waveSpeed = 50;
     waterMaterial.colorBlendFactor = 0.25;
@@ -285,39 +384,9 @@ export class App {
     waterGround.material = waterMaterial;
     waterGround.position.y = 2;
 
-    const particleSystem = new ParticleSystem('particles', 1000, this.scene);
-    particleSystem.emitter = new Vector3(15.7, 2, -3.5);
-    particleSystem.blendMode = ParticleSystem.BLENDMODE_ADD;
-    const tex2 = new Texture('particle/smoke.png', this.scene, true, false, null);
-    tex2.hasAlpha = true;
-    particleSystem.particleTexture = tex2;
-    particleSystem.isAnimationSheetEnabled = true;
-    particleSystem.spriteCellWidth = 1; // 列数 = 1
-    particleSystem.spriteCellHeight = 5; // 行数 = 5
-    particleSystem.spriteCellLoop = true;
-    particleSystem.spriteCellChangeSpeed = 5;
-
-    particleSystem.minScaleX = 10;
-    particleSystem.minScaleY = 10;
-    particleSystem.startSpriteCellID = 0;
-    particleSystem.endSpriteCellID = 5;
-    particleSystem.spriteCellHeight = 256;
-    particleSystem.spriteCellWidth = 256;
-    particleSystem.spriteCellLoop = true;
-    // 发射速率
-    particleSystem.emitRate = 30; // 每秒发射多少颗
-
-    // // 方向、速度等（示例：向上喷发）
-    particleSystem.minSize = 0.5;
-    particleSystem.minLifeTime = 5;
-    particleSystem.minLifeTime = 5;
-    particleSystem.maxSize = 1.5;
-    particleSystem.direction1 = new Vector3(30, 0, -2);
-    particleSystem.direction2 = new Vector3(30, 0, -2);
-    particleSystem.start();
-    const particleSystem2 = particleSystem.clone('particles2', new Vector3(15.7, 2, 3.5));
-    particleSystem2.direction1 = new Vector3(30, 0, 2);
-    particleSystem2.direction2 = new Vector3(30, 0, 2);
+    this.createPropellerWaveEffectShader();
+    // this.createPropellerWaveEffect();
+    this.setPropellerWaveEffectEnabled(this.propellerWaveEnabled);
     this.scene.debugLayer.show();
 
     const points = [
@@ -356,6 +425,188 @@ export class App {
         waterMaterial.addToRenderList(m);
       }
     });
+  }
+
+  /**
+   * 使用面片 + 着色器创建螺旋桨波浪效果（基于 docs/水面波浪2.glsl，仅流动条带 + iChannel0 噪声）。
+   *
+   * 流程说明：
+   * 1. 使用 ShaderMaterialHelper.createTimedShaderMaterial 注册并创建材质（vertex/fragment 见顶部 PROPELLER_WAVE_*）。
+   * 2. 绑定噪声贴图 iChannel0.png（平铺），着色器内用 fbm 采样做流动纹理。
+   * 3. 创建平面并摆放到船尾位置，设置 renderingGroupId=0、forceDepthWrite/needDepthPrePass 使面片被前景遮挡。
+   * 4. 使用 startShaderTimeObserver 每帧更新 iTime（时间缩放 1/3200），仅在 mesh 启用时累加。
+   */
+  private createPropellerWaveEffectShader() {
+    const shaderKey = 'propellerWave';
+    const mat = createTimedShaderMaterial(
+      this.scene,
+      shaderKey,
+      PROPELLER_WAVE_VERTEX,
+      PROPELLER_WAVE_FRAGMENT,
+      ['iChannel0'],
+    );
+
+    const noiseTex = createTiledTexture(this.scene, 'iChannel0.png');
+    mat.setTexture('iChannel0', noiseTex);
+
+    const plane = MeshBuilder.CreatePlane(
+      'propellerWavePlane',
+      { size: 120, width: 120, height: 320 },
+      this.scene,
+    );
+    plane.position.set(72, 4, 0);
+    plane.rotation.y = 0;
+    plane.rotate(new Vector3(1, 0, 0), Math.PI / 2);
+    plane.rotate(new Vector3(0, 0, 1), Math.PI / 2);
+    plane.material = mat;
+    plane.setEnabled(this.propellerWaveEnabled);
+    plane.isPickable = false;
+    plane.renderingGroupId = 0;
+
+    this.propellerWaveMesh = plane;
+    this.propellerWaveShaderMaterial = mat;
+    this.propellerWaveRemoveTimeObserver = startShaderTimeObserver(
+      this.scene,
+      mat,
+      () => !!this.propellerWaveMesh?.isEnabled(),
+      1 / 3200,
+    );
+  }
+
+  /**
+   * 创建螺旋桨推动的波浪粒子效果（船尾两侧），独立效果可切换显示
+   */
+  private createPropellerWaveEffect() {
+    const capacity = 6000;
+    // 用一个“面”（盒状发射区域）代替左右两条尾流
+    const emitterCenter = new Vector3(15.7, 2, 0);
+
+    const tex = new Texture('particle/smoke.png', this.scene, true, false, null);
+    tex.hasAlpha = true;
+
+    const ps = new ParticleSystem('propellerWave', capacity, this.scene);
+    ps.emitter = emitterCenter;
+    ps.blendMode = ParticleSystem.BLENDMODE_ADD;
+    ps.particleTexture = tex;
+    ps.isAnimationSheetEnabled = true;
+    ps.spriteCellWidth = 256;
+    ps.spriteCellHeight = 256;
+    ps.startSpriteCellID = 0;
+    ps.endSpriteCellID = 4;
+    ps.spriteCellLoop = true;
+    ps.spriteCellChangeSpeed = 5;
+    ps.minScaleX = 10;
+    ps.minScaleY = 10;
+    ps.emitRate = App.PROPELLER_WAVE_EMIT_RATE;
+    ps.minSize = 0.5;
+    ps.maxSize = 1.5;
+    ps.minLifeTime = 5;
+    ps.maxLifeTime = 6;
+    // 发射区域：在水面附近的一个矩形面（扩大范围）
+    ps.createBoxEmitter(
+      new Vector3(30, 0, -3.5),
+      new Vector3(30, 0, 3.5),
+      new Vector3(-0.6, -0.08, -6),
+      new Vector3(0.6, 0.08, 6),
+    );
+    // 生命周期内前段就快速缩小，关闭螺旋桨后几乎看不到“浪带向后移”，只看到波浪在船尾处收掉
+    ps.addSizeGradient(0, 1);
+    ps.addSizeGradient(0.15, 0.4);
+    ps.addSizeGradient(0.35, 0.08);
+    ps.addSizeGradient(0.6, 0.02);
+    ps.addSizeGradient(1, 0);
+
+    ps.start();
+
+    this.propellerWaveParticles = [ps];
+  }
+
+  /**
+   * 切换螺旋桨波浪效果显示/隐藏。
+   * 面片着色器版：直接显隐 mesh；粒子版：关闭时从后往前回收，开启时渐强发射率。
+   */
+  setPropellerWaveEffectEnabled(enabled: boolean) {
+    this.propellerWaveEnabled = enabled;
+    if (this.propellerWaveMesh) {
+      this.propellerWaveMesh.setEnabled(enabled);
+      return;
+    }
+    if (this.propellerWaveEmitRateTween) {
+      this.propellerWaveEmitRateTween.kill();
+      this.propellerWaveEmitRateTween = null;
+    }
+    if (this.propellerWaveClosingObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.propellerWaveClosingObserver);
+      this.propellerWaveClosingObserver = null;
+    }
+    if (!enabled) {
+      this.propellerWaveParticles.forEach((ps) => {
+        ps.emitRate = 0;
+      });
+      this.startPropellerWaveCloseFromBackToFront();
+      return;
+    }
+    if (this.propellerWaveParticles.length === 0) {
+      this.createPropellerWaveEffect();
+    }
+    const rate = { value: 0 };
+    const applyRate = () => {
+      this.propellerWaveParticles.forEach((ps) => {
+        ps.emitRate = rate.value;
+      });
+    };
+    applyRate();
+    this.propellerWaveParticles.forEach((ps) => ps.start());
+    this.propellerWaveEmitRateTween = gsap.to(rate, {
+      value: App.PROPELLER_WAVE_EMIT_RATE,
+      duration: 1.2,
+      onUpdate: applyRate,
+      onComplete: () => {
+        this.propellerWaveEmitRateTween = null;
+      },
+    });
+  }
+
+  /**
+   * 关闭螺旋桨时：每帧按距离发射器从远到近回收粒子，实现波浪从后往前逐渐消失。
+   */
+  private startPropellerWaveCloseFromBackToFront() {
+    const recyclePerFrame = App.PROPELLER_WAVE_RECYCLE_PER_FRAME;
+    const emitterPos = (ps: ParticleSystem) => {
+      const e = ps.emitter;
+      return e instanceof Vector3 ? e : (e as AbstractMesh).getAbsolutePosition();
+    };
+    const closingStep = () => {
+      let anyActive = false;
+      for (const ps of this.propellerWaveParticles) {
+        const pos = emitterPos(ps);
+        const particles = ps.particles;
+        if (particles.length === 0) continue;
+        anyActive = true;
+        const withDist = particles.map((p) => ({
+          p,
+          d: Vector3.Distance(p.position, pos),
+        }));
+        withDist.sort((a, b) => b.d - a.d);
+        const toRecycle = Math.min(recyclePerFrame, withDist.length);
+        for (let i = 0; i < toRecycle; i++) {
+          ps.recycleParticle(withDist[i].p);
+        }
+      }
+      if (!anyActive || this.propellerWaveParticles.every((ps) => ps.particles.length === 0)) {
+        if (this.propellerWaveClosingObserver !== null) {
+          this.scene.onBeforeRenderObservable.remove(this.propellerWaveClosingObserver);
+          this.propellerWaveClosingObserver = null;
+        }
+        this.propellerWaveParticles.forEach((ps) => ps.stop());
+      }
+    };
+    this.propellerWaveClosingObserver = this.scene.onBeforeRenderObservable.add(closingStep);
+  }
+
+  /** 当前螺旋桨波浪效果是否开启 */
+  get isPropellerWaveEffectEnabled(): boolean {
+    return this.propellerWaveEnabled;
   }
 
   private updateSkyByTime() {
