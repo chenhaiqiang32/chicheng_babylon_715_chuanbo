@@ -27,6 +27,12 @@ interface RuntimeAssetsEventBus {
   onChanged: void;
 }
 
+// 使用本地 Draco 编码器资源，断网时可正常发布
+DracoEncoder.DefaultConfiguration = {
+  wasmUrl: './lib/draco/draco_encoder_wasm_wrapper.js',
+  wasmBinaryUrl: './lib/draco/draco_encoder.wasm',
+  fallbackUrl: './lib/draco/draco_encoder.js',
+};
 const encoder = DracoEncoder.Default;
 
 export class PublishAssets {
