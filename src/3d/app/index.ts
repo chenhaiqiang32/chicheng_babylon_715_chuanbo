@@ -35,6 +35,7 @@ import {
   ShaderMaterial,
   PostProcess,
   Effect,
+  PointerEventTypes,
 } from '@babylonjs/core';
 import { FBXLoader } from 'babylonjs-fbx-loader';
 import { DirectionalLightHelper } from './DirectionalLightHelper';
@@ -301,6 +302,9 @@ export class App {
   private propellerWaveClosingObserver: ReturnType<Scene['onBeforeRenderObservable']['add']> | null = null;
   private static readonly PROPELLER_WAVE_RECYCLE_PER_FRAME = 100;
 
+  /** 是否已注册相机调试点击事件，避免重复注册 */
+  private cameraClickDebugRegistered = false;
+
   private currentCount = 0;
   allCount = 18;
   /** 水面材质，用于在加载 HDR 后设置反射贴图使水面接受环境效果 */
@@ -489,6 +493,10 @@ export class App {
       camera.maxZ = 10000;
       camera.minZ = 0.1;
       scene.activeCamera = camera;
+      this.registerCameraClickDebug();
+    } else {
+      // 复用已有场景时也确保已注册点击事件
+      this.registerCameraClickDebug();
     }
 
     progressCb?.(0.1);
@@ -1120,6 +1128,7 @@ export class App {
       scene.activeCamera.panningSensibility = 400;
     }
     scene.activeCamera.attachControl(this.canvas, true);
+    this.registerCameraClickDebug();
     this.registerAction();
     const groupCount = Math.ceil(padding.length / 20);
     const group = ArrayUtils.groupArray(padding, groupCount);
@@ -1328,6 +1337,42 @@ export class App {
   /** 获取当前场景环境强度 */
   getEnvironmentIntensity(): number {
     return this.scene?.environmentIntensity ?? 1;
+  }
+
+  /**
+   * 注册一个场景级别的鼠标点击监听，用于调试当前相机位置和目标点。
+   * 点击画布时在控制台输出 activeCamera 的 position 和 target。
+   */
+  private registerCameraClickDebug(): void {
+    if (!this.scene || this.cameraClickDebugRegistered) return;
+    this.cameraClickDebugRegistered = true;
+
+    this.scene.onPointerObservable.add((pointerInfo) => {
+      if (pointerInfo.type !== PointerEventTypes.POINTERDOWN) return;
+      const cam = this.scene?.activeCamera;
+      if (!cam) return;
+
+      const pos = cam.position;
+      let target: Vector3 | null = null;
+
+      if (cam instanceof ArcRotateCamera) {
+        target = cam.target;
+      } else if ((cam as any).getTarget) {
+        try {
+          target = (cam as any).getTarget();
+        } catch {
+          target = null;
+        }
+      }
+
+      // 简单输出到控制台，方便在浏览器控制台中复制数值
+      // 形如：position: { x, y, z }, target: { x, y, z }
+      // eslint-disable-next-line no-console
+      console.log('Camera debug click =>', {
+        position: { x: pos.x, y: pos.y, z: pos.z },
+        target: target ? { x: target.x, y: target.y, z: target.z } : null,
+      });
+    });
   }
 
   /**
