@@ -7,6 +7,9 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
+    "generate:models": "node scripts/generate-model-urls.mjs",
+    "predev": "npm run generate:models",
+    "prebuild": "npm run generate:models",
     "dev": "vite --host  --port 51741",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
