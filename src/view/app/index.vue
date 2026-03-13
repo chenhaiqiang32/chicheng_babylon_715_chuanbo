@@ -167,6 +167,15 @@
 </template>
 <script lang="ts" setup>
 import { App, MODEL_URLS, type CameraViewPreset, type InfoBoardItem, type SeaParams } from '@/3d/app';
+import {
+    cameraPresetsConfig,
+    defaultCameraViewLimitConfig,
+    hdrDemoConfig,
+    skyboxDemoConfig,
+    seaDemoDefaults,
+    ropeDemoConfig,
+    infoBoardDemoConfig,
+} from '@/3d/app/demoConfig';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import { AppAssets } from '@/3d/assets/PublishLibrary';
 import Loading from '@/component/common/Loading.vue'
@@ -200,26 +209,30 @@ let cameraDebugTick: ReturnType<typeof setInterval> | null = null;
 let removeInfoBoardMessageListener: (() => void) | undefined;
 
 // HDR 环境配置（仅用于模型反射）
-const hdrUrl = ref('/venice_sunset_1k.hdr');
-const hdrSize = ref(512);
-const hdrIntensity = ref(1);
+const hdrUrl = ref(hdrDemoConfig.defaultUrl);
+const hdrSize = ref(hdrDemoConfig.defaultSize);
+const hdrIntensity = ref(hdrDemoConfig.defaultIntensity);
 const hdrLoading = ref(false);
 const hdrApplied = ref(false);
 
 // 天空盒 + 水面反射配置（与 HDR 环境解耦）
-const skyboxUrl = ref('environment/512/TropicalSunnyDay');
-const skyboxSize = ref(512);
+const skyboxUrl = ref(skyboxDemoConfig.defaultUrl);
+const skyboxSize = ref(skyboxDemoConfig.defaultSize);
 
-// 海面参数 Demo（从 App.getSeaParams() 读取当前值作为默认）
-const seaWindForce = ref(8);
-const seaWaveHeight = ref(0.1);
-const seaBumpHeight = ref(0.5);
-const seaWaveLength = ref(0.15);
-const seaWaveSpeed = ref(50);
-const seaColorBlendFactor = ref(0.25);
-const seaBumpU = ref(3);
-const seaBumpV = ref(3);
-const seaColorHex = ref('#07291e');
+// 海面参数 Demo（从 App.getSeaParams() 读取当前值作为默认；此处仅为 UI 初始值）
+const seaWindForce = ref(seaDemoDefaults.params.windForce ?? 8);
+const seaWaveHeight = ref(seaDemoDefaults.params.waveHeight ?? 0.1);
+const seaBumpHeight = ref(seaDemoDefaults.params.bumpHeight ?? 0.5);
+const seaWaveLength = ref(seaDemoDefaults.params.waveLength ?? 0.15);
+const seaWaveSpeed = ref(seaDemoDefaults.params.waveSpeed ?? 50);
+const seaColorBlendFactor = ref(seaDemoDefaults.params.colorBlendFactor ?? 0.25);
+const seaBumpU = ref(seaDemoDefaults.params.bumpTextureScale?.u ?? 3);
+const seaBumpV = ref(seaDemoDefaults.params.bumpTextureScale?.v ?? 3);
+const seaColorHex = ref(
+    typeof seaDemoDefaults.params.waterColor === 'string'
+        ? seaDemoDefaults.params.waterColor
+        : seaDemoDefaults.colorHex,
+);
 
 // 信息牌 Demo：多个小球牌子的 id 与可编辑数据
 const demoBoardIds = ref<string[]>([]);
@@ -240,11 +253,11 @@ const cameraDebugText = ref('相机：未初始化');
 function applyDefaultCameraViewLimits() {
     // 默认范围：方便拖拽/缩放时直观看到“被钳制”
     App.Instance.setCameraViewLimits({
-        panRadius: 12,
-        maxRadius: 120,
-        minTargetY: 0,
-        maxTargetY: 18,
-        limitFlipTo90Deg: true,
+        panRadius: defaultCameraViewLimitConfig.panRadius,
+        maxRadius: defaultCameraViewLimitConfig.maxRadius,
+        minTargetY: defaultCameraViewLimitConfig.minTargetY,
+        maxTargetY: defaultCameraViewLimitConfig.maxTargetY,
+        limitFlipTo90Deg: defaultCameraViewLimitConfig.limitFlipTo90Deg,
     });
     // 立刻刷新一次显示
     updateCameraDebugText();
@@ -270,7 +283,7 @@ function updateCameraDebugText() {
 
 // 绳子 Demo：是否已创建（用于显示速度控件）
 const ropeDemoReady = ref(false);
-const ropeBallSpeed = ref(2.5);
+const ropeBallSpeed = ref(ropeDemoConfig.defaultBallSpeed);
 
 function onRopeBallSpeedInput() {
     App.Instance.setRopeDemoBallSpeed(ropeBallSpeed.value);
@@ -355,29 +368,8 @@ function resetClipToFull() {
     }
 }
 
-/** 镜头预设 demo：目标点 (0,0,0)，不同角度与距离 */
-const cameraPresets: Record<string, { label: string; preset: CameraViewPreset }> = {
-    default: {
-        label: '默认',
-        preset: { target: { x: 0, y: 0, z: 0 }, position: { x: -80, y: 10, z: 0 } },
-    },
-    front: {
-        label: '正面',
-        preset: { target: { x: 0, y: 0, z: 0 }, alpha: 0, beta: Math.PI / 2.5, radius: 80 },
-    },
-    side: {
-        label: '侧面',
-        preset: { target: { x: 0, y: 0, z: 0 }, alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 80 },
-    },
-    top: {
-        label: '俯视',
-        preset: { target: { x: 0, y: 0, z: 0 }, alpha: -Math.PI / 2, beta: 0.35, radius: 80 },
-    },
-    close: {
-        label: '特写',
-        preset: { target: { x: 0, y: 0, z: 0 }, alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 25 },
-    },
-};
+/** 镜头预设 demo：从 3D 层配置文件读取，目标点 (0,0,0)，不同角度与距离 */
+const cameraPresets: Record<string, { label: string; preset: CameraViewPreset }> = cameraPresetsConfig;
 function switchCamera(presetKey: string) {
     const item = cameraPresets[presetKey];
     if (item) App.Instance.switchCameraView(item.preset, { duration: 0.8 });
@@ -416,7 +408,7 @@ onMounted(async () => {
         loadedAsModel.value = true;
         // 默认加载 HDR 环境贴图，仅用于模型反射
         await App.Instance.loadHdrEnvironment({
-            url: hdrUrl.value || '/charolettenbrunn_park_1k.hdr',
+            url: hdrUrl.value || hdrDemoConfig.initFallbackUrl,
             size: hdrSize.value,
             onProgress: (p) => { loading.value = 0.85 + p * 0.15; },
         });
@@ -424,7 +416,7 @@ onMounted(async () => {
         hdrApplied.value = true;
         // 默认创建一个天空盒并让水面反射它（与 HDR 环境分离）
         await App.Instance.setSkyboxForWater({
-            url: skyboxUrl.value || 'environment/512/TropicalSunnyDay',
+            url: skyboxUrl.value || skyboxDemoConfig.defaultUrl,
             size: skyboxSize.value,
             onProgress: (p) => { loading.value = 0.9 + p * 0.1; },
         });
@@ -435,26 +427,19 @@ onMounted(async () => {
         modelNames.value = App.Instance.getModelNames();
         currentModelName.value = App.Instance.getCurrentModelName() || '';
         updateClipRangeToDefault();
-        // 调试：生成多个循环运动的小球，并分别插入信息牌
+        // 调试：生成多个循环运动的小球，并分别插入信息牌（配置来自 3D 层 demoConfig）
         const center = App.Instance.getModelRootNode('Soldier')?.getAbsolutePosition?.() ?? undefined;
         const ballIds = App.Instance.createDebugMovingBalls({
-            count: 6,
-            diameter: 0.8,
-            radius: 7,
+            count: infoBoardDemoConfig.ballCount,
+            diameter: infoBoardDemoConfig.ballOptions.diameter,
+            radius: infoBoardDemoConfig.ballOptions.radius,
             center,
-            speed: 1.2,
-            yAmplitude: 0.8,
-            namePrefix: 'debugBall',
+            speed: infoBoardDemoConfig.ballOptions.speed,
+            yAmplitude: infoBoardDemoConfig.ballOptions.yAmplitude,
+            namePrefix: infoBoardDemoConfig.ballOptions.namePrefix,
         });
         if (ballIds.length) {
-            const items: InfoBoardItem[] = ballIds.map((id, i) => ({
-                id,
-                title: `移动小球 #${i + 1}`,
-                attribute: [
-                    { 状态: '循环运动' },
-                    { 速度: '1.2 rad/s' },
-                ],
-            }));
+            const items: InfoBoardItem[] = infoBoardDemoConfig.createItems(ballIds);
             App.Instance.setInfoBoards(items);
             demoBoardIds.value = ballIds;
             demoBoardItems.value = items.map((x) => ({ ...x, attribute: x.attribute.map((a) => ({ ...a })) }));
@@ -589,7 +574,7 @@ async function applyHdr() {
     hdrLoading.value = true;
     try {
         await App.Instance.loadHdrEnvironment({
-            url: hdrUrl.value || '/Dutch-Sky_0168_4k.hdr',
+            url: hdrUrl.value || hdrDemoConfig.applyFallbackUrl,
             size: hdrSize.value,
             onProgress: (p) => { loading.value = 0.9 + p * 0.1; },
         });
@@ -605,7 +590,7 @@ async function applyHdr() {
 
 async function applySkybox() {
     await App.Instance.setSkyboxForWater({
-        url: skyboxUrl.value || 'environment/512/TropicalSunnyDay',
+        url: skyboxUrl.value || skyboxDemoConfig.defaultUrl,
         size: skyboxSize.value,
         onProgress: (p) => { loading.value = 0.9 + p * 0.1; },
     });
