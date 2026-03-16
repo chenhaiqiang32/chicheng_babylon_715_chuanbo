@@ -524,6 +524,16 @@ export class App {
     progressCb?.(0.6);
 
     const groups = result.animationGroups ?? [];
+    // 加载完成后，默认不让任何动画自动播放，统一停止在起始帧
+    if (groups.length) {
+      groups.forEach((g) => {
+        g.stop();
+        // 将动画时间轴重置到 from 帧，避免停在中间位置
+        if (typeof g.from === 'number') {
+          g.goToFrame(g.from);
+        }
+      });
+    }
     const finalModelName = modelName ?? this.getModelNameFromUrl(modelUrl);
     // 无论是否有动画组，都记录模型名称；没有动画则存空数组，方便在 UI 中按模型选择
     this.modelAnimationsMap.set(finalModelName, groups);
@@ -1624,7 +1634,7 @@ export class App {
     p.vScale = 100;
     groundMaterial.albedoTexture = p;
     ground.material = groundMaterial;
-    ground.position.y = -20;
+    ground.position.y = -84;
     ground.doNotSyncBoundingInfo = true;
     return ground;
   }
