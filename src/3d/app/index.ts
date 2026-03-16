@@ -63,8 +63,13 @@ export { MODEL_URLS } from './modelUrls.generated';
 
 /** 镜头预设：可将相机与控制器切换到指定位置（仅支持 ArcRotateCamera） */
 export interface CameraViewPreset {
-  /** 观察目标点（控制器 target） */
-  target: { x: number; y: number; z: number } | Vector3;
+  /**
+   * 观察目标点（控制器 target）。
+   *
+   * - 直接位置切换场景：显式传入 target + position/alpha/beta/radius。
+   * - 模型包围盒场景：若提供 modelName，则可不传 target，而是自动使用模型包围盒中心点。
+   */
+  target?: { x: number; y: number; z: number } | Vector3;
   /** 相机位置；若提供则根据 target 自动计算 alpha/beta/radius */
   position?: { x: number; y: number; z: number } | Vector3;
   /** 水平角度（弧度），与 position 二选一 */
@@ -73,6 +78,15 @@ export interface CameraViewPreset {
   beta?: number;
   /** 相机到目标的距离 */
   radius?: number;
+  /**
+   * 基于模型名称 + 偏移的切换方式：
+   * - modelName：使用该模型包围盒中心点作为默认 target。
+   * - offset：相对于 target 的偏移量，用于计算相机位置 position = target + offset。
+   *
+   * 当同时提供 target 和 modelName 时，以显式传入的 target 为准。
+   */
+  modelName?: string;
+  offset?: { x: number; y: number; z: number } | Vector3;
 }
 
 /** 海面（水面）材质参数：用于 demo 面板配置 WaterMaterial。 */
@@ -513,6 +527,7 @@ export class App {
     const finalModelName = modelName ?? this.getModelNameFromUrl(modelUrl);
     // 无论是否有动画组，都记录模型名称；没有动画则存空数组，方便在 UI 中按模型选择
     this.modelAnimationsMap.set(finalModelName, groups);
+    console.log('modelAnimationsMap', this.modelAnimationsMap);
     if (result.meshes?.length) {
       this.modelRootMap.set(finalModelName, result.meshes[0]);
     }
@@ -1365,16 +1380,25 @@ export class App {
         }
       }
 
+      const positionData = { x: pos.x, y: pos.y, z: pos.z };
+      const targetData = target ? { x: target.x, y: target.y, z: target.z } : null;
+
       // 简单输出到控制台，方便在浏览器控制台中复制数值
-      // 形如：position: { x, y, z }, target: { x, y, z }
       // eslint-disable-next-line no-console
       console.log('Camera debug click =>', {
-        position: { x: pos.x, y: pos.y, z: pos.z },
-        target: target ? { x: target.x, y: target.y, z: target.z } : null,
+        position: positionData,
+        target: targetData,
+        // 下面这个片段可以直接粘到 demoConfig.ts 的 cameraPresetsConfig 中
+        presetSnippet: {
+          // label: '自定义相机预设',
+          preset: {
+            target: targetData ?? positionData,
+            position: positionData,
+          },
+        },
       });
     });
   }
-
   /**
    * 将当前场景中用于显示环境的天空盒网格加入水面 render list。
    * 仅用于在外部有自定义天空盒（如 setSkyboxForWater 之外创建的）时手动让水面反射该天空盒。
@@ -1534,9 +1558,9 @@ export class App {
     });
   }
 
-  setGround() {
-    const light = new HemisphericLight('light', new Vector3(0, -1, 0), this.scene);
-
+  /** 创建环境光与天空盒 */
+  private setupLightingAndSkybox(): void {
+    new HemisphericLight('light', new Vector3(0, -1, 0), this.scene);
     const box = MeshBuilder.CreateBox(
       'box',
       { width: 1000, height: 1000, depth: 1000 },
@@ -1549,7 +1573,10 @@ export class App {
     const tex = new CubeTexture('environment/512/TropicalSunnyDay', this.scene);
     tex.coordinatesMode = Texture.SKYBOX_MODE;
     skyBox.reflectionTexture = tex;
+  }
 
+  /** 创建/获取平行光，并创建方向光/相机辅助线 */
+  private setupSunAndHelpers(): void {
     let sun = this.scene.lights.find((l) => l instanceof DirectionalLight) as DirectionalLight;
     if (!sun) {
       sun = new DirectionalLight('sunLight', new Vector3(0, -1, 0), this.scene);
@@ -1571,20 +1598,20 @@ export class App {
         this.cameraTargetHelper.setEnabled(this.cameraTargetHelperEnabledByDefault);
       }
     }
+  }
 
+  /** 注册每帧更新：天空、方向光/相机辅助线 */
+  private setupSkyRenderObserver(): void {
     this.skyObserver = this.scene.onBeforeRenderObservable.add(() => {
       this.updateSkyByTime();
       this.directionalLightHelper?.update();
       this.cameraHelper?.update();
       this.cameraTargetHelper?.update();
     });
-    this.updateSkyByTime();
+  }
 
-    const waterGround = MeshBuilder.CreateGround(
-      'waterGround',
-      { width: 3000, height: 3000, subdivisions: 1 },
-      this.scene,
-    );
+  /** 创建陆地地面网格（贴图 + 位置） */
+  private createGroundMesh(): Mesh {
     const ground = MeshBuilder.CreateGround(
       'ground',
       { width: 3000, height: 3000, subdivisions: 1 },
@@ -1595,10 +1622,20 @@ export class App {
     const p = new Texture('OIP-C.webp', this.scene, true, false);
     p.uScale = 100;
     p.vScale = 100;
-
     groundMaterial.albedoTexture = p;
     ground.material = groundMaterial;
     ground.position.y = -20;
+    ground.doNotSyncBoundingInfo = true;
+    return ground;
+  }
+
+  /** 创建水面地面网格与 WaterMaterial，并初始化螺旋桨波浪效果；返回水面网格 */
+  private createWaterGroundAndMaterial(): Mesh {
+    const waterGround = MeshBuilder.CreateGround(
+      'waterGround',
+      { width: 3000, height: 3000, subdivisions: 1 },
+      this.scene,
+    );
     const waterMaterial = new WaterMaterial('water', this.scene, new Vector2(1024, 1024));
     const normal = new Texture('waterbump.png', this.scene, true, false);
     normal.uScale = 3;
@@ -1607,27 +1644,24 @@ export class App {
     waterMaterial.windForce = 8;
     waterMaterial.waveHeight = 0.1;
     waterMaterial.bumpHeight = 0.5;
-    // waterMaterial.windDirection=new Vector2(-1,0);
     waterMaterial.waveLength = 0.15;
     waterMaterial.waveSpeed = 50;
     waterMaterial.colorBlendFactor = 0.25;
     waterMaterial.sideOrientation = 1;
     waterMaterial.waterColor = new Color3(7 / 255, 41 / 255, 30 / 255);
     this.waterMaterial = waterMaterial;
-    // 记录一份默认参数快照，供 UI demo reset（不影响现有默认参数本身）
     this.seaParamsDefaults = this.getSeaParams();
 
-    // 反射/折射对象
-
-    ground.doNotSyncBoundingInfo = true;
     waterGround.material = waterMaterial;
     waterGround.position.y = -4;
 
     this.createPropellerWaveEffectShader();
-    // this.createPropellerWaveEffect();
     this.setPropellerWaveEffectEnabled(this.propellerWaveEnabled);
-    // this.scene.debugLayer.show();
+    return waterGround;
+  }
 
+  /** 创建路径曲线、路径线及沿路径的圆柱体，并写入 this.path3D / this.meshArray */
+  private createPathAndCylinderMeshes(): void {
     const points = [
       new Vector3(35, 10, 0),
       new Vector3(50, 10, 0),
@@ -1636,11 +1670,13 @@ export class App {
       new Vector3(50, -50, 0),
     ];
     const path = Curve3.CreateCatmullRomSpline(points, 20, false);
-    const line = MeshBuilder.CreateLines('line', { points: path.getPoints() }, this.scene);
-    const line2 = MeshBuilder.CreateLines('line', { points: path.getPoints() }, this.scene);
+    const pathPoints = path.getPoints();
+    const line = MeshBuilder.CreateLines('line', { points: pathPoints }, this.scene);
+    const line2 = MeshBuilder.CreateLines('line', { points: pathPoints }, this.scene);
     line2.position.z = 3;
     line.position.z = -3;
-    const path3D = new Path3D(path.getPoints());
+
+    const path3D = new Path3D(pathPoints);
     const boxArray: Mesh[] = [];
     const mat = new PBRMaterial('boxMaterial', this.scene);
     mat.roughness = 1;
@@ -1656,18 +1692,23 @@ export class App {
       box.rotate(new Vector3(1, 0, 0), Math.PI / 2);
       boxArray.push(box);
     }
-
     this.path3D = path3D;
     this.meshArray = boxArray;
+  }
+
+  /** 将场景中除水面以外的网格加入水面材质的反射/折射渲染列表 */
+  private addMeshesToWaterRenderList(waterGround: Mesh): void {
+    const waterMaterial = this.waterMaterial;
+    if (!waterMaterial) return;
     this.scene.meshes.forEach((m) => {
       if (m !== waterGround) {
         waterMaterial.addToRenderList(m);
       }
     });
+  }
 
-    // 当相机视角切换到水面下方/上方时，自动开关海水下效果
-    // 使用一定的滞后区间，避免在水面附近抖动频繁开关
-    const waterY = waterGround.position.y;
+  /** 根据相机相对水面高度自动开关水下效果（带滞后避免抖动） */
+  private setupUnderwaterAutoObserver(waterY: number): void {
     const hysteresis = 0.5;
     if (this.underwaterAutoObserver) {
       this.scene.onBeforeRenderObservable.remove(this.underwaterAutoObserver);
@@ -1677,7 +1718,6 @@ export class App {
       const cam = this.scene.activeCamera;
       if (!cam) return;
       const y = cam.position.y;
-
       if (!this.isUnderwaterAuto && y < waterY - hysteresis) {
         this.isUnderwaterAuto = true;
         this.setUnderwaterEffectEnabled(true, 1);
@@ -1686,6 +1726,20 @@ export class App {
         this.setUnderwaterEffectEnabled(false, 1);
       }
     });
+  }
+
+  setGround() {
+    this.setupLightingAndSkybox();
+    this.setupSunAndHelpers();
+    this.setupSkyRenderObserver();
+    this.updateSkyByTime();
+
+    this.createGroundMesh();
+    const waterGround = this.createWaterGroundAndMaterial();
+
+    // this.createPathAndCylinderMeshes();
+    this.addMeshesToWaterRenderList(waterGround);
+    this.setupUnderwaterAutoObserver(waterGround.position.y);
   }
 
   /**
@@ -2028,7 +2082,9 @@ export class App {
 
   /**
    * 切换镜头：将相机和控制器（ArcRotateCamera）移动到预设位置。
-   * @param preset 镜头预设（target 必填；可填 position 或 alpha/beta/radius）
+   * @param preset 镜头预设：
+   *  - 方式一：仅传入旋转中心（target）和相机位置（position），直接将 camera.target / camera.position 渐变到目标值；
+   *  - 方式二：传入 target + alpha/beta/radius，或 modelName + offset，根据模型包围盒中心点 + 偏移量计算视角参数。
    * @param options.duration 过渡时长（秒），为 0 或不传则瞬间切换
    */
   switchCameraView(
@@ -2040,15 +2096,97 @@ export class App {
 
     const toVec3 = (v: { x: number; y: number; z: number } | Vector3) =>
       v instanceof Vector3 ? v : new Vector3(v.x, v.y, v.z);
-    const target = toVec3(preset.target);
+    // 1. 计算目标点 target：
+    //    - 若显式传入 preset.target，则优先使用；
+    //    - 否则若提供了 modelName，则使用该模型包围盒中心点；
+    //    - 若都没有，则退回当前相机 target。
+    let target: Vector3 | null = null;
+
+    if (preset.target) {
+      target = toVec3(preset.target);
+    } else if (preset.modelName) {
+      const root = this.getModelRootNode(preset.modelName);
+      if (root) {
+        const { min, max } = root.getHierarchyBoundingVectors();
+        target = min.add(max).scale(0.5);
+      }
+    }
+
+    if (!target) {
+      // 最终兜底：使用当前相机的 target
+      target = cam.target.clone();
+    }
 
     let alpha: number;
     let beta: number;
     let radius: number;
 
+    // 2. 若“仅传入旋转中心和相机位置”（position 存在，且未显式指定 alpha/beta/radius），
+    //    则直接对 camera.target 与 camera.position 做插值，不重新计算角度与半径。
+    const isDirectTargetAndPosition =
+      preset.position !== undefined &&
+      preset.alpha === undefined &&
+      preset.beta === undefined &&
+      preset.radius === undefined &&
+      !preset.offset;
+
+    if (isDirectTargetAndPosition) {
+      const finalTarget = target;
+      const finalPos = toVec3(preset.position as { x: number; y: number; z: number });
+      const duration = options?.duration ?? 0;
+
+      if (duration <= 0) {
+        cam.target.copyFrom(finalTarget);
+        // 使用 setPosition 以同时更新 alpha/beta/radius，避免下一帧被还原
+        cam.setPosition(finalPos);
+        this.cameraHelper?.update();
+        this.cameraTargetHelper?.update();
+        return;
+      }
+
+      const from = {
+        tx: cam.target.x,
+        ty: cam.target.y,
+        tz: cam.target.z,
+        px: cam.position.x,
+        py: cam.position.y,
+        pz: cam.position.z,
+      };
+      gsap.to(from, {
+        tx: finalTarget.x,
+        ty: finalTarget.y,
+        tz: finalTarget.z,
+        px: finalPos.x,
+        py: finalPos.y,
+        pz: finalPos.z,
+        duration,
+        ease: 'power2.inOut',
+        onUpdate: () => {
+          cam.target.set(from.tx, from.ty, from.tz);
+          // ArcRotateCamera 的 position 是由 alpha/beta/radius 推导的，
+          // 这里用 setPosition 让内部同步更新角度与半径，确保插值生效
+          cam.setPosition(new Vector3(from.px, from.py, from.pz));
+          this.cameraHelper?.update();
+          this.cameraTargetHelper?.update();
+        },
+      });
+      return;
+    }
+
+    // 3. 其它情况：按 alpha/beta/radius 视角参数处理。
+    //    - 若提供 position 或 offset，则先计算 position，再由 position - target 推导 alpha/beta/radius；
+    //    - 否则直接使用 alpha/beta/radius（缺省时保持当前相机参数）。
+    let finalPosition: Vector3 | null = null;
+
     if (preset.position !== undefined) {
-      const pos = toVec3(preset.position);
-      const offset = pos.subtract(target);
+      finalPosition = toVec3(preset.position);
+    } else if (preset.offset) {
+      const offset = toVec3(preset.offset);
+      finalPosition = target.add(offset);
+    }
+
+    if (finalPosition) {
+      const offset = finalPosition.subtract(target);
       radius = offset.length();
       if (radius < 1e-6) {
         radius = cam.radius;

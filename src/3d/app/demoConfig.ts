@@ -9,43 +9,55 @@ export const cameraPresetsConfig: Record<
     label: '默认',
     preset: {
       target: { x: 0, y: 0, z: 0 },
-      position: { x: -80, y: 10, z: 0 },
+      position: { x: 0.20738870009251056, y: -80.36847884128419, z: -6.392548598726246 },
     },
   },
   front: {
     label: '正面',
     preset: {
       target: { x: 0, y: 0, z: 0 },
-      alpha: 0,
-      beta: Math.PI / 2.5,
-      radius: 80,
+      // 相机在目标前方稍微抬高
+      position: { x: 0, y: 20, z: 80 },
     },
   },
   side: {
     label: '侧面',
     preset: {
       target: { x: 0, y: 0, z: 0 },
-      alpha: -Math.PI / 2,
-      beta: Math.PI / 2.5,
-      radius: 80,
+      // 相机在目标左侧稍微抬高
+      position: { x: -80, y: 20, z: 0 },
     },
   },
   top: {
     label: '俯视',
     preset: {
       target: { x: 0, y: 0, z: 0 },
-      alpha: -Math.PI / 2,
-      beta: 0.35,
-      radius: 80,
+      // 相机在目标正上方
+      position: { x: 0, y: 80, z: 0 },
     },
   },
   close: {
     label: '特写',
     preset: {
       target: { x: 0, y: 0, z: 0 },
-      alpha: -Math.PI / 2,
-      beta: Math.PI / 2.5,
-      radius: 25,
+      // 更靠近目标一点
+      position: { x: -25, y: 8, z: 0 },
+    },
+  },
+  // 基于模型包围盒中心点 + 偏移量的示例（以 Soldier 模型为例）
+  soldierFrontClose: {
+    label: 'Dancing 前方近景',
+    preset: {
+      modelName: 'Dancing',
+      // 以 Soldier 包围盒中心点为 target，向前方 + 稍微抬高的偏移作为 position
+      offset: { x: 0, y: 0, z: 0 },
+    },
+  },
+  soldierTop: {
+    label: 'Soldier 俯视',
+    preset: {
+      modelName: 'Soldier',
+      offset: { x: 0, y: 60, z: 0 },
     },
   },
 };
