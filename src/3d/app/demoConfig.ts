@@ -1,4 +1,10 @@
-import type { CameraViewPreset, InfoBoardItem, SeaParams } from './index';
+import type {
+  CameraViewPreset,
+  FlexibleRopeCreateItem,
+  FlexibleRopeUpdatePayload,
+  InfoBoardItem,
+  SeaParams,
+} from './index';
 
 /** 镜头预设 demo 配置：仅存放数据，方便后续按需调整 */
 export const cameraPresetsConfig: Record<
@@ -112,9 +118,133 @@ export const seaDemoDefaults: {
 
 /** 绳子 demo 默认配置 */
 export const ropeDemoConfig = {
-  /** 小球 B 默认移动速度（单位/秒） */
-  defaultBallSpeed: 2.5,
+  /** 默认绳子纹理路径（public 下） */
+  textureUrl: '/1712285623239_7670.jpeg',
+  /** 纹理原始像素尺寸（宽 x 高） */
+  textureWidthPx: 1600,
+  textureHeightPx: 1200,
+  /** 初始距离（相对 A） */
+  initialDistance: 6,
+  /** 初始水平角（yaw，度，绕 Y 轴，0 为 +X） */
+  initialYawDeg: 0,
+  /** 初始俯仰角（pitch，度，0 为水平，正值向上） */
+  initialPitchDeg: 0,
 } as const;
+
+/**
+ * 绳子 demo 绑定的模型配置：
+ * - id: 绳子唯一标识（用于多绳子管理与 UI 控制）
+ * - meshAName: 固定端（A）绑定的模型名称
+ * - modelBName: 可移动端（B）绑定的模型名称
+ * - config: 每根绳子独立的初始化配置（未填则回退到 ropeDemoConfig）
+ *
+ * 实际使用时会从 App 中已加载的模型数据中按名称查找模型进行绑定。
+ */
+export const ropeDemoModelBindings: Array<{
+  id: string;
+  meshAName: string;
+  modelBName: string;
+  config?: Partial<{
+    textureUrl: string;
+    textureWidthPx: number;
+    textureHeightPx: number;
+    initialDistance: number;
+    initialYawDeg: number;
+    initialPitchDeg: number;
+  }>;
+}> = [
+  {
+    id: 'rope_1',
+    meshAName: 'DamagedHelmet',
+    modelBName: 'Soldier',
+    config: {
+      // rope_1：默认绳子纹理
+      textureUrl: '/1712285623239_7670.jpeg',
+      textureWidthPx: 1600,
+      textureHeightPx: 1200,
+      // rope_1：偏短、水平
+      initialDistance: 6,
+      initialYawDeg: 0,
+      initialPitchDeg: 0,
+    },
+  },
+  {
+    id: 'rope_2',
+    meshAName: 'rope_Third',
+    modelBName: 'Dancing',
+    config: {
+      // rope_2：使用另一张纹理（与 rope_1 不同）
+      textureUrl: '/1711002072994_1522.jpeg',
+      // 未知真实像素尺寸时也可不填；这里给出占位值，便于 UI/缩放策略一致
+      textureWidthPx: 1600,
+      textureHeightPx: 1200,
+      // rope_2：更长、向右前方、略向上
+      initialDistance: 9,
+      initialYawDeg: 45,
+      initialPitchDeg: 8,
+    },
+  },
+  // 第三根使用一个通用 B 端名称，实际绑定时可根据当前选中模型名称覆盖
+  {
+    id: 'rope_3',
+    meshAName: 'rope_Third',
+    modelBName: 'Soldier',
+    config: {
+      // rope_3：第三套纹理（与 rope_1/rope_2 不同）
+      textureUrl: '/DefaultScene/amiga.jpg',
+      textureWidthPx: 1024,
+      textureHeightPx: 1024,
+      // rope_3：中等长度、向左前方、略向下
+      initialDistance: 7,
+      initialYawDeg: 315,
+      initialPitchDeg: -6,
+    },
+  },
+];
+
+/** 柔性绳子 demo 默认配置（起点+终点+中间 17 个控制点） */
+export const flexibleRopeDemoConfig = {
+  /** 中间控制点数量（不含起点与终点） */
+  pointCount: 17,
+  /** 起点位置（世界坐标） */
+  start: { x: -10, y: 6, z: 0 },
+  /** 终点位置（世界坐标） */
+  end: { x: 10, y: 6, z: 0 },
+  /** 绳子半径 */
+  ropeRadius: 0.12,
+  /** 纹理路径（沿用绳子 demo） */
+  textureUrl: '/1712285623239_7670.jpeg',
+} as const;
+
+/** 柔性绳子创建示例（用于 message 或直接调用 createFlexibleRopes，默认创建两根绳子） */
+export const flexibleRopeCreateExample: FlexibleRopeCreateItem[] = [
+  {
+    id: 'rope_1',
+    angle: 0,
+    start: { x: -10, y: 6, z: 0 },
+    end: { x: 10, y: 6, z: 0 },
+    length: Array.from({ length: 17 }, (_, i) => ({
+      id: `p${i}`,
+      distance: (20 * (i + 1)) / 18,
+    })),
+  },
+  {
+    id: 'rope_2',
+    angle: 0,
+    start: { x: -10, y: 4, z: 5 },
+    end: { x: 10, y: 4, z: 5 },
+    length: Array.from({ length: 17 }, (_, i) => ({
+      id: `q${i}`,
+      distance: (20 * (i + 1)) / 18,
+    })),
+  },
+];
+
+/** 柔性绳子更新示例（用于 message 或直接调用 updateFlexibleRopePoints） */
+export const flexibleRopeUpdateExample: FlexibleRopeUpdatePayload = {
+  parentId: 'rope_1',
+  length: [{ id: 'p0', angle: 15 }, { id: 'p8', angle: -10 }],
+};
 
 /** 信息牌 demo：创建调试小球与牌子时的默认配置 */
 export const infoBoardDemoConfig = {

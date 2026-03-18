@@ -108,16 +108,67 @@
         </div>
         <template v-if="ropeDemoReady">
             <div class="anim-label" style="margin-top:10px;">绳子 Demo</div>
-            <div class="anim-label">小球 B 移动速度 {{ ropeBallSpeed.toFixed(1) }} 单位/秒</div>
+            <div class="anim-label">当前操控绳子</div>
+            <select v-model="ropeControlTarget" class="anim-select" @change="onRopeControlTargetChange">
+                <option v-for="opt in ropeControlOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                </option>
+            </select>
+            <div class="anim-label">距离（相对 A）: {{ ropeDistance.toFixed(2) }}</div>
             <input
                 type="range"
                 class="anim-slider"
                 min="0.5"
-                max="15"
-                step="0.5"
-                v-model.number="ropeBallSpeed"
-                @input="onRopeBallSpeedInput"
+                max="20"
+                step="0.1"
+                v-model.number="ropeDistance"
+                @input="onRopeParamsChange"
             />
+            <div class="anim-label">水平角 yaw（度，绕 Y 轴）: {{ ropeYaw.toFixed(1) }}</div>
+            <input
+                type="range"
+                class="anim-slider"
+                min="-180"
+                max="180"
+                step="1"
+                v-model.number="ropeYaw"
+                @input="onRopeParamsChange"
+            />
+            <div class="anim-label">俯仰角 pitch（度，向上为正）: {{ ropePitch.toFixed(1) }}</div>
+            <input
+                type="range"
+                class="anim-slider"
+                min="-89"
+                max="89"
+                step="1"
+                v-model.number="ropePitch"
+                @input="onRopeParamsChange"
+            />
+        </template>
+        <template v-if="flexibleRopeReady">
+            <div class="anim-label" style="margin-top:10px;">柔性绳子 Demo（17 个中间点）</div>
+            <label class="anim-checkbox" style="margin-bottom:6px;">
+                <input type="checkbox" v-model="flexibleRopePointsVisible" @change="onFlexibleRopePointsVisibleChange" />
+                <span>显示控制点小球</span>
+            </label>
+            <div
+                v-for="(angle, idx) in flexibleRopeAngles"
+                :key="idx"
+                class="anim-row"
+            >
+                <div class="anim-label">
+                    点 #{{ idx + 1 }} 角度偏移: {{ angle.toFixed(1) }}°
+                </div>
+                <input
+                    type="range"
+                    class="anim-slider"
+                    min="-180"
+                    max="180"
+                    step="1"
+                    v-model.number="flexibleRopeAngles[idx]"
+                    @input="applyFlexibleRopeAngles"
+                />
+            </div>
         </template>
         <template v-if="demoBoardIds.length">
             <div class="anim-label" style="margin-top:10px;">信息牌 Demo</div>
@@ -174,6 +225,9 @@ import {
     skyboxDemoConfig,
     seaDemoDefaults,
     ropeDemoConfig,
+    ropeDemoModelBindings,
+    flexibleRopeDemoConfig,
+    flexibleRopeCreateExample,
     infoBoardDemoConfig,
 } from '@/3d/app/demoConfig';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
@@ -281,12 +335,83 @@ function updateCameraDebugText() {
         `radius=${s.radius.toFixed(2)}  beta=${deg(s.beta).toFixed(1)}°  alpha=${deg(s.alpha).toFixed(1)}°`;
 }
 
-// 绳子 Demo：是否已创建（用于显示速度控件）
+// 绳子 Demo：是否已创建（用于显示控制面板）
 const ropeDemoReady = ref(false);
-const ropeBallSpeed = ref(ropeDemoConfig.defaultBallSpeed);
+// 绳子 Demo：当前要操控哪一根（用“绳子 id”作为更新定位 key）
+const ropeControlTarget = ref<string>('');
 
-function onRopeBallSpeedInput() {
-    App.Instance.setRopeDemoBallSpeed(ropeBallSpeed.value);
+const resolvedRopeBindings = computed(() => {
+    const fallback = currentModelName.value || App.Instance.getCurrentModelName() || '';
+    return ropeDemoModelBindings.map((b, idx) => {
+        if (idx === 2 && fallback) return { ...b, modelBName: fallback };
+        return b;
+    });
+});
+
+function getRopeInitConfigById(id: string) {
+    const b = resolvedRopeBindings.value.find((x) => x.id === id);
+    const c = b?.config ?? {};
+    return {
+        textureUrl: c.textureUrl ?? ropeDemoConfig.textureUrl,
+        textureWidthPx: c.textureWidthPx ?? ropeDemoConfig.textureWidthPx,
+        textureHeightPx: c.textureHeightPx ?? ropeDemoConfig.textureHeightPx,
+        initialDistance: c.initialDistance ?? ropeDemoConfig.initialDistance,
+        initialYawDeg: c.initialYawDeg ?? ropeDemoConfig.initialYawDeg,
+        initialPitchDeg: c.initialPitchDeg ?? ropeDemoConfig.initialPitchDeg,
+    };
+}
+
+// 当前操控绳子的参数（切换 ropeControlTarget 时会自动切到该绳子的初始值）
+const ropeDistance = ref<number>(Number(ropeDemoConfig.initialDistance));
+const ropeYaw = ref<number>(Number(ropeDemoConfig.initialYawDeg));
+const ropePitch = ref<number>(Number(ropeDemoConfig.initialPitchDeg));
+
+const ropeControlOptions = computed(() => {
+    return resolvedRopeBindings.value.map((b) => ({
+        value: b.id,
+        label: `${b.meshAName}（B: ${b.modelBName}）`,
+    }));
+});
+
+// 柔性绳子 Demo：当前选中的绳子 id、其控制点 id 列表、各点角度偏移（度）
+const flexibleRopeReady = ref(false);
+const flexibleRopePointsVisible = ref(false);
+const flexibleRopeFirstId = ref('');
+const flexibleRopePointIds = ref<string[]>([]);
+const flexibleRopeAngles = ref<number[]>(
+    Array.from({ length: flexibleRopeDemoConfig.pointCount }, () => 0),
+);
+
+function onRopeParamsChange() {
+    // 使用“当前操控目标（绳子 id）”更新对应绳子的 B 端位置
+    const targetId = ropeControlTarget.value || resolvedRopeBindings.value[0]?.id || '';
+    if (!targetId) return;
+    App.Instance.updateRopeDemoByAngleDistance(targetId, ropeDistance.value, ropeYaw.value, ropePitch.value);
+}
+
+function onRopeControlTargetChange() {
+    const targetId = ropeControlTarget.value || resolvedRopeBindings.value[0]?.id || '';
+    if (!targetId) return;
+    const initCfg = getRopeInitConfigById(targetId);
+    ropeDistance.value = initCfg.initialDistance;
+    ropeYaw.value = initCfg.initialYawDeg;
+    ropePitch.value = initCfg.initialPitchDeg;
+    onRopeParamsChange();
+}
+
+function onFlexibleRopePointsVisibleChange() {
+    App.Instance.setFlexibleRopePointsVisible(flexibleRopePointsVisible.value);
+}
+
+function applyFlexibleRopeAngles() {
+    if (!flexibleRopeFirstId.value) return;
+    App.Instance.updateFlexibleRopePoints({
+        parentId: flexibleRopeFirstId.value,
+        length: flexibleRopePointIds.value.map((id, i) => ({
+            id,
+            angle: flexibleRopeAngles.value[i] ?? 0,
+        })),
+    });
 }
 
 function applyBoardVisibility() {
@@ -379,7 +504,7 @@ const modelUrl = () => props.projectId || './Dancing.fbx';
 
 const isModelUrl = (url: string) => /\.(glb|gltf|fbx)$/i.test(url);
 
-onMounted(async () => {
+async function initAppAndCameraDebug() {
     if (canvas.value) {
         await App.Instance.init(canvas.value, true);
     }
@@ -390,75 +515,156 @@ onMounted(async () => {
     if (!cameraDebugTick) {
         cameraDebugTick = setInterval(updateCameraDebugText, 120);
     }
+}
 
+function registerAnimationCallbacks() {
     // 注册动画结束回调（正放/倒放播放完成时触发）
     App.Instance.onAnimationEnd((info) => {
         console.log('动画播放结束', info);
     });
-    const modelUrls = MODEL_URLS;
+}
+
+async function loadAllModels(modelUrls: string[]) {
+    // 依次加载多个模型，动画会自动按名称存到 App.modelAnimationsMap 里
+    for (const mUrl of modelUrls) {
+        await App.Instance.loadModelAndScene(mUrl, (progress) => {
+            // 这里是每个模型自己的进度，你可以简单用最后一次覆盖：
+            loading.value = progress;
+        });
+    }
+    loadedAsModel.value = true;
+}
+
+async function initEnvironmentForModel() {
+    // 默认加载 HDR 环境贴图，仅用于模型反射
+    await App.Instance.loadHdrEnvironment({
+        url: hdrUrl.value || hdrDemoConfig.initFallbackUrl,
+        size: hdrSize.value,
+        onProgress: (p) => { loading.value = 0.85 + p * 0.15; },
+    });
+    App.Instance.setEnvironmentIntensity(hdrIntensity.value);
+    hdrApplied.value = true;
+
+    // 默认创建一个天空盒并让水面反射它（与 HDR 环境分离）
+    await App.Instance.setSkyboxForWater({
+        url: skyboxUrl.value || skyboxDemoConfig.defaultUrl,
+        size: skyboxSize.value,
+        onProgress: (p) => { loading.value = 0.9 + p * 0.1; },
+    });
+    loading.value = 1;
+
+    // 海面参数 demo：读取当前水面参数作为 UI 默认值（不改变现有默认参数）
+    syncSeaParamsFromApp();
+}
+
+function syncModelUiAfterLoaded() {
+    // 加载完成后更新模型名称列表，并同步裁剪区间为完整动画
+    modelNames.value = App.Instance.getModelNames();
+    currentModelName.value = App.Instance.getCurrentModelName() || '';
+    updateClipRangeToDefault();
+}
+
+function initInfoBoardDemo() {
+    // 调试：生成多个循环运动的小球，并分别插入信息牌（配置来自 3D 层 demoConfig）
+    const center =
+        (App.Instance.getNodeByModelAndName('Soldier') as any)?.getAbsolutePosition?.() ??
+        undefined;
+    const ballIds = App.Instance.createDebugMovingBalls({
+        count: infoBoardDemoConfig.ballCount,
+        diameter: infoBoardDemoConfig.ballOptions.diameter,
+        radius: infoBoardDemoConfig.ballOptions.radius,
+        center,
+        speed: infoBoardDemoConfig.ballOptions.speed,
+        yAmplitude: infoBoardDemoConfig.ballOptions.yAmplitude,
+        namePrefix: infoBoardDemoConfig.ballOptions.namePrefix,
+    });
+    if (!ballIds.length) return;
+
+    const items: InfoBoardItem[] = infoBoardDemoConfig.createItems(ballIds);
+    App.Instance.setInfoBoards(items);
+    demoBoardIds.value = ballIds;
+    demoBoardItems.value = items.map((x) => ({ ...x, attribute: x.attribute.map((a) => ({ ...a })) }));
+    demoVisible.value = ballIds.map(() => true);
+    demoEditIndex.value = 0;
+    syncDemoEditFromItem();
+}
+
+function initRopeDemo() {
+    // 绳子 Demo：根据配置初始化生成三根绳子，B 端通过模型名称绑定
+    // 若某个模型名称不存在，则对应端点会退回到默认小球。
+    const bindings = resolvedRopeBindings.value;
+    bindings.forEach((cfg) => {
+        const initCfg = getRopeInitConfigById(cfg.id);
+        App.Instance.createRopeDemo({
+            // 多绳子管理 key：使用唯一 id，避免 rope_Third 重名覆盖
+            name: cfg.id,
+            // A/B 端按绑定模型名称查找
+            meshAName: cfg.meshAName,
+            meshBName: cfg.modelBName,
+            textureUrl: initCfg.textureUrl,
+            textureWidthPx: initCfg.textureWidthPx,
+            textureHeightPx: initCfg.textureHeightPx,
+            // 仅在 B 未绑定到模型时生效；若 B 已绑定模型，下面会用 updateRopeDemoByAngleDistance 统一初始化
+            initialDistance: initCfg.initialDistance,
+            initialAngleDeg: initCfg.initialYawDeg,
+        });
+        // 统一把“每根绳子的初始角度/距离/pitch”应用到该绳子（即使 B 端绑定了模型）
+        App.Instance.updateRopeDemoByAngleDistance(
+            cfg.id,
+            initCfg.initialDistance,
+            initCfg.initialYawDeg,
+            initCfg.initialPitchDeg,
+        );
+    });
+
+    ropeDemoReady.value = true;
+    // 默认操控第三根，否则第一根
+    ropeControlTarget.value = bindings[2]?.id || bindings[0]?.id || '';
+    if (ropeControlTarget.value) {
+        const initCfg = getRopeInitConfigById(ropeControlTarget.value);
+        ropeDistance.value = initCfg.initialDistance;
+        ropeYaw.value = initCfg.initialYawDeg;
+        ropePitch.value = initCfg.initialPitchDeg;
+    }
+}
+
+function initFlexibleRopeDemo() {
+    // 柔性绳子 Demo：支持多根绳子，使用 createFlexibleRopes + 示例数据
+    App.Instance.createFlexibleRopes(flexibleRopeCreateExample);
+    const ropeIds = App.Instance.getFlexibleRopeIds();
+    if (ropeIds.length > 0) {
+        flexibleRopeFirstId.value = ropeIds[0];
+        flexibleRopePointIds.value = App.Instance.getFlexibleRopePointIds(ropeIds[0]);
+        flexibleRopeAngles.value = flexibleRopePointIds.value.map(() => 0);
+    }
+    flexibleRopeReady.value = true;
+}
+
+async function loadSceneFromProjectUrl(url: string) {
+    const assets = new AppAssets();
+    await assets.loadFromUrl(url, (progress) => {
+        loading.value = progress * 0.4;
+    });
+    App.Instance.setAssetsLibrary(assets);
+    await App.Instance.setScene((progress) => {
+        loading.value = progress * 0.6 + 0.4;
+    });
+}
+
+onMounted(async () => {
+    await initAppAndCameraDebug();
+    registerAnimationCallbacks();
+
     const url = modelUrl();
     if (isModelUrl(url)) {
-        // 依次加载多个模型，动画会自动按名称存到 App.modelAnimationsMap 里
-        for (const mUrl of modelUrls) {
-            await App.Instance.loadModelAndScene(mUrl, (progress) => {
-                // 这里是每个模型自己的进度，你可以简单用最后一次覆盖：
-                loading.value = progress;
-            });
-        }
-        loadedAsModel.value = true;
-        // 默认加载 HDR 环境贴图，仅用于模型反射
-        await App.Instance.loadHdrEnvironment({
-            url: hdrUrl.value || hdrDemoConfig.initFallbackUrl,
-            size: hdrSize.value,
-            onProgress: (p) => { loading.value = 0.85 + p * 0.15; },
-        });
-        App.Instance.setEnvironmentIntensity(hdrIntensity.value);
-        hdrApplied.value = true;
-        // 默认创建一个天空盒并让水面反射它（与 HDR 环境分离）
-        await App.Instance.setSkyboxForWater({
-            url: skyboxUrl.value || skyboxDemoConfig.defaultUrl,
-            size: skyboxSize.value,
-            onProgress: (p) => { loading.value = 0.9 + p * 0.1; },
-        });
-        loading.value = 1;
-        // 海面参数 demo：读取当前水面参数作为 UI 默认值（不改变现有默认参数）
-        syncSeaParamsFromApp();
-        // 加载完成后更新模型名称列表，并同步裁剪区间为完整动画
-        modelNames.value = App.Instance.getModelNames();
-        currentModelName.value = App.Instance.getCurrentModelName() || '';
-        updateClipRangeToDefault();
-        // 调试：生成多个循环运动的小球，并分别插入信息牌（配置来自 3D 层 demoConfig）
-        const center = App.Instance.getModelRootNode('Soldier')?.getAbsolutePosition?.() ?? undefined;
-        const ballIds = App.Instance.createDebugMovingBalls({
-            count: infoBoardDemoConfig.ballCount,
-            diameter: infoBoardDemoConfig.ballOptions.diameter,
-            radius: infoBoardDemoConfig.ballOptions.radius,
-            center,
-            speed: infoBoardDemoConfig.ballOptions.speed,
-            yAmplitude: infoBoardDemoConfig.ballOptions.yAmplitude,
-            namePrefix: infoBoardDemoConfig.ballOptions.namePrefix,
-        });
-        if (ballIds.length) {
-            const items: InfoBoardItem[] = infoBoardDemoConfig.createItems(ballIds);
-            App.Instance.setInfoBoards(items);
-            demoBoardIds.value = ballIds;
-            demoBoardItems.value = items.map((x) => ({ ...x, attribute: x.attribute.map((a) => ({ ...a })) }));
-            demoVisible.value = ballIds.map(() => true);
-            demoEditIndex.value = 0;
-            syncDemoEditFromItem();
-        }
-        // 绳子 Demo：固定小球 A、移动小球 B、带木纹贴图的绳子（B 拉远/拉近时纹理流动）
-        App.Instance.createRopeDemo({ ballSpeed: ropeBallSpeed.value });
-        ropeDemoReady.value = true;
+        await loadAllModels(MODEL_URLS);
+        await initEnvironmentForModel();
+        syncModelUiAfterLoaded();
+        // initInfoBoardDemo();
+        initRopeDemo();
+        initFlexibleRopeDemo();
     } else {
-        const assets = new AppAssets();
-        await assets.loadFromUrl(url, (progress) => {
-            loading.value = progress * 0.4;
-        });
-        App.Instance.setAssetsLibrary(assets);
-        await App.Instance.setScene((progress) => {
-            loading.value = progress * 0.6 + 0.4;
-        });
+        await loadSceneFromProjectUrl(url);
     }
 });
 
@@ -646,7 +852,7 @@ function normalizeInfoBoardPayload(payload: unknown): InfoBoardItem[] | null {
     }).filter(Boolean) as InfoBoardItem[];
 }
 
-/** 通过 onMessage 接收信息牌数据，数据格式: [{ id, title?, attribute: [{ key: value }, ...] }] 或 { type: 'infoBoards', data: [...] } */
+/** 通过 onMessage 接收信息牌数据，数据格式: [{ id, title?, attribute }] 或 { type: 'infoBoards', data: [...] } */
 function onMessage(handler: (data: InfoBoardItem[]) => void) {
     const fn = (event: MessageEvent) => {
         let raw = event.data;
@@ -658,10 +864,30 @@ function onMessage(handler: (data: InfoBoardItem[]) => void) {
     return () => window.removeEventListener('message', fn);
 }
 
+/** 统一 message 监听：信息牌、柔性绳子创建、柔性绳子更新 */
+function setupMessageListeners() {
+    const onMessageFn = (event: MessageEvent) => {
+        const raw = event.data;
+        if (!raw || typeof raw !== 'object') return;
+        if (raw.type === 'flexibleRopeCreate' && Array.isArray(raw.data)) {
+            App.Instance.createFlexibleRopes(raw.data);
+            return;
+        }
+        if (raw.type === 'flexibleRopeUpdate' && raw.data?.parentId) {
+            App.Instance.updateFlexibleRopePoints(raw.data);
+            return;
+        }
+        let payload = raw;
+        if (raw.type === 'infoBoards' && Array.isArray(raw.data)) payload = raw.data;
+        const data = normalizeInfoBoardPayload(payload);
+        if (data) App.Instance.setInfoBoards(data);
+    };
+    window.addEventListener('message', onMessageFn);
+    return () => window.removeEventListener('message', onMessageFn);
+}
+
 onMounted(() => {
-    removeInfoBoardMessageListener = onMessage((data) => {
-        App.Instance.setInfoBoards(data);
-    });
+    removeInfoBoardMessageListener = setupMessageListeners();
 });
 
 onUnmounted(() => {
