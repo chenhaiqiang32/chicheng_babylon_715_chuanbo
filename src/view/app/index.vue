@@ -343,7 +343,7 @@ const ropeControlTarget = ref<string>('');
 const resolvedRopeBindings = computed(() => {
     const fallback = currentModelName.value || App.Instance.getCurrentModelName() || '';
     return ropeDemoModelBindings.map((b, idx) => {
-        if (idx === 2 && fallback) return { ...b, modelBName: fallback };
+        // if (idx === 2 && fallback) return { ...b, modelBName: fallback };
         return b;
     });
 });
