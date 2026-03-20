@@ -94,12 +94,28 @@ export interface CameraViewPreset {
 export interface FlexibleRopeCreateItem {
   /** 唯一标识，用于后续通过 parentId 更新该绳子 */
   id: string;
-  /** 可选：整根绳子绕 Y 轴的旋转角度（度），绕起点终点中点旋转 */
+  /**
+   * 可选：方向水平角 yaw（度，绕 Y 轴，0 为 +X，正角度沿 +Z 旋转）。
+   * 当 start 为“模型名称”时，与 pitch 一起决定终点方向。
+   */
   angle?: number;
-  /** 起点坐标 */
-  start: { x: number; y: number; z: number };
-  /** 终点坐标 */
-  end: { x: number; y: number; z: number };
+  /**
+   * 可选：方向俯仰角 pitch（度，0 为水平，向上为正）。
+   * 与 angle（yaw）一起决定起点到终点的方向。
+   */
+  pitch?: number;
+  /**
+   * 起点：
+   * - string：模型名称（会在场景已加载模型节点中查找并跟随移动）
+   * - 坐标：显式世界坐标（兼容旧数据）
+   */
+  start: string | { x: number; y: number; z: number };
+  /**
+   * 终点坐标（世界坐标）。
+   * - 当 start 为模型名称时无需传入（会按 angle+长度推导）。
+   * - 当 start 为坐标时建议传入（兼容旧数据）。
+   */
+  end?: { x: number; y: number; z: number };
   /** 中间控制点：每项为到起点的距离及该点的唯一 id */
   length: Array<{ id: string; distance: number }>;
 }
@@ -354,6 +370,16 @@ export class App {
       radius: number;
       material: PBRMaterial;
       texture: Texture;
+      /** 跟随模式：起点模型名称（有值则代表该绳子会跟随模型移动） */
+      startModelName?: string;
+      /** 跟随模式：方向水平角 yaw（度） */
+      angleDeg?: number;
+      /** 跟随模式：方向俯仰角 pitch（度） */
+      pitchDeg?: number;
+      /** 跟随模式：缓存到的起点节点 */
+      startNode?: TransformNode | null;
+      /** 跟随模式：每帧更新监听 */
+      followObserver?: ReturnType<Scene['onBeforeRenderObservable']['add']> | null;
     }
   > = new Map();
   /** 柔性绳子默认半径（新建时未指定时使用） */
@@ -1141,43 +1167,91 @@ export class App {
       const startRaw = item.start;
       const endRaw = item.end;
       const lengthArr = Array.isArray(item.length) ? item.length : [];
-      if (
-        !startRaw ||
-        typeof startRaw.x !== 'number' ||
-        typeof startRaw.y !== 'number' ||
-        typeof startRaw.z !== 'number' ||
-        !endRaw ||
-        typeof endRaw.x !== 'number' ||
-        typeof endRaw.y !== 'number' ||
-        typeof endRaw.z !== 'number'
+      const distancesRaw = lengthArr.map((l) =>
+        Math.max(0, Number.isFinite(l?.distance) ? Number(l!.distance) : 0),
+      );
+      const pointIds = lengthArr.map((l) => (l?.id != null ? String(l.id) : ''));
+      const pointCount = distancesRaw.length;
+      if (pointCount === 0) continue;
+
+      const maxDistance = Math.max(0.1, ...distancesRaw);
+      const hasAngle = typeof item.angle === 'number' && Number.isFinite(item.angle);
+      const angleDeg = hasAngle ? Number(item.angle) : 0;
+      const hasPitch = typeof item.pitch === 'number' && Number.isFinite(item.pitch);
+      const pitchDeg = hasPitch ? Number(item.pitch) : 0;
+
+      let startNode: TransformNode | null = null;
+      let start = new Vector3(0, 0, 0);
+      let end = new Vector3(0, 0, 0);
+
+      const dirFromYawPitch = (yaw: number, pitch: number) => {
+        const yawRad = (yaw * Math.PI) / 180;
+        const pitchRad = (pitch * Math.PI) / 180;
+        const cosPitch = Math.cos(pitchRad);
+        return new Vector3(
+          cosPitch * Math.cos(yawRad),
+          Math.sin(pitchRad),
+          cosPitch * Math.sin(yawRad),
+        );
+      };
+
+      // start 为“模型名称”：通过名称查找模型节点作为起点，并根据 angle+pitch 推导终点
+      if (typeof startRaw === 'string') {
+        const node = this.getNodeByModelAndName(startRaw);
+        if (node && node instanceof TransformNode) {
+          startNode = node;
+          start.copyFrom(node.getAbsolutePosition());
+        } else {
+          start.set(0, 0, 0);
+        }
+        const dir = dirFromYawPitch(angleDeg, pitchDeg);
+        end = start.add(dir.scale(maxDistance));
+      } else if (
+        startRaw &&
+        typeof (startRaw as any).x === 'number' &&
+        typeof (startRaw as any).y === 'number' &&
+        typeof (startRaw as any).z === 'number' &&
+        endRaw &&
+        typeof (endRaw as any).x === 'number' &&
+        typeof (endRaw as any).y === 'number' &&
+        typeof (endRaw as any).z === 'number'
       ) {
+        // 兼容旧数据：start/end 均为显式坐标
+        start = new Vector3((startRaw as any).x, (startRaw as any).y, (startRaw as any).z);
+        end = new Vector3((endRaw as any).x, (endRaw as any).y, (endRaw as any).z);
+        if (hasAngle) {
+          // 旧语义：绕起点终点中点做整体旋转
+          const center = start.add(end).scale(0.5);
+          const angleRad = (angleDeg * Math.PI) / 180;
+          const c = Math.cos(angleRad);
+          const s = Math.sin(angleRad);
+          const toStart = start.subtract(center);
+          const toEnd = end.subtract(center);
+          start = center.add(
+            new Vector3(
+              toStart.x * c - toStart.z * s,
+              toStart.y,
+              toStart.x * s + toStart.z * c,
+            ),
+          );
+          end = center.add(
+            new Vector3(toEnd.x * c - toEnd.z * s, toEnd.y, toEnd.x * s + toEnd.z * c),
+          );
+        }
+      } else {
+        // 数据不完整
         continue;
       }
 
-      let start = new Vector3(startRaw.x, startRaw.y, startRaw.z);
-      let end = new Vector3(endRaw.x, endRaw.y, endRaw.z);
-      if (typeof item.angle === 'number' && Number.isFinite(item.angle)) {
-        const center = start.add(end).scale(0.5);
-        const angleRad = (item.angle * Math.PI) / 180;
-        const c = Math.cos(angleRad);
-        const s = Math.sin(angleRad);
-        const toStart = start.subtract(center);
-        const toEnd = end.subtract(center);
-        start = center.add(new Vector3(toStart.x * c - toStart.z * s, toStart.y, toStart.x * s + toStart.z * c));
-        end = center.add(new Vector3(toEnd.x * c - toEnd.z * s, toEnd.y, toEnd.x * s + toEnd.z * c));
-      }
-
       const baseLength = Vector3.Distance(start, end);
-      const distances = lengthArr.map((l) =>
-        Math.max(0, Math.min(baseLength, Number.isFinite(l?.distance) ? l!.distance : 0)),
-      );
-      const pointIds = lengthArr.map((l) => (l?.id != null ? String(l.id) : ''));
-      const pointCount = distances.length;
-      if (pointCount === 0) continue;
+      const distances = distancesRaw.map((d) => Math.max(0, Math.min(baseLength, d)));
 
       // 若已存在同 id 绳子，先销毁
       const existing = this.flexibleRopesMap.get(id);
       if (existing) {
+        if ((existing as any).followObserver && this.scene) {
+          this.scene.onBeforeRenderObservable.remove((existing as any).followObserver);
+        }
         existing.pointMeshes.forEach((m) => m.dispose());
         existing.tube.dispose();
         existing.material.dispose();
@@ -1236,7 +1310,13 @@ export class App {
       const refLength = Math.max(0.1, totalLen);
       const tube = MeshBuilder.CreateTube(
         `flexRopeTube_${id}`,
-        { path, radius: ropeRadius, tessellation: 8, cap: Mesh.CAP_ALL },
+        {
+          path,
+          radius: ropeRadius,
+          tessellation: 8,
+          cap: Mesh.CAP_ALL,
+          updatable: true,
+        } as any,
         this.scene,
       );
       tube.material = ropeMat;
@@ -1260,7 +1340,53 @@ export class App {
         radius: ropeRadius,
         material: ropeMat,
         texture: ropeTex,
+        // 跟随模式（start 为模型名称时启用）
+        startModelName: typeof startRaw === 'string' ? startRaw : undefined,
+        angleDeg,
+        pitchDeg,
+        startNode,
+        followObserver: null,
       });
+
+      // 若配置为“跟随模型起点”，则每帧根据模型位置与 angle 更新 start/end 并刷新绳子
+      const state = this.flexibleRopesMap.get(id) as any;
+      if (state?.startModelName && this.scene) {
+        state.followObserver = this.scene.onBeforeRenderObservable.add(() => {
+          if (!this.scene) return;
+          if (!state.startNode) {
+            const n = this.getNodeByModelAndName(state.startModelName);
+            if (n && n instanceof TransformNode) state.startNode = n;
+          }
+          const nodePos = state.startNode
+            ? (state.startNode as TransformNode).getAbsolutePosition()
+            : null;
+          if (!nodePos) return;
+
+          const yaw = Number(state.angleDeg ?? 0);
+          const pitch = Number(state.pitchDeg ?? 0);
+          const yawRad = (yaw * Math.PI) / 180;
+          const pitchRad = (pitch * Math.PI) / 180;
+          const cosPitch = Math.cos(pitchRad);
+          const dir = new Vector3(
+            cosPitch * Math.cos(yawRad),
+            Math.sin(pitchRad),
+            cosPitch * Math.sin(yawRad),
+          );
+          const ropeLen = Math.max(0.1, ...state.distances);
+          const nextStart = nodePos.clone();
+          const nextEnd = nextStart.add(dir.scale(ropeLen));
+
+          // 只有起点/终点发生变化时才更新，避免每帧重建
+          const eps = 1e-6;
+          const ds = Vector3.DistanceSquared(state.start, nextStart);
+          const de = Vector3.DistanceSquared(state.end, nextEnd);
+          if (ds > eps || de > eps) {
+            state.start.copyFrom(nextStart);
+            state.end.copyFrom(nextEnd);
+            this.updateSingleFlexibleRope(state);
+          }
+        });
+      }
     }
 
     this.refreshAllFlexibleRopeInfoBoards();
@@ -1283,6 +1409,46 @@ export class App {
     }
     this.updateSingleFlexibleRope(state);
     this.refreshAllFlexibleRopeInfoBoards();
+  }
+
+  /**
+   * 更新指定柔性绳子的整体方向（水平角 yaw + 俯仰角 pitch）。
+   * 仅当绳子为“跟随模型”模式时生效，会据此重算终点并刷新形状。
+   */
+  updateFlexibleRopeDirection(ropeId: string, yawDeg: number, pitchDeg: number): void {
+    if (!this.scene) return;
+    const state = this.flexibleRopesMap.get(ropeId);
+    if (!state || !state.startModelName) return;
+    state.angleDeg = yawDeg;
+    state.pitchDeg = pitchDeg;
+    const ropeLen = Math.max(0.1, ...state.distances);
+    const yawRad = (yawDeg * Math.PI) / 180;
+    const pitchRad = (pitchDeg * Math.PI) / 180;
+    const cosPitch = Math.cos(pitchRad);
+    const dir = new Vector3(
+      cosPitch * Math.cos(yawRad),
+      Math.sin(pitchRad),
+      cosPitch * Math.sin(yawRad),
+    );
+    state.end.copyFrom(state.start).addInPlace(dir.scale(ropeLen));
+    this.updateSingleFlexibleRope(state);
+    this.refreshAllFlexibleRopeInfoBoards();
+  }
+
+  /** 获取指定绳子当前整体方向（yaw / pitch，度） */
+  getFlexibleRopeDirection(ropeId: string): { yaw: number; pitch: number } | null {
+    const state = this.flexibleRopesMap.get(ropeId);
+    if (!state) return null;
+    return {
+      yaw: state.angleDeg ?? 0,
+      pitch: state.pitchDeg ?? 0,
+    };
+  }
+
+  /** 获取指定绳子的 17 个控制点当前角度偏移（度），顺序与创建时 length[].id 一致 */
+  getFlexibleRopePointAngles(ropeId: string): number[] {
+    const state = this.flexibleRopesMap.get(ropeId);
+    return state ? state.anglesDeg.slice() : [];
   }
 
   /** 根据当前角度与距离重建单根绳子的曲线与 Tube，并更新控制点位置 */
@@ -1323,7 +1489,6 @@ export class App {
       pointMeshes[i].position.copyFrom(pos);
     }
 
-    state.tube.dispose();
     const controlPoints = [start.clone(), ...midPositions.map((p) => p.clone()), end.clone()];
     const curve = Curve3.CreateCatmullRomSpline(controlPoints, 20, false);
     const path = curve.getPoints();
@@ -1331,9 +1496,17 @@ export class App {
     for (let i = 1; i < path.length; i++) {
       totalLen += Vector3.Distance(path[i - 1], path[i]);
     }
+    // 使用 instance 更新 Tube，避免每次 dispose/recreate（便于跟随移动时每帧更新）
     const tube = MeshBuilder.CreateTube(
       state.tube.name,
-      { path, radius: state.radius, tessellation: 8, cap: Mesh.CAP_ALL },
+      {
+        path,
+        radius: state.radius,
+        tessellation: 8,
+        cap: Mesh.CAP_ALL,
+        updatable: true,
+        instance: state.tube,
+      } as any,
       this.scene,
     );
     tube.material = state.material;

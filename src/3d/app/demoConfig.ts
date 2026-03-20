@@ -129,6 +129,8 @@ export const ropeDemoConfig = {
   initialYawDeg: 0,
   /** 初始俯仰角（pitch，度，0 为水平，正值向上） */
   initialPitchDeg: 0,
+  /** 绳子半径（场景单位，与 createRopeDemo 的 ropeRadius 一致） */
+  ropeRadius: 0.12,
 } as const;
 
 /**
@@ -136,7 +138,7 @@ export const ropeDemoConfig = {
  * - id: 绳子唯一标识（用于多绳子管理与 UI 控制）
  * - meshAName: 固定端（A）绑定的模型名称
  * - modelBName: 可移动端（B）绑定的模型名称
- * - config: 每根绳子独立的初始化配置（未填则回退到 ropeDemoConfig）
+ * - config: 每根绳子独立的初始化配置（未填则回退到 ropeDemoConfig，含 ropeRadius 粗细）
  *
  * 实际使用时会从 App 中已加载的模型数据中按名称查找模型进行绑定。
  */
@@ -151,6 +153,8 @@ export const ropeDemoModelBindings: Array<{
     initialDistance: number;
     initialYawDeg: number;
     initialPitchDeg: number;
+    /** 该根绳子的管状半径（粗细），场景单位 */
+    ropeRadius: number;
   }>;
 }> = [
   {
@@ -166,6 +170,7 @@ export const ropeDemoModelBindings: Array<{
       initialDistance: 6,
       initialYawDeg: 0,
       initialPitchDeg: 0,
+      ropeRadius: 0.12,
     },
   },
   {
@@ -182,6 +187,7 @@ export const ropeDemoModelBindings: Array<{
       initialDistance: 9,
       initialYawDeg: 45,
       initialPitchDeg: 8,
+      ropeRadius: 0.09,
     },
   },
   // 第三根使用一个通用 B 端名称，实际绑定时可根据当前选中模型名称覆盖
@@ -198,6 +204,7 @@ export const ropeDemoModelBindings: Array<{
       initialDistance: 7,
       initialYawDeg: 315,
       initialPitchDeg: -6,
+      ropeRadius: 0.16,
     },
   },
 ];
@@ -206,10 +213,12 @@ export const ropeDemoModelBindings: Array<{
 export const flexibleRopeDemoConfig = {
   /** 中间控制点数量（不含起点与终点） */
   pointCount: 17,
-  /** 起点位置（世界坐标） */
-  start: { x: -10, y: 6, z: 0 },
-  /** 终点位置（世界坐标） */
-  end: { x: 10, y: 6, z: 0 },
+  /** 起点：模型名称（会在已加载模型节点中查找并跟随移动） */
+  start: 'Soldier',
+  /** 起点到终点方向：水平角 yaw（度，绕 Y 轴，0 为 +X） */
+  angle: 0,
+  /** 起点到终点方向：俯仰角 pitch（度，0 为水平，向上为正） */
+  pitch: 0,
   /** 绳子半径 */
   ropeRadius: 0.12,
   /** 纹理路径（沿用绳子 demo） */
@@ -220,9 +229,9 @@ export const flexibleRopeDemoConfig = {
 export const flexibleRopeCreateExample: FlexibleRopeCreateItem[] = [
   {
     id: 'rope_1',
-    angle: 0,
-    start: { x: -10, y: 6, z: 0 },
-    end: { x: 10, y: 6, z: 0 },
+    angle: flexibleRopeDemoConfig.angle,
+    pitch: flexibleRopeDemoConfig.pitch,
+    start: flexibleRopeDemoConfig.start,
     length: Array.from({ length: 17 }, (_, i) => ({
       id: `p${i}`,
       distance: (20 * (i + 1)) / 18,
@@ -230,9 +239,9 @@ export const flexibleRopeCreateExample: FlexibleRopeCreateItem[] = [
   },
   {
     id: 'rope_2',
-    angle: 0,
-    start: { x: -10, y: 4, z: 5 },
-    end: { x: 10, y: 4, z: 5 },
+    angle: 35,
+    pitch: 0,
+    start: 'Dancing',
     length: Array.from({ length: 17 }, (_, i) => ({
       id: `q${i}`,
       distance: (20 * (i + 1)) / 18,

@@ -108,8 +108,10 @@ window.postMessage(
     data: [
       {
         id: 'rope_1',
-        start: { x: -10, y: 6, z: 0 },
-        end: { x: 10, y: 6, z: 0 },
+        // start 也可以直接传模型名称：会在已加载模型节点中查找并跟随移动
+        start: 'Soldier',
+        // 当 start 为模型名称时，终点由 angle + 总长度推导，无需传 end
+        angle: 0,
         length: [
           { id: 'p0', distance: 1.11 },
           { id: 'p1', distance: 2.22 }
