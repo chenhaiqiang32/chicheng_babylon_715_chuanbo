@@ -232,6 +232,8 @@ export const flexibleRopeCreateExample: FlexibleRopeCreateItem[] = [
     angle: flexibleRopeDemoConfig.angle,
     pitch: flexibleRopeDemoConfig.pitch,
     start: flexibleRopeDemoConfig.start,
+    textureUrl: flexibleRopeDemoConfig.textureUrl,
+    ropeRadius: flexibleRopeDemoConfig.ropeRadius,
     length: Array.from({ length: 17 }, (_, i) => ({
       id: `p${i}`,
       distance: (20 * (i + 1)) / 18,
@@ -242,6 +244,8 @@ export const flexibleRopeCreateExample: FlexibleRopeCreateItem[] = [
     angle: 35,
     pitch: 0,
     start: 'Dancing',
+    textureUrl: flexibleRopeDemoConfig.textureUrl,
+    ropeRadius: flexibleRopeDemoConfig.ropeRadius,
     length: Array.from({ length: 17 }, (_, i) => ({
       id: `q${i}`,
       distance: (20 * (i + 1)) / 18,

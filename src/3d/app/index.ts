@@ -118,6 +118,10 @@ export interface FlexibleRopeCreateItem {
   end?: { x: number; y: number; z: number };
   /** 中间控制点：每项为到起点的距离及该点的唯一 id */
   length: Array<{ id: string; distance: number }>;
+  /** 绳子纹理 URL（可选；用于覆盖默认纹理） */
+  textureUrl?: string;
+  /** 绳子半径（可选；用于覆盖默认半径） */
+  ropeRadius?: number | string;
 }
 
 /** 柔性绳子：更新某根绳子上连接点角度的数据格式 */
@@ -1159,11 +1163,26 @@ export class App {
   createFlexibleRopes(items: FlexibleRopeCreateItem[]): void {
     if (!this.scene || !Array.isArray(items)) return;
     const textureUrlDefault = '/1712285623239_7670.jpeg';
-    const ropeRadius = this.flexibleRopeRadius;
 
     for (const item of items) {
       const id = item?.id;
       if (id == null || typeof id !== 'string') continue;
+
+      const ropeRadiusRaw = item?.ropeRadius;
+      const ropeRadius =
+        (typeof ropeRadiusRaw === 'number' && Number.isFinite(ropeRadiusRaw) ? ropeRadiusRaw : undefined) ||
+        (typeof ropeRadiusRaw === 'string' &&
+          ropeRadiusRaw.trim().length > 0 &&
+          Number.isFinite(Number(ropeRadiusRaw))
+          ? Number(ropeRadiusRaw)
+          : undefined) ||
+        this.flexibleRopeRadius;
+
+      const textureUrl =
+        typeof item?.textureUrl === 'string' && item.textureUrl.trim().length > 0
+          ? item.textureUrl
+          : textureUrlDefault;
+
       const startRaw = item.start;
       const endRaw = item.end;
       const lengthArr = Array.isArray(item.length) ? item.length : [];
@@ -1259,7 +1278,7 @@ export class App {
         this.flexibleRopesMap.delete(id);
       }
 
-      const ropeTex = new Texture(textureUrlDefault, this.scene, false, false);
+      const ropeTex = new Texture(textureUrl, this.scene, false, false);
       ropeTex.wrapU = Texture.WRAP_ADDRESSMODE;
       ropeTex.wrapV = Texture.WRAP_ADDRESSMODE;
       const ropeMat = new PBRMaterial(`flexRopeMat_${id}`, this.scene);
