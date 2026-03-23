@@ -176,21 +176,32 @@
                 <span>显示控制点小球</span>
             </label>
             <div
-                v-for="(angle, idx) in flexibleRopeAngles"
+                v-for="(yaw, idx) in flexibleRopePointYaws"
                 :key="idx"
                 class="anim-row"
             >
                 <div class="anim-label">
-                    点 #{{ idx + 1 }} 角度偏移: {{ angle.toFixed(1) }}°
+                    点 #{{ idx + 1 }} 偏移 yaw: {{ yaw.toFixed(1) }}° / pitch: {{ flexibleRopePointPitches[idx]?.toFixed(1) }}°
                 </div>
+                <div class="anim-label" style="margin-top:4px;">水平偏移 yaw（度）</div>
                 <input
                     type="range"
                     class="anim-slider"
                     min="-180"
                     max="180"
                     step="1"
-                    v-model.number="flexibleRopeAngles[idx]"
-                    @input="applyFlexibleRopeAngles"
+                    v-model.number="flexibleRopePointYaws[idx]"
+                    @input="applyFlexibleRopeOffsets"
+                />
+                <div class="anim-label" style="margin-top:4px;">俯仰偏移 pitch（度）</div>
+                <input
+                    type="range"
+                    class="anim-slider"
+                    min="-89"
+                    max="89"
+                    step="1"
+                    v-model.number="flexibleRopePointPitches[idx]"
+                    @input="applyFlexibleRopeOffsets"
                 />
             </div>
         </template>
@@ -383,6 +394,9 @@ function getRopeInitConfigById(id: string) {
         initialYawDeg: c.initialYawDeg ?? ropeDemoConfig.initialYawDeg,
         initialPitchDeg: c.initialPitchDeg ?? ropeDemoConfig.initialPitchDeg,
         ropeRadius: c.ropeRadius ?? ropeDemoConfig.ropeRadius,
+        ropeShapeType: c.ropeShapeType ?? 'tube',
+        boxFlipAngleDeg: c.boxFlipAngleDeg ?? 0,
+        boxFaces: c.boxFaces,
     };
 }
 
@@ -404,7 +418,10 @@ const flexibleRopePointsVisible = ref(false);
 const flexibleRopeIds = ref<string[]>([]);
 const flexibleRopeFirstId = ref('');
 const flexibleRopePointIds = ref<string[]>([]);
-const flexibleRopeAngles = ref<number[]>(
+const flexibleRopePointYaws = ref<number[]>(
+    Array.from({ length: flexibleRopeDemoConfig.pointCount }, () => 0),
+);
+const flexibleRopePointPitches = ref<number[]>(
     Array.from({ length: flexibleRopeDemoConfig.pointCount }, () => 0),
 );
 const flexibleRopeYaw = ref(0);
@@ -435,7 +452,9 @@ function onFlexibleRopeControlTargetChange() {
     const id = flexibleRopeFirstId.value;
     if (!id) return;
     flexibleRopePointIds.value = App.Instance.getFlexibleRopePointIds(id);
-    flexibleRopeAngles.value = App.Instance.getFlexibleRopePointAngles(id);
+    const offsets = App.Instance.getFlexibleRopePointYawPitch(id);
+    flexibleRopePointYaws.value = offsets.yawsDeg;
+    flexibleRopePointPitches.value = offsets.pitchesDeg;
     const dir = App.Instance.getFlexibleRopeDirection(id);
     if (dir) {
         flexibleRopeYaw.value = dir.yaw;
@@ -452,13 +471,14 @@ function onFlexibleRopeDirectionChange() {
     );
 }
 
-function applyFlexibleRopeAngles() {
+function applyFlexibleRopeOffsets() {
     if (!flexibleRopeFirstId.value) return;
     App.Instance.updateFlexibleRopePoints({
         parentId: flexibleRopeFirstId.value,
         length: flexibleRopePointIds.value.map((id, i) => ({
             id,
-            angle: flexibleRopeAngles.value[i] ?? 0,
+            yaw: flexibleRopePointYaws.value[i] ?? 0,
+            pitch: flexibleRopePointPitches.value[i] ?? 0,
         })),
     });
 }
@@ -654,6 +674,9 @@ function initRopeDemo() {
             textureWidthPx: initCfg.textureWidthPx,
             textureHeightPx: initCfg.textureHeightPx,
             ropeRadius: initCfg.ropeRadius,
+            ropeShapeType: initCfg.ropeShapeType,
+            boxFlipAngleDeg: initCfg.boxFlipAngleDeg,
+            boxFaces: initCfg.boxFaces,
             // 仅在 B 未绑定到模型时生效；若 B 已绑定模型，下面会用 updateRopeDemoByAngleDistance 统一初始化
             initialDistance: initCfg.initialDistance,
             initialAngleDeg: initCfg.initialYawDeg,
@@ -685,7 +708,9 @@ function initFlexibleRopeDemo() {
     if (ropeIds.length > 0) {
         flexibleRopeFirstId.value = ropeIds[0];
         flexibleRopePointIds.value = App.Instance.getFlexibleRopePointIds(ropeIds[0]);
-        flexibleRopeAngles.value = App.Instance.getFlexibleRopePointAngles(ropeIds[0]);
+        const offsets = App.Instance.getFlexibleRopePointYawPitch(ropeIds[0]);
+        flexibleRopePointYaws.value = offsets.yawsDeg;
+        flexibleRopePointPitches.value = offsets.pitchesDeg;
         const dir = App.Instance.getFlexibleRopeDirection(ropeIds[0]);
         if (dir) {
             flexibleRopeYaw.value = dir.yaw;

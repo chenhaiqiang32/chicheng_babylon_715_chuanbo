@@ -16,7 +16,8 @@
 | `start` | `{ x, y, z }` | 是 | 起点坐标（世界坐标） |
 | `end` | `{ x, y, z }` | 是 | 终点坐标（世界坐标） |
 | `length` | array | 是 | 中间控制点列表，见下表 |
-| `angle` | number | 否 | 整根绳子绕 Y 轴的旋转角度（度），绕起点与终点中点旋转 |
+| `angle` | number | 否 | 起点为“模型名称”时：方向水平角 yaw（度，绕 Y 轴） |
+| `pitch` | number | 否 | 起点为“模型名称”时：方向俯仰角 pitch（度，正值向上） |
 
 **`length` 每项：**
 
@@ -54,11 +55,11 @@
 ```
 
 - 同一 `id` 的绳子若已存在，会先销毁再按新数据创建。
-- 每根绳子会生成：一条沿控制点平滑插值（Catmull-Rom）的曲线 Tube、以及每个控制点上的小球（用于挂接信息牌）。信息牌默认显示「洋流点 {id}」和当前角度偏移。
+- 每根绳子会生成：一条沿控制点平滑插值（Catmull-Rom）的曲线 Tube、以及每个控制点上的小球（用于挂接信息牌）。信息牌默认显示「洋流点 {id}」以及当前 `yaw/pitch` 偏移。
 
-### 2. 更新连接点角度
+### 2. 更新连接点偏移
 
-更新**某一根**绳子上部分或全部控制点的角度偏移：
+更新**某一根**绳子上部分或全部控制点的偏移（yaw/pitch）：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -70,7 +71,9 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `id` | string | 控制点 id（创建时 `length[].id`） |
-| `angle` | number | 该点的角度偏移（度） |
+| `yaw` | number | 该点的水平偏移 yaw（度） |
+| `pitch` | number | 该点的俯仰偏移 pitch（度） |
+| `angle` | number | 兼容旧字段：等价映射为 `pitch=angle`、`yaw=0` |
 
 示例：
 
@@ -78,14 +81,14 @@
 {
   "parentId": "rope_1",
   "length": [
-    { "id": "p0", "angle": 15 },
-    { "id": "p1", "angle": -10 },
-    { "id": "p8", "angle": 5 }
+    { "id": "p0", "yaw": 0, "pitch": 15 },
+    { "id": "p1", "yaw": 0, "pitch": -10 },
+    { "id": "p8", "yaw": 30, "pitch": 5 }
   ]
 }
 ```
 
-- 只传需要更新的节点即可，未传的节点保持当前角度。
+- 只传需要更新的节点即可，未传的节点保持当前偏移。
 - `parentId` 对应的绳子必须已通过创建接口创建，否则更新会被忽略。
 
 ---
@@ -130,10 +133,10 @@ window.postMessage(
 iframe.contentWindow.postMessage({ type: 'flexibleRopeCreate', data: [...] }, '*');
 ```
 
-### 2. 更新绳子连接点角度
+### 2. 更新绳子连接点偏移
 
 - **type**: `flexibleRopeUpdate`
-- **data**: 上述「更新连接点角度」的**对象**（含 `parentId`、`length`）
+- **data**: 上述「更新连接点偏移」的**对象**（含 `parentId`、`length`）
 
 发送示例：
 
@@ -144,8 +147,8 @@ window.postMessage(
     data: {
       parentId: 'rope_1',
       length: [
-        { id: 'p0', angle: 15 },
-        { id: 'p8', angle: -10 }
+        { id: 'p0', yaw: 0, pitch: 15 },
+        { id: 'p8', yaw: 0, pitch: -10 }
       ]
     }
   },
@@ -161,7 +164,7 @@ window.postMessage(
 
 - **创建多根绳子**：`App.Instance.createFlexibleRopes(items)`
   - `items`: `FlexibleRopeCreateItem[]`，格式同上述创建数组。
-- **更新连接点角度**：`App.Instance.updateFlexibleRopePoints(payload)`
+- **更新连接点偏移**：`App.Instance.updateFlexibleRopePoints(payload)`
   - `payload`: `FlexibleRopeUpdatePayload`，格式同上述更新对象。
 
 辅助方法：
@@ -192,7 +195,7 @@ import type { FlexibleRopeCreateItem, FlexibleRopeUpdatePayload } from '@/3d/app
 ## 五、行为说明
 
 - **多根绳子**：支持同时存在多根绳子，每根由 `id` 唯一标识；创建时同 `id` 会先移除再创建。
-- **角度偏移**：每个控制点可单独设置角度（度），用于在垂直于基线的方向上偏移该点，形成柔性弯曲；曲线通过 Catmull-Rom 样条平滑连接。
-- **信息牌**：每个控制点对应一个小球 mesh，并挂接信息牌，默认显示「洋流点 {id}」和当前角度；与现有 `setInfoBoards` 体系一致，更新绳子后会刷新所有绳子的信息牌。
+- **yaw/pitch 偏移**：每个控制点可单独设置 `yaw`/`pitch`（度），用于在垂直于绳子基线的方向上偏移该点，形成柔性弯曲；曲线通过 Catmull-Rom 样条平滑连接。
+- **信息牌**：每个控制点对应一个小球 mesh，并挂接信息牌，默认显示「洋流点 {id}」以及当前 `yaw/pitch`；与现有 `setInfoBoards` 体系一致，更新绳子后会刷新所有绳子的信息牌。
 - **控制点小球**：控制点上的小球默认**隐藏**，仅绳子曲线可见。可通过 `App.Instance.setFlexibleRopePointsVisible(true)` 显示、`setFlexibleRopePointsVisible(false)` 隐藏；Demo 面板提供「显示控制点小球」勾选切换。
 - **纹理**：每根绳子独立材质与纹理，根据当前曲线总长与参考长度设置 vScale，避免纹理被整体拉伸（变短时保持一整张，变长时重复铺贴）。

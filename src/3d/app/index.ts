@@ -33,6 +33,7 @@ import {
   Path3D,
   Curve3,
   Quaternion,
+  Matrix,
   ShaderMaterial,
   PostProcess,
   Effect,
@@ -47,6 +48,12 @@ import {
   type InfoBoardItem,
   type InfoBoardStyleOptions,
 } from './InfoBoardHelper';
+import {
+  animationSplitDemoConfig,
+  type AnimationSplitModelConfig,
+  type AnimationSplitSourceConfig,
+  type AnimationSplitSegmentConfig,
+} from './demoConfig';
 import {
   createTimedShaderMaterial,
   startShaderTimeObserver,
@@ -120,6 +127,10 @@ export interface FlexibleRopeCreateItem {
   length: Array<{ id: string; distance: number }>;
   /** 绳子纹理 URL（可选；用于覆盖默认纹理） */
   textureUrl?: string;
+  /** 绳子纹理宽像素（可选；用于按像素密度校正纹理在 Tube 上的映射） */
+  textureWidthPx?: number;
+  /** 绳子纹理高像素（可选；用于按像素密度校正纹理在 Tube 上的映射） */
+  textureHeightPx?: number;
   /** 绳子半径（可选；用于覆盖默认半径） */
   ropeRadius?: number | string;
 }
@@ -128,8 +139,12 @@ export interface FlexibleRopeCreateItem {
 export interface FlexibleRopeUpdatePayload {
   /** 要更新的绳子 id（创建时的 id） */
   parentId: string;
-  /** 要更新的节点列表：id 为 length[].id，angle 为角度偏移（度） */
-  length: Array<{ id: string; angle: number }>;
+  /**
+   * 要更新的节点列表：id 为 length[].id
+   * - 新语义：每个点支持 yaw/pitch 控制偏移（度）
+   * - 兼容旧语义：若只提供 angle，则按 pitch=angle、yaw=0 进行映射
+   */
+  length: Array<{ id: string; yaw?: number; pitch?: number; angle?: number }>;
 }
 
 /** 海面（水面）材质参数：用于 demo 面板配置 WaterMaterial。 */
@@ -149,6 +164,16 @@ export interface SeaParams {
   /** 颜色（0~1）或 hex */
   waterColor?: { r: number; g: number; b: number } | string;
 }
+
+export type RopeBoxFaceName = 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+
+export interface RopeBoxFaceTextureConfig {
+  textureUrl: string;
+  textureWidthPx: number;
+  textureHeightPx: number;
+}
+
+type RopeDemoShapeType = 'tube' | 'box';
 
 // 螺旋桨波浪面片着色器（基于 docs/水面波浪.glsl）
 const PROPELLER_WAVE_VERTEX = `
@@ -328,15 +353,49 @@ export class App {
   private ropeStates: Map<
     string,
     {
+      shapeType: RopeDemoShapeType;
       name: string;
       meshA: TransformNode;
       meshB: TransformNode;
-      tube: Mesh;
-      material: PBRMaterial;
-      texture: Texture;
       refLength: number;
       radius: number;
-    }
+      // tube / box 的专用字段在下面通过联合结构补齐（TS 通过 shapeType 做区分）
+    } & (
+      | {
+          shapeType: 'tube';
+          tube: Mesh;
+          material: PBRMaterial;
+          texture: Texture;
+          /** 与柔性绳一致：用于管状纹理无拉伸平铺 */
+          textureWidthPx: number;
+          textureHeightPx: number;
+        }
+      | {
+          shapeType: 'box';
+          boxRoot: TransformNode;
+          boxDepthRef: number;
+          boxWidth: number;
+          boxHeight: number;
+          boxFlipAngleDeg: number;
+          boxPixelsPerWorld: number;
+          boxFaces: Record<
+            RopeBoxFaceName,
+            {
+              plane: Mesh;
+              material: PBRMaterial;
+              texture: Texture;
+              textureWidthPx: number;
+              textureHeightPx: number;
+              // 当绳子长度变化时，对应纹理的 u/v 需要跟随“重复平铺”更新
+              uDependsOnLength: boolean;
+              vDependsOnLength: boolean;
+              // 用于“不发生形变”的 clamp 下限：缩短时不减少重复次数
+              uScaleRef: number;
+              vScaleRef: number;
+            }
+          >;
+        }
+    )
   > = new Map();
   /** 兼容旧实现：若外部未传 name，则仍保存一份“默认绳子”引用 */
   private ropeBallA: Mesh | null = null;
@@ -370,7 +429,13 @@ export class App {
       pointMeshes: Mesh[];
       tube: Mesh;
       refLength: number;
-      anglesDeg: number[];
+      /** 每个控制点的水平偏移 yaw（度） */
+      pointYawDegs: number[];
+      /** 每个控制点的俯仰偏移 pitch（度） */
+      pointPitchDegs: number[];
+      /** 纹理宽/高像素：用于 uScale/vScale 归一化 */
+      textureWidthPx: number;
+      textureHeightPx: number;
       radius: number;
       material: PBRMaterial;
       texture: Texture;
@@ -550,9 +615,18 @@ export class App {
     this.ropeTexture = null;
     // 多根绳子统一清理
     for (const state of this.ropeStates.values()) {
-      state.tube.dispose();
-      state.material.dispose();
-      state.texture.dispose();
+      if (state.shapeType === 'tube') {
+        state.tube.dispose();
+        state.material.dispose();
+        state.texture.dispose();
+      } else {
+        for (const face of Object.values(state.boxFaces)) {
+          face.plane.dispose();
+          face.material.dispose();
+          face.texture.dispose();
+        }
+        state.boxRoot.dispose();
+      }
     }
     this.ropeStates.clear();
     for (const state of this.flexibleRopesMap.values()) {
@@ -579,6 +653,71 @@ export class App {
 
   setAssetsLibrary(assets: AppAssets) {
     this.assets = assets;
+  }
+
+  /**
+   * 按 demoConfig 的动画分割规则，生成“分段动画组”，并与未分割动画一并返回。
+   *
+   * - 只有当 modelName 命中 `animationSplitDemoConfig` 时才会生效
+   * - 若某个源动画组命中 sources 配置，则会用 `AnimationGroup.ClipFrames` 生成 segments
+   * - 默认不保留源动画组（keepSourceAnimation: false），以避免 UI 出现重复来源
+   */
+  private applyAnimationSplits(modelName: string, groups: AnimationGroup[]): AnimationGroup[] {
+    const modelCfg: AnimationSplitModelConfig | undefined = animationSplitDemoConfig[modelName];
+    if (!modelCfg || !groups.length) return groups;
+
+    const out: AnimationGroup[] = [];
+
+    groups.forEach((g, groupIndex) => {
+      const matchedSources = (modelCfg.sources ?? []).filter((sourceCfg) => {
+        const matchByIndex =
+          typeof sourceCfg.sourceAnimationIndex === 'number' && sourceCfg.sourceAnimationIndex === groupIndex;
+        const matchByNames =
+          Array.isArray(sourceCfg.sourceAnimationNames) && sourceCfg.sourceAnimationNames.includes(g.name);
+        return matchByIndex || matchByNames;
+      });
+
+      if (!matchedSources.length) {
+        out.push(g);
+        return;
+      }
+
+      const keepSourceAnimation = matchedSources.some((s) => !!s.keepSourceAnimation);
+      if (keepSourceAnimation) {
+        out.push(g);
+      } else {
+        // 源组不再加入 modelAnimationsMap，但仍在 scene 中；若不显式 stop，会与分段动画同时作用在骨骼上，
+        // 表现为停不下、循环播放、play/stop 与进度条异常。
+        g.stop();
+        if (typeof g.from === 'number') {
+          g.goToFrame(g.from);
+        }
+      }
+
+      matchedSources.forEach((sourceCfg: AnimationSplitSourceConfig) => {
+        (sourceCfg.segments ?? []).forEach((seg: AnimationSplitSegmentConfig) => {
+          if (!seg || typeof seg.name !== 'string') return;
+
+          const from = seg.from;
+          let to = seg.to;
+          // 支持 demoConfig：to=-1 表示裁剪到源动画组最后一帧
+          if (to === -1) {
+            if (typeof g.to !== 'number') return;
+            to = g.to;
+          }
+          if (!Number.isFinite(from) || !Number.isFinite(to)) return;
+
+          const fromFrame = Math.min(from, to);
+          const toFrame = Math.max(from, to);
+
+          // ClipFrames 会生成一个新的 AnimationGroup，只保留指定帧区间内的帧
+          const clipped = AnimationGroup.ClipFrames(g, fromFrame, toFrame, seg.name);
+          out.push(clipped);
+        });
+      });
+    });
+
+    return out;
   }
 
   /**
@@ -642,7 +781,11 @@ export class App {
     });
     progressCb?.(0.6);
 
-    const groups = result.animationGroups ?? [];
+    const finalModelName = modelName ?? this.getModelNameFromUrl(modelUrl);
+    let groups = result.animationGroups ?? [];
+    // 按配置对指定模型的动画组做“分段裁剪”，并与未分割动画一起存储
+    groups = this.applyAnimationSplits(finalModelName, groups);
+
     // 加载完成后，默认不让任何动画自动播放，统一停止在起始帧
     if (groups.length) {
       groups.forEach((g) => {
@@ -653,7 +796,6 @@ export class App {
         }
       });
     }
-    const finalModelName = modelName ?? this.getModelNameFromUrl(modelUrl);
     // 无论是否有动画组，都记录模型名称；没有动画则存空数组，方便在 UI 中按模型选择
     this.modelAnimationsMap.set(finalModelName, groups);
     console.log('modelAnimationsMap', this.modelAnimationsMap);
@@ -682,7 +824,6 @@ export class App {
       // 重要：写入“模型名 -> root”别名，兼容外部用 modelName 直接查根节点
       this.modelNodesByNameMap.set(finalModelName, root);
     }
-    console.log('modelNodesByNameMap', this.modelNodesByNameMap);
     this.currentModelName = finalModelName;
     this.modelAnimationGroups = groups;
     if (sceneJustCreated) {
@@ -890,6 +1031,15 @@ export class App {
     initialAngleDeg?: number;
     /** 绳子半径（场景单位） */
     ropeRadius?: number;
+    /** 绳子渲染形状：tube（旧版管状）/ box（长方体六面贴图） */
+    ropeShapeType?: RopeDemoShapeType;
+    /** 长方体类型：整体反转角度（度，绕绳子方向轴旋转） */
+    boxFlipAngleDeg?: number;
+    /**
+     * 长方体类型：六个面的贴图配置
+     * - 缺省将回退到本方法的 textureUrl/textureWidthPx/textureHeightPx 作为默认贴图与像素尺寸
+     */
+    boxFaces?: Partial<Record<RopeBoxFaceName, Partial<RopeBoxFaceTextureConfig>>>;
   }): void {
     if (!this.scene) return;
     const textureUrl = options?.textureUrl ?? '/1712285623239_7670.jpeg';
@@ -912,9 +1062,18 @@ export class App {
     // 若已有同名绳子，先销毁旧的 Mesh/材质/纹理
     const existing = this.ropeStates.get(ropeKey);
     if (existing) {
-      existing.tube.dispose();
-      existing.material.dispose();
-      existing.texture.dispose();
+      if (existing.shapeType === 'tube') {
+        existing.tube.dispose();
+        existing.material.dispose();
+        existing.texture.dispose();
+      } else {
+        for (const face of Object.values(existing.boxFaces)) {
+          face.plane.dispose();
+          face.material.dispose();
+          face.texture.dispose();
+        }
+        existing.boxRoot.dispose();
+      }
       this.ropeStates.delete(ropeKey);
     }
 
@@ -975,14 +1134,8 @@ export class App {
       (ballB as Mesh).material = matB;
     }
 
-    // 绳子贴图 + PBR 材质
-    const ropeTex = new Texture(textureUrl, this.scene, false, false);
-    ropeTex.wrapU = Texture.WRAP_ADDRESSMODE;
-    ropeTex.wrapV = Texture.WRAP_ADDRESSMODE;
-    const ropeMat = new PBRMaterial('ropeMat', this.scene);
-    ropeMat.albedoTexture = ropeTex;
-    ropeMat.roughness = 1;
-    ropeMat.metallic = 0;
+    const ropeShapeType: RopeDemoShapeType = options?.ropeShapeType ?? 'tube';
+    const boxFlipAngleDeg = options?.boxFlipAngleDeg ?? 0;
 
     // 参考长度：以当前 A/B 位置距离为基准
     const posA = ballA.getAbsolutePosition();
@@ -992,6 +1145,223 @@ export class App {
     this.ropeFlowOffset = 0;
     this.ropePhase = 0;
     this.ropePrevBPos.copyFrom(posB);
+
+    if (ropeShapeType === 'box') {
+      const boxDepthRef = this.ropeRefLength;
+      const boxWidth = ropeRadius * 2;
+      const boxHeight = ropeRadius * 2;
+      const boxPixelsPerWorld = this.ropeTextureHeightPx / boxDepthRef;
+
+      const forwardInit = posB.subtract(posA);
+      const computeBoxRotationQuaternion = (forward: Vector3, rollAngleDeg: number): Quaternion => {
+        const f = forward.clone();
+        const fLen = f.length();
+        if (fLen < 1e-6) {
+          f.set(0, 0, 1);
+        } else {
+          f.scaleInPlace(1 / fLen);
+        }
+
+        // worldUp 选择：避免 forward 近似平行世界上方向导致基向量退化
+        let worldUp = Vector3.Up();
+        if (Math.abs(Vector3.Dot(worldUp, f)) > 0.99) {
+          worldUp = Vector3.Right();
+        }
+
+        const right0 = Vector3.Cross(worldUp, f);
+        right0.normalize();
+        const up0 = Vector3.Cross(f, right0);
+        up0.normalize();
+
+        const rollRad = (rollAngleDeg * Math.PI) / 180;
+        const c = Math.cos(rollRad);
+        const s = Math.sin(rollRad);
+
+        const right = right0.scale(c).add(up0.scale(s));
+        const up = up0.scale(c).subtract(right0.scale(s));
+
+        const m = Matrix.FromValues(
+          right.x,
+          up.x,
+          f.x,
+          0,
+          right.y,
+          up.y,
+          f.y,
+          0,
+          right.z,
+          up.z,
+          f.z,
+          0,
+          0,
+          0,
+          0,
+          1,
+        );
+        return Quaternion.FromRotationMatrix(m);
+      };
+
+      // boxRoot：把本地 +Z 对齐到绳子方向（A -> B）
+      const boxRoot = new TransformNode(`ropeBoxRoot_${ropeKey}`, this.scene);
+      const boxCenter = posA.add(posB).scale(0.5);
+      boxRoot.position.copyFrom(boxCenter);
+      boxRoot.rotationQuaternion = computeBoxRotationQuaternion(forwardInit, boxFlipAngleDeg);
+
+      const faceNames: RopeBoxFaceName[] = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+      const defaultWidthPx = this.ropeTextureWidthPx;
+      const defaultHeightPx = this.ropeTextureHeightPx;
+
+      const boxFaces = {} as Record<
+        RopeBoxFaceName,
+        {
+          plane: Mesh;
+          material: PBRMaterial;
+          texture: Texture;
+          textureWidthPx: number;
+          textureHeightPx: number;
+          uDependsOnLength: boolean;
+          vDependsOnLength: boolean;
+          uScaleRef: number;
+          vScaleRef: number;
+        }
+      >;
+
+      const resolveFaceTextureCfg = (
+        faceName: RopeBoxFaceName,
+      ): { textureUrl: string; textureWidthPx: number; textureHeightPx: number } => {
+        const faceCfg = options?.boxFaces?.[faceName];
+        const textureUrlResolved =
+          typeof faceCfg?.textureUrl === 'string' && faceCfg.textureUrl.trim().length > 0
+            ? faceCfg.textureUrl
+            : textureUrl;
+        const textureWidthResolvedRaw = faceCfg?.textureWidthPx;
+        const textureWidthResolved =
+          typeof textureWidthResolvedRaw === 'number' && Number.isFinite(textureWidthResolvedRaw)
+            ? textureWidthResolvedRaw
+            : defaultWidthPx;
+        const textureHeightResolvedRaw = faceCfg?.textureHeightPx;
+        const textureHeightResolved =
+          typeof textureHeightResolvedRaw === 'number' && Number.isFinite(textureHeightResolvedRaw)
+            ? textureHeightResolvedRaw
+            : defaultHeightPx;
+
+        return { textureUrl: textureUrlResolved, textureWidthPx: textureWidthResolved, textureHeightPx: textureHeightResolved };
+      };
+
+      const createFacePlane = (
+        faceName: RopeBoxFaceName,
+      ): { plane: Mesh; material: PBRMaterial; texture: Texture; uDependsOnLength: boolean; vDependsOnLength: boolean; uScaleRef: number; vScaleRef: number } => {
+        const { textureUrl: faceTextureUrl, textureWidthPx, textureHeightPx } = resolveFaceTextureCfg(faceName);
+        const tex = new Texture(faceTextureUrl, this.scene, false, false);
+        tex.wrapU = Texture.WRAP_ADDRESSMODE;
+        tex.wrapV = Texture.WRAP_ADDRESSMODE;
+
+        const mat = new PBRMaterial(`ropeBox_${ropeKey}_${faceName}_mat`, this.scene);
+        mat.albedoTexture = tex;
+        mat.roughness = 1;
+        mat.metallic = 0;
+        mat.backFaceCulling = false;
+
+        // 不同面：其 UV 轴对应的世界尺寸不同
+        // - right/left：u 对应长度（depth），v 对应高度（height）
+        // - top/bottom：u 对应宽度（width），v 对应长度（depth）
+        // - front/back：u 对应宽度（width），v 对应高度（height）
+        const uDependsOnLength = faceName === 'right' || faceName === 'left';
+        const vDependsOnLength = faceName === 'top' || faceName === 'bottom';
+
+        const worldURef = uDependsOnLength ? boxDepthRef : boxWidth;
+        const worldVRef = vDependsOnLength ? boxDepthRef : boxHeight;
+        const uScaleRef = (boxPixelsPerWorld * worldURef) / Math.max(1, textureWidthPx);
+        const vScaleRef = (boxPixelsPerWorld * worldVRef) / Math.max(1, textureHeightPx);
+        tex.uScale = uScaleRef;
+        tex.vScale = vScaleRef;
+
+        let plane: Mesh;
+        if (faceName === 'front') {
+          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_front`, { width: boxWidth, height: boxHeight }, this.scene);
+          plane.position.z = boxDepthRef / 2;
+        } else if (faceName === 'back') {
+          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_back`, { width: boxWidth, height: boxHeight }, this.scene);
+          plane.position.z = -boxDepthRef / 2;
+          plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), Math.PI);
+        } else if (faceName === 'right') {
+          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_right`, { width: boxDepthRef, height: boxHeight }, this.scene);
+          plane.position.x = boxWidth / 2;
+          plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), Math.PI / 2);
+        } else if (faceName === 'left') {
+          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_left`, { width: boxDepthRef, height: boxHeight }, this.scene);
+          plane.position.x = -boxWidth / 2;
+          plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), -Math.PI / 2);
+        } else if (faceName === 'top') {
+          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_top`, { width: boxWidth, height: boxDepthRef }, this.scene);
+          plane.position.y = boxHeight / 2;
+          plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Right(), -Math.PI / 2);
+        } else {
+          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_bottom`, { width: boxWidth, height: boxDepthRef }, this.scene);
+          plane.position.y = -boxHeight / 2;
+          plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Right(), Math.PI / 2);
+        }
+
+        plane.parent = boxRoot;
+        plane.material = mat;
+        plane.isPickable = false;
+
+        return {
+          plane,
+          material: mat,
+          texture: tex,
+          uDependsOnLength,
+          vDependsOnLength,
+          uScaleRef,
+          vScaleRef,
+        };
+      };
+
+      for (const faceName of faceNames) {
+        const { plane, material, texture, uDependsOnLength, vDependsOnLength, uScaleRef, vScaleRef } = createFacePlane(faceName);
+        const { textureWidthPx, textureHeightPx } = resolveFaceTextureCfg(faceName);
+        boxFaces[faceName] = {
+          plane,
+          material,
+          texture,
+          textureWidthPx,
+          textureHeightPx,
+          uDependsOnLength,
+          vDependsOnLength,
+          uScaleRef,
+          vScaleRef,
+        };
+      }
+
+      // 保存到多绳子状态表
+      this.ropeStates.set(ropeKey, {
+        shapeType: 'box',
+        name: ropeKey,
+        meshA: ballA,
+        meshB: ballB,
+        boxRoot,
+        boxDepthRef,
+        boxWidth,
+        boxHeight,
+        boxFlipAngleDeg,
+        boxPixelsPerWorld,
+        boxFaces,
+        refLength: this.ropeRefLength,
+        radius: ropeRadius,
+      });
+
+      return;
+    }
+
+    // tube：原有管状绳子逻辑（保持旧行为）
+    // 绳子贴图 + PBR 材质
+    const ropeTex = new Texture(textureUrl, this.scene, false, false);
+    ropeTex.wrapU = Texture.WRAP_ADDRESSMODE;
+    ropeTex.wrapV = Texture.WRAP_ADDRESSMODE;
+    const ropeMat = new PBRMaterial('ropeMat', this.scene);
+    ropeMat.albedoTexture = ropeTex;
+    ropeMat.roughness = 1;
+    ropeMat.metallic = 0;
 
     const pathPoints = [posA.clone(), posB.clone()];
     const ropeTube = MeshBuilder.CreateTube(
@@ -1008,7 +1378,10 @@ export class App {
     ropeTube.isPickable = false;
 
     // 保存到多绳子状态表
+    const textureWidthPxTube = this.ropeTextureWidthPx;
+    const textureHeightPxTube = this.ropeTextureHeightPx;
     this.ropeStates.set(ropeKey, {
+      shapeType: 'tube',
       name: ropeKey,
       meshA: ballA,
       meshB: ballB,
@@ -1017,6 +1390,8 @@ export class App {
       texture: ropeTex,
       refLength: this.ropeRefLength,
       radius: ropeRadius,
+      textureWidthPx: textureWidthPxTube,
+      textureHeightPx: textureHeightPxTube,
     });
 
     // 兼容旧字段（默认绳子），便于老代码仍可工作
@@ -1029,10 +1404,14 @@ export class App {
       this.ropeTexture = ropeTex;
     }
 
-    // 根据当前长度更新纹理缩放（不做时间流动）
-    const vScale = Math.max(0.01, initialLength / this.ropeRefLength);
-    ropeTex.vScale = vScale;
-    ropeTex.vOffset = 0;
+    // 管状：按 textureWidthPx / textureHeightPx / ropeRadius / 绳长 保持截面与轴向 texel 比例（与柔性绳一致）
+    this.applyFlexibleRopeTubeTextureScale(
+      ropeTex,
+      initialLength,
+      textureWidthPxTube,
+      textureHeightPxTube,
+      ropeRadius,
+    );
   }
 
   /**
@@ -1085,10 +1464,13 @@ export class App {
       this.ropePrevBPos.copyFrom(posBFallback);
 
       const lengthFallback = Vector3.Distance(posAFallback, posBFallback);
-      const repeatsFallback = lengthFallback / this.ropeRefLength;
-      const vScaleFallback = Math.max(1, repeatsFallback);
-      this.ropeTexture.vScale = vScaleFallback;
-      this.ropeTexture.vOffset = 0;
+      this.applyFlexibleRopeTubeTextureScale(
+        this.ropeTexture,
+        lengthFallback,
+        this.ropeTextureWidthPx,
+        this.ropeTextureHeightPx,
+        this.ropeRadiusCurrent,
+      );
 
       if (this.ropeTube) {
         this.ropeTube.dispose();
@@ -1132,13 +1514,98 @@ export class App {
     this.ropePrevBPos.copyFrom(posB);
 
     const length = Vector3.Distance(posA, posB);
-    // 让绳子变长时通过重复纹理来表现（vScale > 1），
-    // 绳子变短时保持至少 1 次完整纹理（vScale >= 1），避免被整体拉伸形变。
-    const repeats = length / (state.refLength || this.ropeRefLength);
-    const vScale = Math.max(1, repeats);
-    state.texture.vScale = vScale;
-    state.texture.vOffset = 0;
+    if (state.shapeType === 'box') {
+      const boxRoot = state.boxRoot;
+      const depthRef = Math.max(1e-6, state.boxDepthRef);
+      const depthRatio = length / depthRef;
 
+      // 更新 boxRoot：本地 +Z 对齐 A->B
+      const forward = posB.subtract(posA);
+      const computeBoxRotationQuaternion = (fwd: Vector3, rollAngleDeg: number): Quaternion => {
+        const f = fwd.clone();
+        const fLen = f.length();
+        if (fLen < 1e-6) {
+          f.set(0, 0, 1);
+        } else {
+          f.scaleInPlace(1 / fLen);
+        }
+
+        let worldUp = Vector3.Up();
+        if (Math.abs(Vector3.Dot(worldUp, f)) > 0.99) worldUp = Vector3.Right();
+
+        const right0 = Vector3.Cross(worldUp, f);
+        right0.normalize();
+        const up0 = Vector3.Cross(f, right0);
+        up0.normalize();
+
+        const rollRad = (rollAngleDeg * Math.PI) / 180;
+        const c = Math.cos(rollRad);
+        const s = Math.sin(rollRad);
+        const right = right0.scale(c).add(up0.scale(s));
+        const up = up0.scale(c).subtract(right0.scale(s));
+
+        const m = Matrix.FromValues(
+          right.x,
+          up.x,
+          f.x,
+          0,
+          right.y,
+          up.y,
+          f.y,
+          0,
+          right.z,
+          up.z,
+          f.z,
+          0,
+          0,
+          0,
+          0,
+          1,
+        );
+        return Quaternion.FromRotationMatrix(m);
+      };
+
+      const boxCenter = posA.add(posB).scale(0.5);
+      boxRoot.position.copyFrom(boxCenter);
+      boxRoot.rotationQuaternion = computeBoxRotationQuaternion(forward, state.boxFlipAngleDeg);
+
+      // 更新前后端面中心（沿本地 +Z/-Z）
+      state.boxFaces.front.plane.position.z = length / 2;
+      state.boxFaces.back.plane.position.z = -length / 2;
+
+      // 更新侧面：通过缩放长度方向实现“伸缩不形变”
+      state.boxFaces.right.plane.scaling.x = depthRatio;
+      state.boxFaces.right.plane.scaling.y = 1;
+      state.boxFaces.right.plane.scaling.z = 1;
+      state.boxFaces.left.plane.scaling.x = depthRatio;
+      state.boxFaces.left.plane.scaling.y = 1;
+      state.boxFaces.left.plane.scaling.z = 1;
+
+      state.boxFaces.top.plane.scaling.y = depthRatio;
+      state.boxFaces.top.plane.scaling.x = 1;
+      state.boxFaces.top.plane.scaling.z = 1;
+      state.boxFaces.bottom.plane.scaling.y = depthRatio;
+      state.boxFaces.bottom.plane.scaling.x = 1;
+      state.boxFaces.bottom.plane.scaling.z = 1;
+
+      // 更新每个面的纹理 u/v：长度方向使用 clamp，确保不缩小导致纹理被“拉伸”
+      for (const faceName of Object.keys(state.boxFaces) as RopeBoxFaceName[]) {
+        const face = state.boxFaces[faceName];
+        const worldU = face.uDependsOnLength ? length : state.boxWidth;
+        const worldV = face.vDependsOnLength ? length : state.boxHeight;
+
+        const uScaleRaw = (state.boxPixelsPerWorld * worldU) / Math.max(1, face.textureWidthPx);
+        const vScaleRaw = (state.boxPixelsPerWorld * worldV) / Math.max(1, face.textureHeightPx);
+
+        face.texture.uScale = face.uDependsOnLength ? Math.max(face.uScaleRef, uScaleRaw) : face.uScaleRef;
+        face.texture.vScale = face.vDependsOnLength ? Math.max(face.vScaleRef, vScaleRaw) : face.vScaleRef;
+        face.texture.vOffset = 0;
+      }
+
+      return;
+    }
+
+    // tube：与柔性绳相同的管状纹理缩放（textureWidthPx / textureHeightPx / radius / 绳长）
     // 重建 Tube
     state.tube.dispose();
     const path = [posA.clone(), posB.clone()];
@@ -1155,6 +1622,14 @@ export class App {
     ropeTube.material = state.material;
     ropeTube.isPickable = false;
     (state as { tube: Mesh }).tube = ropeTube;
+
+    this.applyFlexibleRopeTubeTextureScale(
+      state.texture,
+      length,
+      state.textureWidthPx,
+      state.textureHeightPx,
+      state.radius ?? this.ropeRadiusCurrent,
+    );
   }
 
   /**
@@ -1163,6 +1638,8 @@ export class App {
   createFlexibleRopes(items: FlexibleRopeCreateItem[]): void {
     if (!this.scene || !Array.isArray(items)) return;
     const textureUrlDefault = '/1712285623239_7670.jpeg';
+    const textureWidthDefault = 1600;
+    const textureHeightDefault = 1200;
 
     for (const item of items) {
       const id = item?.id;
@@ -1182,6 +1659,18 @@ export class App {
         typeof item?.textureUrl === 'string' && item.textureUrl.trim().length > 0
           ? item.textureUrl
           : textureUrlDefault;
+
+      const textureWidthRaw = item?.textureWidthPx;
+      const textureWidthPx =
+        (typeof textureWidthRaw === 'number' && Number.isFinite(textureWidthRaw)
+          ? textureWidthRaw
+          : undefined) ?? textureWidthDefault;
+
+      const textureHeightRaw = item?.textureHeightPx;
+      const textureHeightPx =
+        (typeof textureHeightRaw === 'number' && Number.isFinite(textureHeightRaw)
+          ? textureHeightRaw
+          : undefined) ?? textureHeightDefault;
 
       const startRaw = item.start;
       const endRaw = item.end;
@@ -1341,10 +1830,14 @@ export class App {
       tube.material = ropeMat;
       tube.isPickable = false;
 
-      const repeats = totalLen / refLength;
-      ropeTex.vScale = Math.max(1, repeats);
-      ropeTex.vOffset = 0;
-      ropeTex.wrapV = Texture.WRAP_ADDRESSMODE;
+      // 与 updateSingleFlexibleRope 中一致：按 textureWidthPx / textureHeightPx / ropeRadius / 绳长 保持表面 texel 不拉伸
+      this.applyFlexibleRopeTubeTextureScale(
+        ropeTex,
+        totalLen,
+        textureWidthPx,
+        textureHeightPx,
+        ropeRadius,
+      );
 
       this.flexibleRopesMap.set(id, {
         id,
@@ -1355,7 +1848,10 @@ export class App {
         pointMeshes,
         tube,
         refLength,
-        anglesDeg: new Array(pointCount).fill(0),
+        pointYawDegs: new Array(pointCount).fill(0),
+        pointPitchDegs: new Array(pointCount).fill(0),
+        textureWidthPx,
+        textureHeightPx,
         radius: ropeRadius,
         material: ropeMat,
         texture: ropeTex,
@@ -1422,9 +1918,23 @@ export class App {
     const idToIndex = new Map(state.pointIds.map((pid, i) => [pid, i]));
     for (const item of lengthArr) {
       const idx = item?.id != null ? idToIndex.get(String(item.id)) : undefined;
-      if (idx !== undefined && typeof item?.angle === 'number') {
-        state.anglesDeg[idx] = item.angle;
+      if (idx === undefined) continue;
+
+      const yaw = typeof item?.yaw === 'number' && Number.isFinite(item.yaw) ? item.yaw : undefined;
+      const pitch =
+        typeof item?.pitch === 'number' && Number.isFinite(item.pitch) ? item.pitch : undefined;
+      const legacyAngle =
+        typeof item?.angle === 'number' && Number.isFinite(item.angle) ? item.angle : undefined;
+
+      // 兼容：仅传 angle 时映射成 pitch=angle、yaw=0
+      if (yaw === undefined && pitch === undefined && legacyAngle !== undefined) {
+        state.pointYawDegs[idx] = 0;
+        state.pointPitchDegs[idx] = legacyAngle;
+        continue;
       }
+
+      if (yaw !== undefined) state.pointYawDegs[idx] = yaw;
+      if (pitch !== undefined) state.pointPitchDegs[idx] = pitch;
     }
     this.updateSingleFlexibleRope(state);
     this.refreshAllFlexibleRopeInfoBoards();
@@ -1464,10 +1974,47 @@ export class App {
     };
   }
 
-  /** 获取指定绳子的 17 个控制点当前角度偏移（度），顺序与创建时 length[].id 一致 */
+  /**
+   * 获取指定绳子的每个控制点偏移（度），顺序与创建时 length[].id 一致。
+   * - yaw：水平偏移（绕绳子基线的“横向旋转”）
+   * - pitch：俯仰偏移（控制偏移幅度与正负）
+   */
+  getFlexibleRopePointYawPitch(ropeId: string): { yawsDeg: number[]; pitchesDeg: number[] } {
+    const state = this.flexibleRopesMap.get(ropeId);
+    return state
+      ? { yawsDeg: state.pointYawDegs.slice(), pitchesDeg: state.pointPitchDegs.slice() }
+      : { yawsDeg: [], pitchesDeg: [] };
+  }
+
+  /**
+   * 兼容旧接口：返回 pitch 偏移（把旧 angle 语义映射成 pitch）。
+   * 若需要 yaw/pitch，请使用 getFlexibleRopePointYawPitch。
+   */
   getFlexibleRopePointAngles(ropeId: string): number[] {
     const state = this.flexibleRopesMap.get(ropeId);
-    return state ? state.anglesDeg.slice() : [];
+    return state ? state.pointPitchDegs.slice() : [];
+  }
+
+  /**
+   * Tube 上 u 绕截面一周、v 沿绳长（0–1）。设 uScale=1 时截面周长映射一整张纹理宽度，
+   * 则方格 texel 要求：2πr/textureWidthPx = (totalLen/vScale)/textureHeightPx
+   * ⇒ vScale = totalLen * textureWidthPx / (textureHeightPx * 2πr)
+   */
+  private applyFlexibleRopeTubeTextureScale(
+    tex: Texture,
+    totalLenWorld: number,
+    textureWidthPx: number,
+    textureHeightPx: number,
+    ropeRadius: number,
+  ): void {
+    const tw = Math.max(1, textureWidthPx);
+    const th = Math.max(1, textureHeightPx);
+    const circumference = 2 * Math.PI * Math.max(1e-6, ropeRadius);
+    tex.uScale = 1;
+    tex.vScale = Math.max(0.01, (totalLenWorld * tw) / (th * circumference));
+    tex.vOffset = 0;
+    tex.wrapU = Texture.WRAP_ADDRESSMODE;
+    tex.wrapV = Texture.WRAP_ADDRESSMODE;
   }
 
   /** 根据当前角度与距离重建单根绳子的曲线与 Tube，并更新控制点位置 */
@@ -1479,19 +2026,24 @@ export class App {
     pointMeshes: Mesh[];
     tube: Mesh;
     refLength: number;
-    anglesDeg: number[];
+    pointYawDegs: number[];
+    pointPitchDegs: number[];
+    textureWidthPx: number;
+    textureHeightPx: number;
     radius: number;
     material: PBRMaterial;
     texture: Texture;
   }): void {
-    const { start, end, pointMeshes, refLength } = state;
+    const { start, end, pointMeshes } = state;
     const dirBase = end.subtract(start);
     const length = dirBase.length();
     const tangent = length > 1e-4 ? dirBase.normalize() : new Vector3(1, 0, 0);
     const up = Vector3.Up();
-    let normal = Vector3.Cross(up, tangent);
-    if (normal.lengthSquared() < 1e-4) normal = new Vector3(0, 0, 1);
-    normal.normalize();
+    // 用与 tangent 垂直的一对基向量表示“偏移平面”
+    let right = Vector3.Cross(up, tangent);
+    if (right.lengthSquared() < 1e-4) right = new Vector3(0, 0, 1);
+    right.normalize();
+    const upLocal = Vector3.Cross(tangent, right).normalize();
     const amplitude = Math.max(0.1, length * 0.08);
     const midPositions: Vector3[] = [];
     const pointCount = pointMeshes.length;
@@ -1500,10 +2052,16 @@ export class App {
       const d = state.distances[i] ?? (length * (i + 1)) / (pointCount + 1);
       const clampedD = Math.max(0, Math.min(length, d));
       const basePos = start.add(tangent.scale(clampedD));
-      const angleDeg = state.anglesDeg[i] ?? 0;
-      const rad = (angleDeg * Math.PI) / 180;
-      const offset = normal.scale(Math.sin(rad) * amplitude);
-      const pos = basePos.add(offset);
+      const yawDeg = state.pointYawDegs[i] ?? 0;
+      const pitchDeg = state.pointPitchDegs[i] ?? 0;
+      const yawRad = (yawDeg * Math.PI) / 180;
+      const pitchRad = (pitchDeg * Math.PI) / 180;
+
+      const offsetMagnitude = amplitude * Math.sin(pitchRad);
+      const offsetDir = right
+        .scale(Math.cos(yawRad))
+        .add(upLocal.scale(Math.sin(yawRad)));
+      const pos = basePos.add(offsetDir.scale(offsetMagnitude));
       midPositions.push(pos);
       pointMeshes[i].position.copyFrom(pos);
     }
@@ -1532,9 +2090,13 @@ export class App {
     tube.isPickable = false;
     (state as { tube: Mesh }).tube = tube;
 
-    const repeats = totalLen / refLength;
-    state.texture.vScale = Math.max(1, repeats);
-    state.texture.vOffset = 0;
+    this.applyFlexibleRopeTubeTextureScale(
+      state.texture,
+      totalLen,
+      state.textureWidthPx,
+      state.textureHeightPx,
+      state.radius,
+    );
   }
 
   /** 汇总所有柔性绳子的控制点信息牌并调用 setInfoBoards */
@@ -1543,11 +2105,15 @@ export class App {
     for (const state of this.flexibleRopesMap.values()) {
       for (let i = 0; i < state.pointMeshes.length; i++) {
         const mesh = state.pointMeshes[i];
-        const angle = state.anglesDeg[i] ?? 0;
+        const yaw = state.pointYawDegs[i] ?? 0;
+        const pitch = state.pointPitchDegs[i] ?? 0;
         items.push({
           id: mesh.id,
           title: `洋流点 ${state.pointIds[i] ?? i + 1}`,
-          attribute: [{ 角度偏移: `${angle.toFixed(1)}°` }],
+          attribute: [
+            { '水平偏移 yaw': `${yaw.toFixed(1)}°` },
+            { '俯仰偏移 pitch': `${pitch.toFixed(1)}°` },
+          ],
         });
       }
     }
