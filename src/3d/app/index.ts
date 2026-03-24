@@ -739,7 +739,7 @@ export class App {
     } else if (typeof modelNameOrOnProgress === 'string') {
       modelName = modelNameOrOnProgress;
     }
-
+    console.log('test')
     const sceneJustCreated = !this.scene;
     const scene = this.scene ?? new Scene(this.engine);
     if (!this.scene) {
