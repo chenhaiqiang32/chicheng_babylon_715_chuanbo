@@ -359,6 +359,8 @@ export class App {
       meshB: TransformNode;
       refLength: number;
       radius: number;
+      /** 最近一次 UI/外部控制参数；存在时每帧重算，确保 B 始终贴合绳子末端 */
+      liveControl?: { distance: number; yawDeg: number; pitchDeg: number };
       // tube / box 的专用字段在下面通过联合结构补齐（TS 通过 shapeType 做区分）
     } & (
       | {
@@ -1153,58 +1155,11 @@ export class App {
       const boxPixelsPerWorld = this.ropeTextureHeightPx / boxDepthRef;
 
       const forwardInit = posB.subtract(posA);
-      const computeBoxRotationQuaternion = (forward: Vector3, rollAngleDeg: number): Quaternion => {
-        const f = forward.clone();
-        const fLen = f.length();
-        if (fLen < 1e-6) {
-          f.set(0, 0, 1);
-        } else {
-          f.scaleInPlace(1 / fLen);
-        }
-
-        // worldUp 选择：避免 forward 近似平行世界上方向导致基向量退化
-        let worldUp = Vector3.Up();
-        if (Math.abs(Vector3.Dot(worldUp, f)) > 0.99) {
-          worldUp = Vector3.Right();
-        }
-
-        const right0 = Vector3.Cross(worldUp, f);
-        right0.normalize();
-        const up0 = Vector3.Cross(f, right0);
-        up0.normalize();
-
-        const rollRad = (rollAngleDeg * Math.PI) / 180;
-        const c = Math.cos(rollRad);
-        const s = Math.sin(rollRad);
-
-        const right = right0.scale(c).add(up0.scale(s));
-        const up = up0.scale(c).subtract(right0.scale(s));
-
-        const m = Matrix.FromValues(
-          right.x,
-          up.x,
-          f.x,
-          0,
-          right.y,
-          up.y,
-          f.y,
-          0,
-          right.z,
-          up.z,
-          f.z,
-          0,
-          0,
-          0,
-          0,
-          1,
-        );
-        return Quaternion.FromRotationMatrix(m);
-      };
 
       // boxRoot：锚定在 A 端世界坐标，本地 +Z 指向 B（与 tube 仅拉伸两端之间的几何一致，避免以中点为 pivot 时拉远整段沿绳平移、带俯仰时像“整体下沉”）
       const boxRoot = new TransformNode(`ropeBoxRoot_${ropeKey}`, this.scene);
       boxRoot.position.copyFrom(posA);
-      boxRoot.rotationQuaternion = computeBoxRotationQuaternion(forwardInit, boxFlipAngleDeg);
+      boxRoot.rotationQuaternion = this.computeRopeBoxRotationQuaternion(forwardInit, boxFlipAngleDeg);
 
       const faceNames: RopeBoxFaceName[] = ['front', 'back', 'left', 'right', 'top', 'bottom'];
       const defaultWidthPx = this.ropeTextureWidthPx;
@@ -1439,6 +1394,64 @@ export class App {
   }
 
   /**
+   * 计算 box 绳子的朝向：本地 +Z 对齐 A->B，并可绕前向滚转。
+   */
+  private computeRopeBoxRotationQuaternion(forward: Vector3, rollAngleDeg: number): Quaternion {
+    const f = forward.clone();
+    const fLen = f.length();
+    if (fLen < 1e-6) {
+      f.set(0, 0, 1);
+    } else {
+      f.scaleInPlace(1 / fLen);
+    }
+
+    let worldUp = Vector3.Up();
+    if (Math.abs(Vector3.Dot(worldUp, f)) > 0.99) worldUp = Vector3.Right();
+    const right0 = Vector3.Cross(worldUp, f);
+    right0.normalize();
+    const up0 = Vector3.Cross(f, right0);
+    up0.normalize();
+
+    const rollRad = (rollAngleDeg * Math.PI) / 180;
+    const c = Math.cos(rollRad);
+    const s = Math.sin(rollRad);
+    const right = right0.scale(c).add(up0.scale(s));
+    const up = up0.scale(c).subtract(right0.scale(s));
+
+    const m = Matrix.FromValues(
+      right.x,
+      up.x,
+      f.x,
+      0,
+      right.y,
+      up.y,
+      f.y,
+      0,
+      right.z,
+      up.z,
+      f.z,
+      0,
+      0,
+      0,
+      0,
+      1,
+    );
+    return Quaternion.FromRotationMatrix(m);
+  }
+
+  /** 确保 rope demo 的控制目标在每帧都能保持“B 在绳子末端”。 */
+  private ensureRopeDemoLiveSyncObserver(): void {
+    if (!this.scene || this.ropeObserver) return;
+    this.ropeObserver = this.scene.onBeforeRenderObservable.add(() => {
+      for (const s of this.ropeStates.values()) {
+        const c = s.liveControl;
+        if (!c) continue;
+        this.updateRopeDemoByAngleDistance(s.name, c.distance, c.yawDeg, c.pitchDeg);
+      }
+    });
+  }
+
+  /**
    * 手动更新绳子 Demo：根据距离和三维角度更新 B 的位置与绳子形状/纹理。
    * - distance：水平面 XZ 上的长度（非三维直线长度）。
    * - yawDeg：绕 Y 轴的水平角度（度），0 表示从 A 指向 +X，正角度沿 +Z 旋转，可 0~360。
@@ -1518,32 +1531,58 @@ export class App {
       return;
     }
 
+    // 记录控制参数，并启用每帧同步，避免 B 被动画/父节点联动拉离绳子末端。
+    state.liveControl = { distance, yawDeg, pitchDeg };
+    this.ensureRopeDemoLiveSyncObserver();
+
     const dist = Math.max(0.01, distance);
 
-    // tube：pitch 的竖直偏移随当前水平距离放大；box：保持原有 refLength 行为
-    const pitchRefLength = state.shapeType === 'tube' ? dist : state.refLength;
+    // 统一语义：pitch 的竖直偏移按“当前 distance”计算。
+    // 这样 box 在调 distance / yaw / pitch 时不会因为固定 refLength 产生目标点偏差。
+    const pitchRefLength = dist;
 
-    // 先取 A 的意图位置（clone，避免与节点内部 _absolutePosition 缓冲区别名）
-    const posAForTarget = state.meshA.getAbsolutePosition().clone();
-    let targetPosB = this.computeRopeDemoTargetWorldPosB(
-      posAForTarget,
-      dist,
-      yawDeg,
-      pitchDeg,
-      pitchRefLength,
-    );
-
-    // 注意：targetPosB 是世界坐标；若 meshB 有 parent（group），直接写 position 会当成局部坐标导致偏移。
-    state.meshB.setAbsolutePosition(targetPosB);
-    // B 移动后若 A 在 B 子树内，A 的世界坐标会变，再对齐一次目标点
-    const posAAfterB = state.meshA.getAbsolutePosition().clone();
-    if (Vector3.Distance(posAForTarget, posAAfterB) > 1e-4) {
-      targetPosB = this.computeRopeDemoTargetWorldPosB(posAAfterB, dist, yawDeg, pitchDeg, pitchRefLength);
+    // 若 A/B 存在父子链联动，单次修正会在 distance 变大时累积误差。
+    // 这里做少量迭代收敛，确保 B 的最终世界坐标与由“当前 A + 参数”计算的目标一致。
+    let targetPosB = Vector3.Zero();
+    const maxIter = 4;
+    for (let i = 0; i < maxIter; i++) {
+      const posACurrent = state.meshA.getAbsolutePosition().clone();
+      targetPosB = this.computeRopeDemoTargetWorldPosB(
+        posACurrent,
+        dist,
+        yawDeg,
+        pitchDeg,
+        pitchRefLength,
+      );
+      // 注意：targetPosB 是世界坐标；若 meshB 有 parent（group），直接写 position 会当成局部坐标导致偏移。
       state.meshB.setAbsolutePosition(targetPosB);
+      // 强制刷新父链世界矩阵，避免下一轮读取到脏的 absolutePosition。
+      state.meshB.computeWorldMatrix(true);
+      state.meshA.computeWorldMatrix(true);
+
+      const posANext = state.meshA.getAbsolutePosition().clone();
+      const targetNext = this.computeRopeDemoTargetWorldPosB(
+        posANext,
+        dist,
+        yawDeg,
+        pitchDeg,
+        pitchRefLength,
+      );
+      if (Vector3.Distance(targetNext, targetPosB) <= 1e-4) {
+        targetPosB = targetNext;
+        state.meshB.setAbsolutePosition(targetPosB);
+        state.meshB.computeWorldMatrix(true);
+        break;
+      }
     }
+
+    // 兜底：确保 B 在本次更新结束时精确落到最终目标点。
+    state.meshB.setAbsolutePosition(targetPosB);
+    state.meshB.computeWorldMatrix(true);
     // B 移动后父链/子节点世界矩阵会失效；必须重新 compute 后再读 A/B，否则 A 端可能仍为脏数据，
     // box 会用错误的 posA 算中点/朝向，伸缩时出现整根绳子上下漂移。
     const posA = state.meshA.getAbsolutePosition().clone();
+    // 使用 meshB 的实时世界坐标作为绳子末端，确保模型与末端绝对一致。
     const posB = state.meshB.getAbsolutePosition().clone();
     this.ropePrevBPos.copyFrom(posB);
 
@@ -1555,53 +1594,10 @@ export class App {
 
       // 更新 boxRoot：本地 +Z 对齐 A->B
       const forward = posB.subtract(posA);
-      const computeBoxRotationQuaternion = (fwd: Vector3, rollAngleDeg: number): Quaternion => {
-        const f = fwd.clone();
-        const fLen = f.length();
-        if (fLen < 1e-6) {
-          f.set(0, 0, 1);
-        } else {
-          f.scaleInPlace(1 / fLen);
-        }
-
-        let worldUp = Vector3.Up();
-        if (Math.abs(Vector3.Dot(worldUp, f)) > 0.99) worldUp = Vector3.Right();
-
-        const right0 = Vector3.Cross(worldUp, f);
-        right0.normalize();
-        const up0 = Vector3.Cross(f, right0);
-        up0.normalize();
-
-        const rollRad = (rollAngleDeg * Math.PI) / 180;
-        const c = Math.cos(rollRad);
-        const s = Math.sin(rollRad);
-        const right = right0.scale(c).add(up0.scale(s));
-        const up = up0.scale(c).subtract(right0.scale(s));
-
-        const m = Matrix.FromValues(
-          right.x,
-          up.x,
-          f.x,
-          0,
-          right.y,
-          up.y,
-          f.y,
-          0,
-          right.z,
-          up.z,
-          f.z,
-          0,
-          0,
-          0,
-          0,
-          1,
-        );
-        return Quaternion.FromRotationMatrix(m);
-      };
 
       // 与 create 一致：根节点在 A，仅向 +Z（B）方向延伸，拉远时不再随中点漂移
       boxRoot.position.copyFrom(posA);
-      boxRoot.rotationQuaternion = computeBoxRotationQuaternion(forward, state.boxFlipAngleDeg);
+      boxRoot.rotationQuaternion = this.computeRopeBoxRotationQuaternion(forward, state.boxFlipAngleDeg);
 
       // 前后端面 + 侧面/顶底 的 z（原点= A）
       state.boxFaces.front.plane.position.z = length;
@@ -1640,6 +1636,14 @@ export class App {
         face.texture.vScale = face.vDependsOnLength ? Math.max(face.vScaleRef, vScaleRaw) : face.vScaleRef;
         face.texture.vOffset = 0;
       }
+
+      // 以 box 几何自身的末端点为准，反向吸附 B，确保 modelBName 始终锁在绳子末端。
+      // 这一步可消除“box 伸缩时 B 端模型逐渐漂离末端”的误差累积。
+      boxRoot.computeWorldMatrix(true);
+      const boxEndWorld = new Vector3(0, 0, length);
+      Vector3.TransformCoordinatesToRef(boxEndWorld, boxRoot.getWorldMatrix(), boxEndWorld);
+      state.meshB.setAbsolutePosition(boxEndWorld);
+      state.meshB.computeWorldMatrix(true);
 
       return;
     }
