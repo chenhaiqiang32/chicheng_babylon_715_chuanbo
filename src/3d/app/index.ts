@@ -1025,7 +1025,7 @@ export class App {
     meshBName?: string;
     /** 初始 A 位置（仅在未传 meshA 时生效） */
     positionA?: Vector3;
-    /** 初始 B 距离 A 的距离（仅在未传 meshB 时生效） */
+    /** 初始 B 与 A 在水平面 XZ 上的距离（未传 meshB 时用于默认小球；与 updateRopeDemoByAngleDistance 的 distance 语义一致） */
     initialDistance?: number;
     /** 初始角度（度，绕 Y 轴，0 为 +X 方向，仅在未传 meshB 时生效） */
     initialAngleDeg?: number;
@@ -1201,10 +1201,9 @@ export class App {
         return Quaternion.FromRotationMatrix(m);
       };
 
-      // boxRoot：把本地 +Z 对齐到绳子方向（A -> B）
+      // boxRoot：锚定在 A 端世界坐标，本地 +Z 指向 B（与 tube 仅拉伸两端之间的几何一致，避免以中点为 pivot 时拉远整段沿绳平移、带俯仰时像“整体下沉”）
       const boxRoot = new TransformNode(`ropeBoxRoot_${ropeKey}`, this.scene);
-      const boxCenter = posA.add(posB).scale(0.5);
-      boxRoot.position.copyFrom(boxCenter);
+      boxRoot.position.copyFrom(posA);
       boxRoot.rotationQuaternion = computeBoxRotationQuaternion(forwardInit, boxFlipAngleDeg);
 
       const faceNames: RopeBoxFaceName[] = ['front', 'back', 'left', 'right', 'top', 'bottom'];
@@ -1277,28 +1276,33 @@ export class App {
         tex.vScale = vScaleRef;
 
         let plane: Mesh;
+        // 原点锚在 A：back 在 z=0，front 在 z=depth，侧面/顶底在 z=depth/2（与 update 中伸缩逻辑一致）
         if (faceName === 'front') {
           plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_front`, { width: boxWidth, height: boxHeight }, this.scene);
-          plane.position.z = boxDepthRef / 2;
+          plane.position.z = boxDepthRef;
         } else if (faceName === 'back') {
           plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_back`, { width: boxWidth, height: boxHeight }, this.scene);
-          plane.position.z = -boxDepthRef / 2;
+          plane.position.z = 0;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), Math.PI);
         } else if (faceName === 'right') {
           plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_right`, { width: boxDepthRef, height: boxHeight }, this.scene);
           plane.position.x = boxWidth / 2;
+          plane.position.z = boxDepthRef / 2;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), Math.PI / 2);
         } else if (faceName === 'left') {
           plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_left`, { width: boxDepthRef, height: boxHeight }, this.scene);
           plane.position.x = -boxWidth / 2;
+          plane.position.z = boxDepthRef / 2;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), -Math.PI / 2);
         } else if (faceName === 'top') {
           plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_top`, { width: boxWidth, height: boxDepthRef }, this.scene);
           plane.position.y = boxHeight / 2;
+          plane.position.z = boxDepthRef / 2;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Right(), -Math.PI / 2);
         } else {
           plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_bottom`, { width: boxWidth, height: boxDepthRef }, this.scene);
           plane.position.y = -boxHeight / 2;
+          plane.position.z = boxDepthRef / 2;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Right(), Math.PI / 2);
         }
 
@@ -1415,9 +1419,31 @@ export class App {
   }
 
   /**
+   * 计算绳子 Demo B 端目标世界坐标。
+   * - distance：水平面 XZ 上的长度；水平分量按 distance 计算。
+   * - pitchDeg：仅影响相对 A 的竖直偏移，竖直偏移按传入的 refLength 作参考尺度（refLength 由外部决定：可用 state.refLength 或当前 distance）。
+   */
+  private computeRopeDemoTargetWorldPosB(
+    posA: Vector3,
+    distance: number,
+    yawDeg: number,
+    pitchDeg: number,
+    refLength: number,
+  ): Vector3 {
+    const yawRad = (yawDeg * Math.PI) / 180;
+    const pitchRad = (pitchDeg * Math.PI) / 180;
+    const ref = Math.max(1e-6, refLength);
+    const horizontal = new Vector3(Math.cos(yawRad), 0, Math.sin(yawRad));
+    const dy = Math.sin(pitchRad) * ref;
+    return posA.add(horizontal.scale(distance)).add(new Vector3(0, dy, 0));
+  }
+
+  /**
    * 手动更新绳子 Demo：根据距离和三维角度更新 B 的位置与绳子形状/纹理。
+   * - distance：水平面 XZ 上的长度（非三维直线长度）。
    * - yawDeg：绕 Y 轴的水平角度（度），0 表示从 A 指向 +X，正角度沿 +Z 旋转，可 0~360。
-   * - pitchDeg：绕 X 轴的俯仰角（度），0 在水平面上，正值向上，负值向下。
+   * - pitchDeg：绕 X 轴的俯仰角（度），0 在水平面上，正值向上，负值向下；
+   *   tube 模式下竖直偏移会随 distance 缩放，box 模式下按 state.refLength 缩放。
    */
   updateRopeDemoByAngleDistance(
     name: string,
@@ -1448,19 +1474,17 @@ export class App {
       if (!this.ropeBallA || !this.ropeBallB || !this.ropeTexture) return;
 
       const distFallback = Math.max(0.01, distance);
-      const yawRadFallback = (yawDeg * Math.PI) / 180;
-      const pitchRadFallback = (pitchDeg * Math.PI) / 180;
-      const cosPitchFallback = Math.cos(pitchRadFallback);
-      const dirFallback = new Vector3(
-        cosPitchFallback * Math.cos(yawRadFallback),
-        Math.sin(pitchRadFallback),
-        cosPitchFallback * Math.sin(yawRadFallback),
+      const posAFallback = this.ropeBallA.getAbsolutePosition().clone();
+      const posBFallback = this.computeRopeDemoTargetWorldPosB(
+        posAFallback,
+        distFallback,
+        yawDeg,
+        pitchDeg,
+        // tube 模式：让 pitch 幅度随当前水平距离变化
+        distFallback,
       );
 
-      const posAFallback = this.ropeBallA.getAbsolutePosition();
-      const posBFallback = posAFallback.add(dirFallback.scale(distFallback));
-
-      this.ropeBallB.position.copyFrom(posBFallback);
+      this.ropeBallB.setAbsolutePosition(posBFallback);
       this.ropePrevBPos.copyFrom(posBFallback);
 
       const lengthFallback = Vector3.Distance(posAFallback, posBFallback);
@@ -1496,21 +1520,31 @@ export class App {
 
     const dist = Math.max(0.01, distance);
 
-    const yawRad = (yawDeg * Math.PI) / 180;
-    const pitchRad = (pitchDeg * Math.PI) / 180;
-    const cosPitch = Math.cos(pitchRad);
-    const dir = new Vector3(
-      cosPitch * Math.cos(yawRad),
-      Math.sin(pitchRad),
-      cosPitch * Math.sin(yawRad),
-    );
+    // tube：pitch 的竖直偏移随当前水平距离放大；box：保持原有 refLength 行为
+    const pitchRefLength = state.shapeType === 'tube' ? dist : state.refLength;
 
-    const posA = state.meshA.getAbsolutePosition();
-    const targetPosB = posA.add(dir.scale(dist));
+    // 先取 A 的意图位置（clone，避免与节点内部 _absolutePosition 缓冲区别名）
+    const posAForTarget = state.meshA.getAbsolutePosition().clone();
+    let targetPosB = this.computeRopeDemoTargetWorldPosB(
+      posAForTarget,
+      dist,
+      yawDeg,
+      pitchDeg,
+      pitchRefLength,
+    );
 
     // 注意：targetPosB 是世界坐标；若 meshB 有 parent（group），直接写 position 会当成局部坐标导致偏移。
     state.meshB.setAbsolutePosition(targetPosB);
-    const posB = state.meshB.getAbsolutePosition();
+    // B 移动后若 A 在 B 子树内，A 的世界坐标会变，再对齐一次目标点
+    const posAAfterB = state.meshA.getAbsolutePosition().clone();
+    if (Vector3.Distance(posAForTarget, posAAfterB) > 1e-4) {
+      targetPosB = this.computeRopeDemoTargetWorldPosB(posAAfterB, dist, yawDeg, pitchDeg, pitchRefLength);
+      state.meshB.setAbsolutePosition(targetPosB);
+    }
+    // B 移动后父链/子节点世界矩阵会失效；必须重新 compute 后再读 A/B，否则 A 端可能仍为脏数据，
+    // box 会用错误的 posA 算中点/朝向，伸缩时出现整根绳子上下漂移。
+    const posA = state.meshA.getAbsolutePosition().clone();
+    const posB = state.meshB.getAbsolutePosition().clone();
     this.ropePrevBPos.copyFrom(posB);
 
     const length = Vector3.Distance(posA, posB);
@@ -1565,13 +1599,18 @@ export class App {
         return Quaternion.FromRotationMatrix(m);
       };
 
-      const boxCenter = posA.add(posB).scale(0.5);
-      boxRoot.position.copyFrom(boxCenter);
+      // 与 create 一致：根节点在 A，仅向 +Z（B）方向延伸，拉远时不再随中点漂移
+      boxRoot.position.copyFrom(posA);
       boxRoot.rotationQuaternion = computeBoxRotationQuaternion(forward, state.boxFlipAngleDeg);
 
-      // 更新前后端面中心（沿本地 +Z/-Z）
-      state.boxFaces.front.plane.position.z = length / 2;
-      state.boxFaces.back.plane.position.z = -length / 2;
+      // 前后端面 + 侧面/顶底 的 z（原点= A）
+      state.boxFaces.front.plane.position.z = length;
+      state.boxFaces.back.plane.position.z = 0;
+      const hz = length / 2;
+      state.boxFaces.right.plane.position.z = hz;
+      state.boxFaces.left.plane.position.z = hz;
+      state.boxFaces.top.plane.position.z = hz;
+      state.boxFaces.bottom.plane.position.z = hz;
 
       // 更新侧面：通过缩放长度方向实现“伸缩不形变”
       state.boxFaces.right.plane.scaling.x = depthRatio;
