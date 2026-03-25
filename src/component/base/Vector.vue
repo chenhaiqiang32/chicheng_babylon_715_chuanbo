@@ -1,16 +1,16 @@
 <template>
 	<Field :title="label" :tooltip="tooltip" :text-width="60">
 		<el-input-number class="vector-input" size="small" v-model="vx" :step="step" :min="axisMin(0)" :max="axisMax(0)"
-			:controls="false" @update:modelValue="val => onAxisChange('x', val as number)" @change="onFinishChange"
+			:controls="false" @update:modelValue="(val: number) => onAxisChange('x', val)" @change="onFinishChange"
 			@blur="onFinishChange" :precision="3" />
 		<el-input-number class="vector-input" size="small" v-model="vy" :step="step" :min="axisMin(1)" :max="axisMax(1)"
-			:controls="false" @update:modelValue="val => onAxisChange('y', val as number)" @change="onFinishChange"
+			:controls="false" @update:modelValue="(val: number) => onAxisChange('y', val)" @change="onFinishChange"
 			@blur="onFinishChange" :precision="3" />
 		<el-input-number class="vector-input" size="small" v-if="hasZ" v-model="vz" :step="step" :min="axisMin(2)"
-			:max="axisMax(2)" :controls="false" @update:modelValue="val => onAxisChange('z', val as number)"
+			:max="axisMax(2)" :controls="false" @update:modelValue="(val: number) => onAxisChange('z', val)"
 			@change="onFinishChange" @blur="onFinishChange" :precision="3" />
 		<el-input-number class="vector-input" size="small" v-if="hasW" v-model="vw" :min="axisMin(3)" :max="axisMax(3)"
-			:controls="false" @update:modelValue="val => onAxisChange('w', val as number)" @change="onFinishChange"
+			:controls="false" @update:modelValue="(val: number) => onAxisChange('w', val)" @change="onFinishChange"
 			@blur="onFinishChange" :precision="3" :step="0.1" />
 	</Field>
 </template>

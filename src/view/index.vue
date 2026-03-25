@@ -8,7 +8,7 @@
                         <ElSplitterPanel>
                             <ElSplitter :lazy="true">
                                 <ElSplitterPanel min="280px" :size="editorLayout.left + 'px'" collapsible
-                                    @update:size="e => sizeChange(e, 'left')" v-if="edit">
+                                    @update:size="(e: number) => sizeChange(e, 'left')" v-if="edit">
                                     <Hierarchy />
                                 </ElSplitterPanel>
                                 <ElSplitterPanel min="280px">
@@ -17,7 +17,7 @@
                             </ElSplitter>
                         </ElSplitterPanel>
                         <ElSplitterPanel min="280px" :size="editorLayout.bottom + 'px'" collapsible
-                            @update:size="e => sizeChange(e, 'bottom')" v-if="edit">
+                            @update:size="(e: number) => sizeChange(e, 'bottom')" v-if="edit">
                             <div class="tab-container-panel">
                                 <div class="tab-title">
                                     <div class="item" :class="{ 'active': activeTab === 'assets' }"
@@ -34,7 +34,7 @@
                     </ElSplitter>
                 </ElSplitterPanel>
                 <ElSplitterPanel min="280px" :size="editorLayout.right + 'px'" collapsible
-                    @update:size="e => sizeChange(e, 'right')" v-if="edit">
+                    @update:size="(e: number) => sizeChange(e, 'right')" v-if="edit">
                     <Inspector />
                 </ElSplitterPanel>
             </ElSplitter>

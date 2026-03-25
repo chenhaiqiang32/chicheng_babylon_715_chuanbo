@@ -1,5 +1,5 @@
 import {
-  AbstractCamera,
+  Camera,
   Mesh,
   MeshBuilder,
   Scene,
@@ -35,7 +35,7 @@ export class CameraHelper {
   private _enabled = false;
   private line: Mesh | null = null;
   private sphere: Mesh | null = null;
-  private currentCamera: AbstractCamera | null = null;
+  private currentCamera: Camera | null = null;
 
   constructor(scene: Scene, options: CameraHelperOptions = {}) {
     this.scene = scene;
@@ -61,7 +61,7 @@ export class CameraHelper {
     }
   }
 
-  setCamera(camera: AbstractCamera | null): void {
+  setCamera(camera: Camera | null): void {
     if (this.currentCamera === camera) return;
     this.currentCamera = camera;
     if (!this._enabled) return;
@@ -86,7 +86,7 @@ export class CameraHelper {
     this.sphere.position.copyFrom(camera.position);
   }
 
-  private create(camera: AbstractCamera): void {
+  private create(camera: Camera): void {
     this.dispose();
     const { forwardLineLength, sphereColor, lineColor, sphereDiameter } = this.options;
     const start = camera.position.clone();
