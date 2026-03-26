@@ -8,8 +8,9 @@
   },
   "scripts": {
     "generate:models": "node scripts/generate-model-urls.mjs",
-    "predev": "npm run generate:models",
-    "prebuild": "npm run generate:models",
+    "generate:hdrs": "node scripts/generate-hdr-urls.mjs",
+    "predev": "npm run generate:models && npm run generate:hdrs",
+    "prebuild": "npm run generate:models && npm run generate:hdrs",
     "dev": "vite --host  --port 51741",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",

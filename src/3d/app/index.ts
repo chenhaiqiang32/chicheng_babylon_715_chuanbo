@@ -68,6 +68,7 @@ import '@babylonjs/inspector';
 
 export type { InfoBoardItem, InfoBoardStyleOptions } from './InfoBoardHelper';
 export { MODEL_URLS } from './modelUrls.generated';
+export { HDR_URLS } from './hdrUrls.generated';
 
 /** 镜头预设：可将相机与控制器切换到指定位置（仅支持 ArcRotateCamera） */
 export interface CameraViewPreset {

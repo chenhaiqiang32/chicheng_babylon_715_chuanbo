@@ -61,15 +61,15 @@
         </template>
         <div class="anim-label">HDR 环境（仅模型反射）</div>
         <div class="anim-label">环境贴图 URL</div>
-        <input type="text" class="anim-input" v-model="hdrUrl" placeholder="/Dutch-Sky_0168_4k.hdr" />
+        <select v-model="hdrUrl" class="anim-select" :disabled="hdrLoading" @change="onHdrUrlSelectChange">
+            <option v-for="(u, i) in hdrUrlOptions" :key="i" :value="u">{{ u }}</option>
+        </select>
+        <input type="text" class="anim-input" v-model="hdrUrl" :disabled="hdrLoading" placeholder="/hdr/xxx.hdr 或 /xxx.hdr" />
         <div class="anim-label">贴图尺寸 {{ hdrSize }}</div>
         <input type="range" class="anim-slider" min="128" max="512" step="128" v-model.number="hdrSize" />
         <div class="anim-label">环境强度 {{ hdrIntensity.toFixed(2) }}</div>
         <input type="range" class="anim-slider" min="0" max="2" step="0.05" v-model.number="hdrIntensity"
             @input="onHdrIntensityInput" />
-        <div @click="applyHdr" :class="{ active: hdrApplied }" class="btn-apply">
-            {{ hdrLoading ? '加载中…' : '应用 HDR 环境' }}
-        </div>
         <div class="anim-label" style="margin-top:8px;">天空盒 + 水面反射</div>
         <div class="anim-label">天空盒 URL</div>
         <input type="text" class="anim-input" v-model="skyboxUrl" placeholder="/environment/512/TropicalSunnyDay" />
@@ -257,7 +257,7 @@
 
 </template>
 <script lang="ts" setup>
-import { App, MODEL_URLS, type CameraViewPreset, type InfoBoardItem, type SeaParams } from '@/3d/app';
+import { App, MODEL_URLS, HDR_URLS, type CameraViewPreset, type InfoBoardItem, type SeaParams } from '@/3d/app';
 import {
     cameraPresetsConfig,
     defaultCameraViewLimitConfig,
@@ -304,10 +304,18 @@ let removeInfoBoardMessageListener: (() => void) | undefined;
 
 // HDR 环境配置（仅用于模型反射）
 const hdrUrl = ref(hdrDemoConfig.defaultUrl);
+const hdrUrlOptions = computed(() => {
+    const list = [hdrUrl.value, ...HDR_URLS].filter((x) => typeof x === 'string' && x.trim().length > 0);
+    return Array.from(new Set(list));
+});
 const hdrSize = ref(hdrDemoConfig.defaultSize);
 const hdrIntensity = ref(hdrDemoConfig.defaultIntensity);
 const hdrLoading = ref(false);
-const hdrApplied = ref(false);
+
+function onHdrUrlSelectChange() {
+    // 切换下拉后立刻生效
+    applyHdr();
+}
 
 // 天空盒 + 水面反射配置（与 HDR 环境解耦）
 const skyboxUrl = ref(skyboxDemoConfig.defaultUrl);
@@ -621,7 +629,6 @@ async function initEnvironmentForModel() {
         onProgress: (p) => { loading.value = 0.85 + p * 0.15; },
     });
     App.Instance.setEnvironmentIntensity(hdrIntensity.value);
-    hdrApplied.value = true;
 
     // 默认创建一个天空盒并让水面反射它（与 HDR 环境分离）
     await App.Instance.setSkyboxForWater({
@@ -876,7 +883,6 @@ async function applyHdr() {
             onProgress: (p) => { loading.value = 0.9 + p * 0.1; },
         });
         App.Instance.setEnvironmentIntensity(hdrIntensity.value);
-        hdrApplied.value = true;
     } catch (e) {
         console.error('应用 HDR 失败', e);
     } finally {
