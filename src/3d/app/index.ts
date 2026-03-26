@@ -379,7 +379,6 @@ export class App {
           boxWidth: number;
           boxHeight: number;
           boxFlipAngleDeg: number;
-          boxPixelsPerWorld: number;
           boxFaces: Record<
             RopeBoxFaceName,
             {
@@ -391,7 +390,10 @@ export class App {
               // 当绳子长度变化时，对应纹理的 u/v 需要跟随“重复平铺”更新
               uDependsOnLength: boolean;
               vDependsOnLength: boolean;
-              // 用于“不发生形变”的 clamp 下限：缩短时不减少重复次数
+              // 纹理像素密度（等价：每个世界单位覆盖多少“纹理像素”）
+              // 用于保证 u/v 在缩放（伸缩）时不会出现非等比拉伸观感。
+              pixelsPerWorld: number;
+              // 初始 u/v 平铺缩放（用于初始化与回退）
               uScaleRef: number;
               vScaleRef: number;
             }
@@ -1035,6 +1037,10 @@ export class App {
     ropeRadius?: number;
     /** 绳子渲染形状：tube（旧版管状）/ box（长方体六面贴图） */
     ropeShapeType?: RopeDemoShapeType;
+    /** box 截面宽（front/back 面的 world 宽；未传则回退到 ropeRadius*2） */
+    boxWidth?: number;
+    /** box 截面高（front/back 面的 world 高；未传则回退到 ropeRadius*2） */
+    boxHeight?: number;
     /** 长方体类型：整体反转角度（度，绕绳子方向轴旋转） */
     boxFlipAngleDeg?: number;
     /**
@@ -1150,9 +1156,15 @@ export class App {
 
     if (ropeShapeType === 'box') {
       const boxDepthRef = this.ropeRefLength;
-      const boxWidth = ropeRadius * 2;
-      const boxHeight = ropeRadius * 2;
-      const boxPixelsPerWorld = this.ropeTextureHeightPx / boxDepthRef;
+      const boxWidth =
+        typeof options?.boxWidth === 'number' && Number.isFinite(options.boxWidth) ? options.boxWidth : ropeRadius * 2;
+      const boxHeight =
+        typeof options?.boxHeight === 'number' && Number.isFinite(options.boxHeight)
+          ? options.boxHeight
+          : ropeRadius * 2;
+      const safeBoxWidth = Math.max(1e-6, boxWidth);
+      const safeBoxHeight = Math.max(1e-6, boxHeight);
+      const safeBoxDepthRef = Math.max(1e-6, boxDepthRef);
 
       const forwardInit = posB.subtract(posA);
 
@@ -1175,6 +1187,7 @@ export class App {
           textureHeightPx: number;
           uDependsOnLength: boolean;
           vDependsOnLength: boolean;
+          pixelsPerWorld: number;
           uScaleRef: number;
           vScaleRef: number;
         }
@@ -1204,7 +1217,16 @@ export class App {
 
       const createFacePlane = (
         faceName: RopeBoxFaceName,
-      ): { plane: Mesh; material: PBRMaterial; texture: Texture; uDependsOnLength: boolean; vDependsOnLength: boolean; uScaleRef: number; vScaleRef: number } => {
+      ): {
+        plane: Mesh;
+        material: PBRMaterial;
+        texture: Texture;
+        uDependsOnLength: boolean;
+        vDependsOnLength: boolean;
+        uScaleRef: number;
+        vScaleRef: number;
+        pixelsPerWorld: number;
+      } => {
         const { textureUrl: faceTextureUrl, textureWidthPx, textureHeightPx } = resolveFaceTextureCfg(faceName);
         const tex = new Texture(faceTextureUrl, this.scene, false, false);
         tex.wrapU = Texture.WRAP_ADDRESSMODE;
@@ -1223,41 +1245,73 @@ export class App {
         const uDependsOnLength = faceName === 'right' || faceName === 'left';
         const vDependsOnLength = faceName === 'top' || faceName === 'bottom';
 
-        const worldURef = uDependsOnLength ? boxDepthRef : boxWidth;
-        const worldVRef = vDependsOnLength ? boxDepthRef : boxHeight;
-        const uScaleRef = (boxPixelsPerWorld * worldURef) / Math.max(1, textureWidthPx);
-        const vScaleRef = (boxPixelsPerWorld * worldVRef) / Math.max(1, textureHeightPx);
+        const worldURef = uDependsOnLength ? safeBoxDepthRef : safeBoxWidth;
+        const worldVRef = vDependsOnLength ? safeBoxDepthRef : safeBoxHeight;
+
+        // 选择“等密度”的像素密度常量：保证 u/v 方向的 texel 在世界空间里呈等比（不拉伸观感）
+        const pixelsPerWorld =
+          Math.sqrt(
+            (Math.max(1, textureWidthPx) / Math.max(1e-6, worldURef)) *
+              (Math.max(1, textureHeightPx) / Math.max(1e-6, worldVRef)),
+          ) || 1;
+
+        const uScaleRef = (pixelsPerWorld * worldURef) / Math.max(1, textureWidthPx);
+        const vScaleRef = (pixelsPerWorld * worldVRef) / Math.max(1, textureHeightPx);
         tex.uScale = uScaleRef;
         tex.vScale = vScaleRef;
 
         let plane: Mesh;
         // 原点锚在 A：back 在 z=0，front 在 z=depth，侧面/顶底在 z=depth/2（与 update 中伸缩逻辑一致）
         if (faceName === 'front') {
-          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_front`, { width: boxWidth, height: boxHeight }, this.scene);
-          plane.position.z = boxDepthRef;
+          plane = MeshBuilder.CreatePlane(
+            `ropeBox_${ropeKey}_front`,
+            { width: safeBoxWidth, height: safeBoxHeight },
+            this.scene,
+          );
+          plane.position.z = safeBoxDepthRef;
         } else if (faceName === 'back') {
-          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_back`, { width: boxWidth, height: boxHeight }, this.scene);
+          plane = MeshBuilder.CreatePlane(
+            `ropeBox_${ropeKey}_back`,
+            { width: safeBoxWidth, height: safeBoxHeight },
+            this.scene,
+          );
           plane.position.z = 0;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), Math.PI);
         } else if (faceName === 'right') {
-          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_right`, { width: boxDepthRef, height: boxHeight }, this.scene);
-          plane.position.x = boxWidth / 2;
-          plane.position.z = boxDepthRef / 2;
+          plane = MeshBuilder.CreatePlane(
+            `ropeBox_${ropeKey}_right`,
+            { width: safeBoxDepthRef, height: safeBoxHeight },
+            this.scene,
+          );
+          plane.position.x = safeBoxWidth / 2;
+          plane.position.z = safeBoxDepthRef / 2;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), Math.PI / 2);
         } else if (faceName === 'left') {
-          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_left`, { width: boxDepthRef, height: boxHeight }, this.scene);
-          plane.position.x = -boxWidth / 2;
-          plane.position.z = boxDepthRef / 2;
+          plane = MeshBuilder.CreatePlane(
+            `ropeBox_${ropeKey}_left`,
+            { width: safeBoxDepthRef, height: safeBoxHeight },
+            this.scene,
+          );
+          plane.position.x = -safeBoxWidth / 2;
+          plane.position.z = safeBoxDepthRef / 2;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), -Math.PI / 2);
         } else if (faceName === 'top') {
-          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_top`, { width: boxWidth, height: boxDepthRef }, this.scene);
-          plane.position.y = boxHeight / 2;
-          plane.position.z = boxDepthRef / 2;
+          plane = MeshBuilder.CreatePlane(
+            `ropeBox_${ropeKey}_top`,
+            { width: safeBoxWidth, height: safeBoxDepthRef },
+            this.scene,
+          );
+          plane.position.y = safeBoxHeight / 2;
+          plane.position.z = safeBoxDepthRef / 2;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Right(), -Math.PI / 2);
         } else {
-          plane = MeshBuilder.CreatePlane(`ropeBox_${ropeKey}_bottom`, { width: boxWidth, height: boxDepthRef }, this.scene);
-          plane.position.y = -boxHeight / 2;
-          plane.position.z = boxDepthRef / 2;
+          plane = MeshBuilder.CreatePlane(
+            `ropeBox_${ropeKey}_bottom`,
+            { width: safeBoxWidth, height: safeBoxDepthRef },
+            this.scene,
+          );
+          plane.position.y = -safeBoxHeight / 2;
+          plane.position.z = safeBoxDepthRef / 2;
           plane.rotationQuaternion = Quaternion.RotationAxis(Vector3.Right(), Math.PI / 2);
         }
 
@@ -1273,11 +1327,21 @@ export class App {
           vDependsOnLength,
           uScaleRef,
           vScaleRef,
+          pixelsPerWorld,
         };
       };
 
       for (const faceName of faceNames) {
-        const { plane, material, texture, uDependsOnLength, vDependsOnLength, uScaleRef, vScaleRef } = createFacePlane(faceName);
+        const {
+          plane,
+          material,
+          texture,
+          uDependsOnLength,
+          vDependsOnLength,
+          uScaleRef,
+          vScaleRef,
+          pixelsPerWorld,
+        } = createFacePlane(faceName);
         const { textureWidthPx, textureHeightPx } = resolveFaceTextureCfg(faceName);
         boxFaces[faceName] = {
           plane,
@@ -1287,6 +1351,7 @@ export class App {
           textureHeightPx,
           uDependsOnLength,
           vDependsOnLength,
+          pixelsPerWorld,
           uScaleRef,
           vScaleRef,
         };
@@ -1299,11 +1364,10 @@ export class App {
         meshA: ballA,
         meshB: ballB,
         boxRoot,
-        boxDepthRef,
-        boxWidth,
-        boxHeight,
+        boxDepthRef: safeBoxDepthRef,
+        boxWidth: safeBoxWidth,
+        boxHeight: safeBoxHeight,
         boxFlipAngleDeg,
-        boxPixelsPerWorld,
         boxFaces,
         refLength: this.ropeRefLength,
         radius: ropeRadius,
@@ -1629,11 +1693,13 @@ export class App {
         const worldU = face.uDependsOnLength ? length : state.boxWidth;
         const worldV = face.vDependsOnLength ? length : state.boxHeight;
 
-        const uScaleRaw = (state.boxPixelsPerWorld * worldU) / Math.max(1, face.textureWidthPx);
-        const vScaleRaw = (state.boxPixelsPerWorld * worldV) / Math.max(1, face.textureHeightPx);
+        // 按“当前面世界宽高 + 配置纹理像素尺寸”计算 u/v 平铺次数
+        // 这样随绳子伸缩变化时，纹理只会重复，不会出现非等比拉伸观感。
+        const uScale = (face.pixelsPerWorld * worldU) / Math.max(1, face.textureWidthPx);
+        const vScale = (face.pixelsPerWorld * worldV) / Math.max(1, face.textureHeightPx);
 
-        face.texture.uScale = face.uDependsOnLength ? Math.max(face.uScaleRef, uScaleRaw) : face.uScaleRef;
-        face.texture.vScale = face.vDependsOnLength ? Math.max(face.vScaleRef, vScaleRaw) : face.vScaleRef;
+        face.texture.uScale = uScale;
+        face.texture.vScale = vScale;
         face.texture.vOffset = 0;
       }
 

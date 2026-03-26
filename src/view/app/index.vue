@@ -397,6 +397,8 @@ function getRopeInitConfigById(id: string) {
         ropeShapeType: c.ropeShapeType ?? 'tube',
         boxFlipAngleDeg: c.boxFlipAngleDeg ?? 0,
         boxFaces: c.boxFaces,
+        boxWidth: c.boxWidth,
+        boxHeight: c.boxHeight,
     };
 }
 
@@ -677,6 +679,8 @@ function initRopeDemo() {
             ropeShapeType: initCfg.ropeShapeType,
             boxFlipAngleDeg: initCfg.boxFlipAngleDeg,
             boxFaces: initCfg.boxFaces,
+            boxWidth: initCfg.boxWidth,
+            boxHeight: initCfg.boxHeight,
             // 仅在 B 未绑定到模型时生效；若 B 已绑定模型，下面会用 updateRopeDemoByAngleDistance 统一初始化
             initialDistance: initCfg.initialDistance,
             initialAngleDeg: initCfg.initialYawDeg,

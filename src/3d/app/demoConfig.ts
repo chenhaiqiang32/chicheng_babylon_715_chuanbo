@@ -114,6 +114,10 @@ export const ropeDemoModelBindings: Array<{
     boxFlipAngleDeg: number;
     /** 长方体类型：六个面的贴图与像素尺寸（缺省将回退到 textureUrl/textureWidthPx/textureHeightPx） */
     boxFaces: Partial<Record<RopeBoxFaceName, Partial<RopeBoxFaceTextureConfig>>>;
+    /** box 截面宽（front/back 面的 world 宽；默认 ropeRadius*2） */
+    boxWidth: number;
+    /** box 截面高（front/back 面的 world 高；默认 ropeRadius*2） */
+    boxHeight: number;
     initialDistance: number;
     initialYawDeg: number;
     initialPitchDeg: number;
@@ -161,6 +165,9 @@ export const ropeDemoModelBindings: Array<{
     modelBName: 'Soldier',
     config: {
       ropeShapeType: 'box',
+      // 截面宽/高：用于控制 box 的形状（front/back 的矩形宽高）
+      boxWidth: 0.01,
+      boxHeight: 0.24,
       // boxFlipAngleDeg：用于控制长方体随 yaw/pitch 变化时的“纹理朝向/翻转”
       boxFlipAngleDeg: 180,
       boxFaces: {
@@ -175,14 +182,14 @@ export const ropeDemoModelBindings: Array<{
           textureHeightPx: 1200,
         },
         left: {
-          textureUrl: '/1711002072994_1522.jpeg',
-          textureWidthPx: 1600,
-          textureHeightPx: 1200,
+          textureUrl: '/f3ce60e08dd2a40aba5ab8536e79269a.jpg',
+          textureWidthPx: 2667,
+          textureHeightPx: 1600,
         },
         right: {
-          textureUrl: '/1712285623239_7670.jpeg',
-          textureWidthPx: 1600,
-          textureHeightPx: 1200,
+          textureUrl: '/f3ce60e08dd2a40aba5ab8536e79269a.jpg',
+          textureWidthPx: 2667,
+          textureHeightPx: 1600,
         },
         top: {
           textureUrl: '/1711002072994_1522.jpeg',
