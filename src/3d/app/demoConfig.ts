@@ -371,16 +371,19 @@ export const seaDemoDefaults: {
   colorHex: string;
 } = {
   params: {
-    windForce: 8,
-    waveHeight: 0.1,
-    bumpHeight: 0.5,
-    waveLength: 0.15,
-    waveSpeed: 50,
-    colorBlendFactor: 0.25,
-    bumpTextureScale: { u: 3, v: 3 },
-    waterColor: '#07291e',
+    // 更“波涛汹涌”的默认值（偏大浪 + 更强法线 + 更快流动）
+    windDirection: { x: 1, y: 0.35 },
+    windForce: 14,
+    waveHeight: 0.6,
+    bumpHeight: 1.2,
+    waveLength: 0.08,
+    waveSpeed: 120,
+    // 提高泡沫/颜色混合强度（更像浪花）
+    colorBlendFactor: 0.45,
+    bumpTextureScale: { u: 6, v: 6 },
+    waterColor: '#0a3b41',
   },
-  colorHex: '#07291e',
+  colorHex: '#0a3b41',
 };
 
 

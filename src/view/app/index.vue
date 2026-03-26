@@ -79,12 +79,17 @@
             应用天空盒到水面
         </div>
         <div class="anim-label" style="margin-top:8px;">海面参数 Demo（WaterMaterial）</div>
+        <div class="anim-label">风向 windDirection (x/y)</div>
+        <div class="sea-row">
+            <input type="number" class="anim-num" v-model.number="seaWindDirX" step="0.05" />
+            <input type="number" class="anim-num" v-model.number="seaWindDirY" step="0.05" />
+        </div>
         <div class="anim-label">风力 windForce {{ seaWindForce.toFixed(2) }}</div>
         <input type="range" class="anim-slider" min="0" max="20" step="0.1" v-model.number="seaWindForce" />
         <div class="anim-label">浪高 waveHeight {{ seaWaveHeight.toFixed(3) }}</div>
-        <input type="range" class="anim-slider" min="0" max="1" step="0.005" v-model.number="seaWaveHeight" />
+        <input type="range" class="anim-slider" min="0" max="2" step="0.01" v-model.number="seaWaveHeight" />
         <div class="anim-label">凹凸 bumpHeight {{ seaBumpHeight.toFixed(2) }}</div>
-        <input type="range" class="anim-slider" min="0" max="2" step="0.01" v-model.number="seaBumpHeight" />
+        <input type="range" class="anim-slider" min="0" max="4" step="0.02" v-model.number="seaBumpHeight" />
         <div class="anim-label">波长 waveLength {{ seaWaveLength.toFixed(3) }}</div>
         <input type="range" class="anim-slider" min="0.01" max="1" step="0.005" v-model.number="seaWaveLength" />
         <div class="anim-label">波速 waveSpeed {{ seaWaveSpeed.toFixed(1) }}</div>
@@ -317,6 +322,8 @@ const seaWaveSpeed = ref(seaDemoDefaults.params.waveSpeed ?? 50);
 const seaColorBlendFactor = ref(seaDemoDefaults.params.colorBlendFactor ?? 0.25);
 const seaBumpU = ref(seaDemoDefaults.params.bumpTextureScale?.u ?? 3);
 const seaBumpV = ref(seaDemoDefaults.params.bumpTextureScale?.v ?? 3);
+const seaWindDirX = ref(seaDemoDefaults.params.windDirection?.x ?? 1);
+const seaWindDirY = ref(seaDemoDefaults.params.windDirection?.y ?? 0.35);
 const seaColorHex = ref(
     typeof seaDemoDefaults.params.waterColor === 'string'
         ? seaDemoDefaults.params.waterColor
@@ -888,6 +895,10 @@ async function applySkybox() {
 
 function syncSeaParamsFromApp() {
     const p = App.Instance.getSeaParams();
+    if (p.windDirection) {
+        seaWindDirX.value = p.windDirection.x;
+        seaWindDirY.value = p.windDirection.y;
+    }
     if (typeof p.windForce === 'number') seaWindForce.value = p.windForce;
     if (typeof p.waveHeight === 'number') seaWaveHeight.value = p.waveHeight;
     if (typeof p.bumpHeight === 'number') seaBumpHeight.value = p.bumpHeight;
@@ -902,6 +913,7 @@ function syncSeaParamsFromApp() {
 
 function applySeaParams() {
     const params: SeaParams = {
+        windDirection: { x: seaWindDirX.value, y: seaWindDirY.value },
         windForce: seaWindForce.value,
         waveHeight: seaWaveHeight.value,
         bumpHeight: seaBumpHeight.value,

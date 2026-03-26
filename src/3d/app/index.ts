@@ -3060,22 +3060,29 @@ export class App {
     );
     const waterMaterial = new WaterMaterial('water', this.scene, new Vector2(1024, 1024));
     const normal = new Texture('waterbump.png', this.scene, true, false);
-    normal.uScale = 3;
-    normal.vScale = 3;
+    // 更密的法线平铺：更容易出现“浪花/碎波”的细节感
+    normal.uScale = 6;
+    normal.vScale = 6;
     waterMaterial.bumpTexture = normal;
-    waterMaterial.windForce = 8;
-    waterMaterial.waveHeight = 0.1;
-    waterMaterial.bumpHeight = 0.5;
-    waterMaterial.waveLength = 0.15;
-    waterMaterial.waveSpeed = 50;
-    waterMaterial.colorBlendFactor = 0.25;
+    // 默认海面效果：更汹涌
+    (waterMaterial as any).windDirection = new Vector2(1, 0.35);
+    waterMaterial.windForce = 14;
+    waterMaterial.waveHeight = 0.6;
+    waterMaterial.bumpHeight = 1.2;
+    // 更短波长会更“碎”，更像波涛汹涌
+    waterMaterial.waveLength = 0.08;
+    waterMaterial.waveSpeed = 120;
+    // 提高泡沫/颜色混合强度
+    waterMaterial.colorBlendFactor = 0.45;
     waterMaterial.sideOrientation = 1;
-    waterMaterial.waterColor = new Color3(7 / 255, 41 / 255, 30 / 255);
+    // 略偏蓝绿色（更接近海水），浪花主要靠 colorBlendFactor+法线细节体现
+    waterMaterial.waterColor = Color3.FromHexString('#0a3b41');
     this.waterMaterial = waterMaterial;
     this.seaParamsDefaults = this.getSeaParams();
 
     waterGround.material = waterMaterial;
     waterGround.position.y = -4;
+    waterGround.rotation.y = -Math.PI / 2; 
 
     this.createPropellerWaveEffectShader();
     this.setPropellerWaveEffectEnabled(this.propellerWaveEnabled);
@@ -3152,7 +3159,7 @@ export class App {
 
   setGround() {
     this.setupLightingAndSkybox();
-    this.setupSunAndHelpers();
+    // this.setupSunAndHelpers();
     this.setupSkyRenderObserver();
     this.updateSkyByTime();
 
@@ -3188,10 +3195,10 @@ export class App {
 
     const plane = MeshBuilder.CreatePlane(
       'propellerWavePlane',
-      { size: 60, width: 80, height: 120 },
+      { size: 60, width: 140, height: 160 },
       this.scene,
     );
-    plane.position.set(-3.2, -3, -48);
+    plane.position.set(-3.2, -1, -48);
     plane.rotation.y = 0;
     plane.rotate(new Vector3(1, 0, 0), Math.PI / 2);
     // plane.rotate(new Vector3(0, 0, 1), Math.PI / 2);
