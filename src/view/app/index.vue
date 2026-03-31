@@ -3,261 +3,373 @@
         <canvas id="canvas" ref="canvas"></canvas>
     </div>
     <div class="btn">
-        <div class="anim-label">镜头切换</div>
-        <div class="camera-presets">
-            <div v-for="(p, key) in cameraPresets" :key="key" class="preset-btn" @click="switchCamera(key)">
-                {{ p.label }}
-            </div>
-        </div>
-        <div class="anim-label" style="margin-top:8px;">相机限制 Demo（调试）</div>
-        <div class="preset-btn" @click="applyDefaultCameraViewLimits">应用默认限制范围</div>
-        <div class="anim-row">
-            <label class="anim-checkbox">
-                <input type="checkbox" v-model="cameraHelperOn" @change="applyCameraHelpers" />
-                <span>相机辅助线</span>
-            </label>
-            <label class="anim-checkbox" style="margin-left:10px;">
-                <input type="checkbox" v-model="cameraTargetHelperOn" @change="applyCameraHelpers" />
-                <span>目标点辅助</span>
-            </label>
-        </div>
-        <div class="camera-debug-text">{{ cameraDebugText }}</div>
-        <div @click="next">下一个</div>
-        <div @click="prev">上一个</div>
-        <div @click="togglePropellerWave" :class="{ active: propellerWaveOn }">螺旋桨波浪 {{ propellerWaveOn ? '开' : '关' }}</div>
-        <template v-if="modelNames.length">
-            <div class="anim-label">模型</div>
-            <select v-model="currentModelName" class="anim-select" @change="onModelChange">
-                <option v-for="(name, i) in modelNames" :key="i" :value="name">{{ name }}</option>
-            </select>
-        </template>
-        <template v-if="animationNames.length">
-            <div class="anim-label">动画</div>
-            <select v-model="currentAnimName" class="anim-select">
-                <option value="">-- 选择动画 --</option>
-                <option v-for="(name, i) in animationNames" :key="i" :value="name">{{ name }}</option>
-            </select>
-            <div class="anim-row">
-                <label class="anim-checkbox">
-                    <input type="checkbox" v-model="animationLoop" @change="onLoopChange" />
-                    <span>循环播放</span>
-                </label>
-            </div>
-            <div class="anim-row clip-row">
-                <div class="anim-label">裁剪：起始帧 / 结束帧</div>
-                <div class="clip-inputs">
-                    <input type="number" class="anim-num" v-model.number="clipFrom" min="0" step="1" />
-                    <span class="clip-sep">–</span>
-                    <input type="number" class="anim-num" v-model.number="clipTo" min="0" step="1" />
-                </div>
-                <div class="anim-util" @click="resetClipToFull">恢复完整</div>
-            </div>
-            <div class="anim-label">进度 {{ Math.round(animationProgress * 100) }}%</div>
-            <input type="range" class="anim-slider" min="0" max="100" step="0.1" :value="animationProgress * 100"
-                @input="onProgressInput" />
-            <div @click="playCurrentAnim">正放</div>
-            <div @click="playCurrentAnimReverse">倒放</div>
-            <div @click="stopAnim">停止</div>
-        </template>
-        <div class="anim-label">HDR 环境（仅模型反射）</div>
-        <div class="anim-label">环境贴图 URL</div>
-        <select v-model="hdrUrl" class="anim-select" :disabled="hdrLoading" @change="onHdrUrlSelectChange">
-            <option v-for="(u, i) in hdrUrlOptions" :key="i" :value="u">{{ u }}</option>
-        </select>
-        <input type="text" class="anim-input" v-model="hdrUrl" :disabled="hdrLoading" placeholder="/hdr/xxx.hdr 或 /xxx.hdr" />
-        <div class="anim-label">贴图尺寸 {{ hdrSize }}</div>
-        <input type="range" class="anim-slider" min="128" max="512" step="128" v-model.number="hdrSize" />
-        <div class="anim-label">环境强度 {{ hdrIntensity.toFixed(2) }}</div>
-        <input type="range" class="anim-slider" min="0" max="2" step="0.05" v-model.number="hdrIntensity"
-            @input="onHdrIntensityInput" />
-        <div class="anim-label" style="margin-top:8px;">天空盒 + 水面反射</div>
-        <div class="anim-label">天空盒 URL</div>
-        <input type="text" class="anim-input" v-model="skyboxUrl" placeholder="/environment/512/TropicalSunnyDay" />
-        <div class="anim-label">天空盒尺寸 {{ skyboxSize }}</div>
-        <input type="range" class="anim-slider" min="128" max="1024" step="128" v-model.number="skyboxSize" />
-        <div @click="applySkybox" class="btn-apply">
-            应用天空盒到水面
-        </div>
-        <div class="anim-label" style="margin-top:8px;">海面参数 Demo（WaterMaterial）</div>
-        <div class="anim-label">风向 windDirection (x/y)</div>
-        <div class="sea-row">
-            <input type="number" class="anim-num" v-model.number="seaWindDirX" step="0.05" />
-            <input type="number" class="anim-num" v-model.number="seaWindDirY" step="0.05" />
-        </div>
-        <div class="anim-label">风力 windForce {{ seaWindForce.toFixed(2) }}</div>
-        <input type="range" class="anim-slider" min="0" max="20" step="0.1" v-model.number="seaWindForce" />
-        <div class="anim-label">浪高 waveHeight {{ seaWaveHeight.toFixed(3) }}</div>
-        <input type="range" class="anim-slider" min="0" max="2" step="0.01" v-model.number="seaWaveHeight" />
-        <div class="anim-label">凹凸 bumpHeight {{ seaBumpHeight.toFixed(2) }}</div>
-        <input type="range" class="anim-slider" min="0" max="4" step="0.02" v-model.number="seaBumpHeight" />
-        <div class="anim-label">波长 waveLength {{ seaWaveLength.toFixed(3) }}</div>
-        <input type="range" class="anim-slider" min="0.01" max="1" step="0.005" v-model.number="seaWaveLength" />
-        <div class="anim-label">波速 waveSpeed {{ seaWaveSpeed.toFixed(1) }}</div>
-        <input type="range" class="anim-slider" min="0" max="200" step="1" v-model.number="seaWaveSpeed" />
-        <div class="anim-label">颜色混合 colorBlendFactor {{ seaColorBlendFactor.toFixed(2) }}</div>
-        <input type="range" class="anim-slider" min="0" max="1" step="0.01" v-model.number="seaColorBlendFactor" />
-        <div class="anim-label">法线平铺 bumpTexture u/v</div>
-        <div class="sea-row">
-            <input type="number" class="anim-num" v-model.number="seaBumpU" min="0.1" step="0.1" />
-            <input type="number" class="anim-num" v-model.number="seaBumpV" min="0.1" step="0.1" />
-        </div>
-        <div class="anim-label">水色 waterColor</div>
-        <input type="color" class="sea-color" v-model="seaColorHex" />
-        <div class="anim-row sea-actions">
-            <div class="preset-btn" @click="applySeaParams">应用到海面</div>
-            <div class="preset-btn" @click="resetSeaParams">重置默认</div>
-        </div>
-        <div class="anim-label" style="margin-top:8px;">相机后处理</div>
-        <div @click="toggleUnderwater" :class="{ active: underwaterOn }">
-            海水下效果 {{ underwaterOn ? '开' : '关' }}
-        </div>
-        <template v-if="ropeDemoReady">
-            <div class="anim-label" style="margin-top:10px;">绳子 Demo</div>
-            <div class="anim-label">当前操控绳子</div>
-            <select v-model="ropeControlTarget" class="anim-select" @change="onRopeControlTargetChange">
-                <option v-for="opt in ropeControlOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                </option>
-            </select>
-            <div class="anim-label">距离（相对 A）: {{ ropeDistance.toFixed(2) }}</div>
-            <input
-                type="range"
-                class="anim-slider"
-                min="0.5"
-                max="20"
-                step="0.1"
-                v-model.number="ropeDistance"
-                @input="onRopeParamsChange"
-            />
-            <div class="anim-label">水平角 yaw（度，绕 Y 轴）: {{ ropeYaw.toFixed(1) }}</div>
-            <input
-                type="range"
-                class="anim-slider"
-                min="-180"
-                max="180"
-                step="1"
-                v-model.number="ropeYaw"
-                @input="onRopeParamsChange"
-            />
-            <div class="anim-label">俯仰角 pitch（度，向上为正）: {{ ropePitch.toFixed(1) }}</div>
-            <input
-                type="range"
-                class="anim-slider"
-                min="-89"
-                max="89"
-                step="1"
-                v-model.number="ropePitch"
-                @input="onRopeParamsChange"
-            />
-        </template>
-        <template v-if="flexibleRopeReady">
-            <div class="anim-label" style="margin-top:10px;">柔性绳子 Demo（17 个中间点）</div>
-            <div class="anim-label">当前绳子</div>
-            <select v-model="flexibleRopeFirstId" class="anim-select" @change="onFlexibleRopeControlTargetChange">
-                <option v-for="id in flexibleRopeIds" :key="id" :value="id">{{ id }}</option>
-            </select>
-            <div class="anim-label">绳子方向 水平角 yaw（度，绕 Y 轴）: {{ flexibleRopeYaw.toFixed(1) }}</div>
-            <input
-                type="range"
-                class="anim-slider"
-                min="-180"
-                max="180"
-                step="1"
-                v-model.number="flexibleRopeYaw"
-                @input="onFlexibleRopeDirectionChange"
-            />
-            <div class="anim-label">绳子方向 俯仰角 pitch（度，向上为正）: {{ flexibleRopePitch.toFixed(1) }}</div>
-            <input
-                type="range"
-                class="anim-slider"
-                min="-89"
-                max="89"
-                step="1"
-                v-model.number="flexibleRopePitch"
-                @input="onFlexibleRopeDirectionChange"
-            />
-            <label class="anim-checkbox" style="margin-bottom:6px;">
-                <input type="checkbox" v-model="flexibleRopePointsVisible" @change="onFlexibleRopePointsVisibleChange" />
-                <span>显示控制点小球</span>
-            </label>
-            <div
-                v-for="(yaw, idx) in flexibleRopePointYaws"
-                :key="idx"
-                class="anim-row"
+        <div class="panel-tabs">
+            <button
+                class="tab-btn"
+                :class="{ active: activePanel === 'camera' }"
+                type="button"
+                @click="activePanel = 'camera'"
             >
-                <div class="anim-label">
-                    点 #{{ idx + 1 }} 偏移 yaw: {{ yaw.toFixed(1) }}° / pitch: {{ flexibleRopePointPitches[idx]?.toFixed(1) }}°
+                相机
+            </button>
+            <button
+                class="tab-btn"
+                :class="{ active: activePanel === 'model' }"
+                type="button"
+                @click="activePanel = 'model'"
+            >
+                模型&动画
+            </button>
+            <button
+                class="tab-btn"
+                :class="{ active: activePanel === 'env' }"
+                type="button"
+                @click="activePanel = 'env'"
+            >
+                环境
+            </button>
+            <button
+                class="tab-btn"
+                :class="{ active: activePanel === 'sea' }"
+                type="button"
+                @click="activePanel = 'sea'"
+            >
+                海面
+            </button>
+            <button
+                class="tab-btn"
+                :class="{ active: activePanel === 'post' }"
+                type="button"
+                @click="activePanel = 'post'"
+            >
+                后处理
+            </button>
+            <button
+                class="tab-btn"
+                :class="{ active: activePanel === 'rope' }"
+                type="button"
+                @click="activePanel = 'rope'"
+            >
+                绳子
+            </button>
+        </div>
+
+        <div class="panel-body">
+            <section v-show="activePanel === 'camera'" class="panel">
+                <div class="anim-label">镜头切换</div>
+                <div class="camera-presets">
+                    <div v-for="(p, key) in cameraPresets" :key="key" class="preset-btn" @click="switchCamera(key)">
+                        {{ p.label }}
+                    </div>
                 </div>
-                <div class="anim-label" style="margin-top:4px;">水平偏移 yaw（度）</div>
+
+                <div class="anim-label" style="margin-top:8px;">相机限制 Demo（调试）</div>
+                <div class="preset-btn" @click="applyDefaultCameraViewLimits">应用默认限制范围</div>
+                <div class="anim-row">
+                    <label class="anim-checkbox">
+                        <input type="checkbox" v-model="cameraHelperOn" @change="applyCameraHelpers" />
+                        <span>相机辅助线</span>
+                    </label>
+                    <label class="anim-checkbox" style="margin-left:10px;">
+                        <input type="checkbox" v-model="cameraTargetHelperOn" @change="applyCameraHelpers" />
+                        <span>目标点辅助</span>
+                    </label>
+                </div>
+                <div class="camera-debug-text">{{ cameraDebugText }}</div>
+            </section>
+
+            <section v-show="activePanel === 'model'" class="panel">
+                <div class="panel-actions">
+                    <div class="action-btn" @click="next">下一个</div>
+                    <div class="action-btn" @click="prev">上一个</div>
+                </div>
+
+                <div class="action-btn" @click="togglePropellerWave" :class="{ active: propellerWaveOn }">
+                    螺旋桨波浪（面片） {{ propellerWaveOn ? '开' : '关' }}
+                </div>
+                <div class="action-btn" @click="togglePropellerParticles" :class="{ active: propellerParticlesOn }">
+                    浪花粒子 {{ propellerParticlesOn ? '开' : '关' }}
+                </div>
+
+                <div class="anim-row" style="margin-top:8px;">
+                    <label class="anim-checkbox">
+                        <input type="checkbox" v-model="propellerWaveParticlesOn" @change="applyPropellerWaveParticlesEnabled" />
+                        <span>浪花粒子</span>
+                    </label>
+                </div>
+
+                <template v-if="modelNames.length">
+                    <div class="anim-label">模型</div>
+                    <select v-model="currentModelName" class="anim-select" @change="onModelChange">
+                        <option v-for="(name, i) in modelNames" :key="i" :value="name">{{ name }}</option>
+                    </select>
+                </template>
+
+                <template v-if="animationNames.length">
+                    <div class="anim-label">动画</div>
+                    <select v-model="currentAnimName" class="anim-select">
+                        <option value="">-- 选择动画 --</option>
+                        <option v-for="(name, i) in animationNames" :key="i" :value="name">{{ name }}</option>
+                    </select>
+                    <div class="anim-row">
+                        <label class="anim-checkbox">
+                            <input type="checkbox" v-model="animationLoop" @change="onLoopChange" />
+                            <span>循环播放</span>
+                        </label>
+                    </div>
+                    <div class="anim-row clip-row">
+                        <div class="anim-label">裁剪：起始帧 / 结束帧</div>
+                        <div class="clip-inputs">
+                            <input type="number" class="anim-num" v-model.number="clipFrom" min="0" step="1" />
+                            <span class="clip-sep">–</span>
+                            <input type="number" class="anim-num" v-model.number="clipTo" min="0" step="1" />
+                        </div>
+                        <div class="anim-util" @click="resetClipToFull">恢复完整</div>
+                    </div>
+                    <div class="anim-label">进度 {{ Math.round(animationProgress * 100) }}%</div>
+                    <input
+                        type="range"
+                        class="anim-slider"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        :value="animationProgress * 100"
+                        @input="onProgressInput"
+                    />
+                    <div class="panel-actions">
+                        <div class="action-btn" @click="playCurrentAnim">正放</div>
+                        <div class="action-btn" @click="playCurrentAnimReverse">倒放</div>
+                        <div class="action-btn" @click="stopAnim">停止</div>
+                    </div>
+                </template>
+            </section>
+
+            <section v-show="activePanel === 'env'" class="panel">
+                <div class="anim-label">HDR 环境（仅模型反射）</div>
+                <div class="anim-label">环境贴图 URL</div>
+                <select v-model="hdrUrl" class="anim-select" :disabled="hdrLoading" @change="onHdrUrlSelectChange">
+                    <option v-for="(u, i) in hdrUrlOptions" :key="i" :value="u">{{ u }}</option>
+                </select>
+                <input
+                    type="text"
+                    class="anim-input"
+                    v-model="hdrUrl"
+                    :disabled="hdrLoading"
+                    placeholder="/hdr/xxx.hdr 或 /xxx.hdr"
+                />
+                <div class="anim-label">贴图尺寸 {{ hdrSize }}</div>
+                <input type="range" class="anim-slider" min="128" max="512" step="128" v-model.number="hdrSize" />
+                <div class="anim-label">环境强度 {{ hdrIntensity.toFixed(2) }}</div>
                 <input
                     type="range"
                     class="anim-slider"
-                    min="-180"
-                    max="180"
-                    step="1"
-                    v-model.number="flexibleRopePointYaws[idx]"
-                    @input="applyFlexibleRopeOffsets"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    v-model.number="hdrIntensity"
+                    @input="onHdrIntensityInput"
                 />
-                <div class="anim-label" style="margin-top:4px;">俯仰偏移 pitch（度）</div>
+
+                <div class="anim-label" style="margin-top:8px;">天空盒（用于水面反射）</div>
+                <div class="anim-label">天空盒 URL</div>
+                <input type="text" class="anim-input" v-model="skyboxUrl" placeholder="/environment/512/TropicalSunnyDay" />
+                <div class="anim-label">天空盒尺寸 {{ skyboxSize }}</div>
+                <input type="range" class="anim-slider" min="128" max="1024" step="128" v-model.number="skyboxSize" />
+                <div class="action-btn btn-apply" @click="applySkybox">应用天空盒到水面</div>
+            </section>
+
+            <section v-show="activePanel === 'sea'" class="panel">
+                <div class="anim-label">海面参数 Demo（WaterMaterial）</div>
+                <div class="anim-label">风向 windDirection (x/y)</div>
+                <div class="sea-row">
+                    <input type="number" class="anim-num" v-model.number="seaWindDirX" step="0.05" />
+                    <input type="number" class="anim-num" v-model.number="seaWindDirY" step="0.05" />
+                </div>
+                <div class="anim-label">风力 windForce {{ seaWindForce.toFixed(2) }}</div>
+                <input type="range" class="anim-slider" min="0" max="20" step="0.1" v-model.number="seaWindForce" />
+                <div class="anim-label">浪高 waveHeight {{ seaWaveHeight.toFixed(3) }}</div>
+                <input type="range" class="anim-slider" min="0" max="2" step="0.01" v-model.number="seaWaveHeight" />
+                <div class="anim-label">凹凸 bumpHeight {{ seaBumpHeight.toFixed(2) }}</div>
+                <input type="range" class="anim-slider" min="0" max="4" step="0.02" v-model.number="seaBumpHeight" />
+                <div class="anim-label">波长 waveLength {{ seaWaveLength.toFixed(3) }}</div>
                 <input
                     type="range"
                     class="anim-slider"
-                    min="-89"
-                    max="89"
-                    step="1"
-                    v-model.number="flexibleRopePointPitches[idx]"
-                    @input="applyFlexibleRopeOffsets"
+                    min="0.01"
+                    max="1"
+                    step="0.005"
+                    v-model.number="seaWaveLength"
                 />
-            </div>
-        </template>
-        <template v-if="demoBoardIds.length">
-            <div class="anim-label" style="margin-top:10px;">信息牌 Demo</div>
-            <div class="anim-label">显示/隐藏（按 id）</div>
-            <div class="info-board-visibility">
-                <label v-for="(id, i) in demoBoardIds" :key="id" class="anim-checkbox">
-                    <input type="checkbox" v-model="demoVisible[i]" @change="applyBoardVisibility" />
-                    <span>#{{ i + 1 }}</span>
-                </label>
-            </div>
-            <div class="anim-row">
-                <div class="preset-btn" @click="showAllBoards">全部显示</div>
-                <div class="preset-btn" @click="hideAllBoards">全部隐藏</div>
-            </div>
-            <div class="anim-label">按相机距离显示</div>
-            <div class="anim-row">
-                <label class="anim-checkbox">
-                    <input type="checkbox" v-model="cameraDistanceFilterOn" @change="applyCameraDistanceFilter" />
-                    <span>启用相机距离过滤</span>
-                </label>
-            </div>
-            <div class="anim-row">
-                <div class="anim-label">最大可见距离 {{ cameraMaxDistance.toFixed(1) }}</div>
+                <div class="anim-label">波速 waveSpeed {{ seaWaveSpeed.toFixed(1) }}</div>
+                <input type="range" class="anim-slider" min="0" max="200" step="1" v-model.number="seaWaveSpeed" />
+                <div class="anim-label">颜色混合 colorBlendFactor {{ seaColorBlendFactor.toFixed(2) }}</div>
                 <input
                     type="range"
                     class="anim-slider"
-                    min="2"
-                    max="60"
-                    step="0.5"
-                    v-model.number="cameraMaxDistance"
-                    @input="applyCameraDistanceFilter"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    v-model.number="seaColorBlendFactor"
                 />
-            </div>
-            <div class="anim-label">更新牌子内容</div>
-            <select v-model="demoEditIndex" class="anim-select">
-                <option v-for="(id, i) in demoBoardIds" :key="id" :value="i">#{{ i + 1 }} {{ demoBoardItems[i]?.title || id }}</option>
-            </select>
-            <div class="anim-label">标题</div>
-            <input type="text" class="anim-input" v-model="demoEditTitle" placeholder="标题" />
-            <div class="anim-label">属性（键: 值，一行一个）</div>
-            <textarea class="anim-textarea" v-model="demoEditAttrsText" placeholder="状态: 运行&#10;速度: 1.2" rows="3"></textarea>
-            <div class="preset-btn" @click="applyBoardContent">应用更新</div>
-        </template>
+                <div class="anim-label">法线平铺 bumpTexture u/v</div>
+                <div class="sea-row">
+                    <input type="number" class="anim-num" v-model.number="seaBumpU" min="0.1" step="0.1" />
+                    <input type="number" class="anim-num" v-model.number="seaBumpV" min="0.1" step="0.1" />
+                </div>
+                <div class="anim-label">水色 waterColor</div>
+                <input type="color" class="sea-color" v-model="seaColorHex" />
+                <div class="anim-row sea-actions">
+                    <div class="preset-btn" @click="applySeaParams">应用到海面</div>
+                    <div class="preset-btn" @click="resetSeaParams">重置默认</div>
+                </div>
+            </section>
+
+            <section v-show="activePanel === 'post'" class="panel">
+                <div class="anim-label">相机后处理</div>
+                <div class="action-btn" @click="toggleUnderwater" :class="{ active: underwaterOn }">
+                    海水下效果 {{ underwaterOn ? '开' : '关' }}
+                </div>
+            </section>
+
+            <section v-show="activePanel === 'rope'" class="panel">
+                <template v-if="ropeDemoReady">
+                    <div class="anim-label">绳子 Demo</div>
+                    <div class="anim-label">当前操控绳子</div>
+                    <select v-model="ropeControlTarget" class="anim-select" @change="onRopeControlTargetChange">
+                        <option v-for="opt in ropeControlOptions" :key="opt.value" :value="opt.value">
+                            {{ opt.label }}
+                        </option>
+                    </select>
+                    <div class="anim-label">距离（相对 A）: {{ ropeDistance.toFixed(2) }}</div>
+                    <input
+                        type="range"
+                        class="anim-slider"
+                        min="0.5"
+                        max="20"
+                        step="0.1"
+                        v-model.number="ropeDistance"
+                        @input="onRopeParamsChange"
+                    />
+                    <div class="anim-label">水平角 yaw（度，绕 Y 轴）: {{ ropeYaw.toFixed(1) }}</div>
+                    <input
+                        type="range"
+                        class="anim-slider"
+                        min="-180"
+                        max="180"
+                        step="1"
+                        v-model.number="ropeYaw"
+                        @input="onRopeParamsChange"
+                    />
+                    <div class="anim-label">俯仰角 pitch（度，向上为正）: {{ ropePitch.toFixed(1) }}</div>
+                    <input
+                        type="range"
+                        class="anim-slider"
+                        min="-89"
+                        max="89"
+                        step="1"
+                        v-model.number="ropePitch"
+                        @input="onRopeParamsChange"
+                    />
+                </template>
+
+                <template v-if="flexibleRopeReady">
+                    <div class="anim-label" style="margin-top:10px;">柔性绳子 Demo（17 个中间点）</div>
+                    <div class="anim-label">当前绳子</div>
+                    <select v-model="flexibleRopeFirstId" class="anim-select" @change="onFlexibleRopeControlTargetChange">
+                        <option v-for="id in flexibleRopeIds" :key="id" :value="id">{{ id }}</option>
+                    </select>
+                    <div class="anim-label">绳子方向 水平角 yaw（度，绕 Y 轴）: {{ flexibleRopeYaw.toFixed(1) }}</div>
+                    <input
+                        type="range"
+                        class="anim-slider"
+                        min="-180"
+                        max="180"
+                        step="1"
+                        v-model.number="flexibleRopeYaw"
+                        @input="onFlexibleRopeDirectionChange"
+                    />
+                    <div class="anim-label">绳子方向 俯仰角 pitch（度，向上为正）: {{ flexibleRopePitch.toFixed(1) }}</div>
+                    <input
+                        type="range"
+                        class="anim-slider"
+                        min="-89"
+                        max="89"
+                        step="1"
+                        v-model.number="flexibleRopePitch"
+                        @input="onFlexibleRopeDirectionChange"
+                    />
+                    <label class="anim-checkbox" style="margin-bottom:6px;">
+                        <input
+                            type="checkbox"
+                            v-model="flexibleRopePointsVisible"
+                            @change="onFlexibleRopePointsVisibleChange"
+                        />
+                        <span>显示控制点小球</span>
+                    </label>
+                    <div v-for="(yaw, idx) in flexibleRopePointYaws" :key="idx" class="anim-row">
+                        <div class="anim-label">
+                            点 #{{ idx + 1 }} 偏移 yaw: {{ yaw.toFixed(1) }}° / pitch:
+                            {{ flexibleRopePointPitches[idx]?.toFixed(1) }}°
+                        </div>
+                        <div class="anim-label" style="margin-top:4px;">水平偏移 yaw（度）</div>
+                        <input
+                            type="range"
+                            class="anim-slider"
+                            min="-180"
+                            max="180"
+                            step="1"
+                            v-model.number="flexibleRopePointYaws[idx]"
+                            @input="applyFlexibleRopeOffsets"
+                        />
+                        <div class="anim-label" style="margin-top:4px;">俯仰偏移 pitch（度）</div>
+                        <input
+                            type="range"
+                            class="anim-slider"
+                            min="-89"
+                            max="89"
+                            step="1"
+                            v-model.number="flexibleRopePointPitches[idx]"
+                            @input="applyFlexibleRopeOffsets"
+                        />
+                    </div>
+
+                    <div class="anim-label" style="margin-top:10px;">柔性绳子信息牌</div>
+                    <div class="anim-row">
+                        <div class="preset-btn" @click="showAllFlexibleRopeBoards">全部显示</div>
+                        <div class="preset-btn" @click="hideAllFlexibleRopeBoards">全部隐藏</div>
+                    </div>
+                    <div class="anim-label">按相机距离显示</div>
+                    <div class="anim-row">
+                        <label class="anim-checkbox">
+                            <input
+                                type="checkbox"
+                                v-model="cameraDistanceFilterOn"
+                                @change="applyFlexibleRopeCameraDistanceFilter"
+                            />
+                            <span>启用相机距离过滤</span>
+                        </label>
+                    </div>
+                    <div class="anim-row">
+                        <div class="anim-label">最大可见距离 {{ cameraMaxDistance.toFixed(1) }}</div>
+                        <input
+                            type="range"
+                            class="anim-slider"
+                            min="2"
+                            max="60"
+                            step="0.5"
+                            v-model.number="cameraMaxDistance"
+                            @input="applyFlexibleRopeCameraDistanceFilter"
+                        />
+                    </div>
+                </template>
+            </section>
+        </div>
     </div>
     <Loading :progress="loading" v-if="loading > 0 && loading < 1"> </Loading>
 
 </template>
 <script lang="ts" setup>
-import { App, MODEL_URLS, HDR_URLS, type CameraViewPreset, type InfoBoardItem, type SeaParams } from '@/3d/app';
+import { App, MODEL_URLS, HDR_URLS, type CameraViewPreset, type SeaParams } from '@/3d/app';
 import {
     cameraPresetsConfig,
     defaultCameraViewLimitConfig,
@@ -268,7 +380,6 @@ import {
     ropeDemoModelBindings,
     flexibleRopeDemoConfig,
     flexibleRopeCreateExample,
-    infoBoardDemoConfig,
 } from '@/3d/app/demoConfig';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import { AppAssets } from '@/3d/assets/PublishLibrary';
@@ -277,6 +388,37 @@ import '../../ai'
 
 
 const props = defineProps<{ projectId: string }>()
+
+type PanelKey = 'camera' | 'model' | 'env' | 'sea' | 'post' | 'rope';
+const ACTIVE_PANEL_STORAGE_KEY = 'cc-editor:activePanel';
+const activePanel = ref<PanelKey>('camera');
+
+function isPanelKey(v: unknown): v is PanelKey {
+    return (
+        v === 'camera' ||
+        v === 'model' ||
+        v === 'env' ||
+        v === 'sea' ||
+        v === 'post' ||
+        v === 'rope'
+    );
+}
+
+// 记住上次选择的面板，避免每次打开都从头翻找
+try {
+    const cached = localStorage.getItem(ACTIVE_PANEL_STORAGE_KEY);
+    if (isPanelKey(cached)) activePanel.value = cached;
+} catch {
+    // ignore
+}
+
+watch(activePanel, (v) => {
+    try {
+        localStorage.setItem(ACTIVE_PANEL_STORAGE_KEY, v);
+    } catch {
+        // ignore
+    }
+});
 
 const canvas = ref<HTMLCanvasElement>(null);
 const loading = ref<number>(0);
@@ -338,14 +480,7 @@ const seaColorHex = ref(
         : seaDemoDefaults.colorHex,
 );
 
-// 信息牌 Demo：多个小球牌子的 id 与可编辑数据
-const demoBoardIds = ref<string[]>([]);
-const demoBoardItems = ref<InfoBoardItem[]>([]);
-const demoVisible = ref<boolean[]>([]);
-const demoEditIndex = ref(0);
-const demoEditTitle = ref('');
-const demoEditAttrsText = ref('');
-const cameraDistanceFilterOn = ref(false);
+const cameraDistanceFilterOn = ref(true);
 const cameraMaxDistance = ref(30);
 const underwaterOn = ref(false);
 
@@ -500,20 +635,21 @@ function applyFlexibleRopeOffsets() {
     });
 }
 
-function applyBoardVisibility() {
-    const ids = demoBoardIds.value.filter((_, i) => demoVisible.value[i]);
+function showAllFlexibleRopeBoards() {
+    const ids = App.Instance.getAllFlexibleRopePointMeshIds();
     App.Instance.setInfoBoardsVisible(ids);
 }
-function showAllBoards() {
-    demoVisible.value = demoBoardIds.value.map(() => true);
-    applyBoardVisibility();
-}
-function hideAllBoards() {
-    demoVisible.value = demoBoardIds.value.map(() => false);
-    applyBoardVisibility();
+function hideAllFlexibleRopeBoards() {
+    App.Instance.setInfoBoardsVisible([]);
 }
 
-function applyCameraDistanceFilter() {
+function applyFlexibleRopeCameraDistanceFilter() {
+    // 这里的距离过滤是作用在“信息牌系统”层面的；为了确保控制对象是柔性绳子牌子，
+    // 在开启过滤时先把可见集合切到柔性绳子控制点对应的 mesh.id 列表。
+    if (cameraDistanceFilterOn.value) {
+        const ids = App.Instance.getAllFlexibleRopePointMeshIds();
+        App.Instance.setInfoBoardsVisible(ids);
+    }
     App.Instance.setInfoBoardsCameraDistanceVisibility(
         cameraDistanceFilterOn.value,
         0,
@@ -526,34 +662,6 @@ function toggleUnderwater() {
     App.Instance.setUnderwaterEffectEnabled(underwaterOn.value, 1);
 }
 
-function syncDemoEditFromItem() {
-    const item = demoBoardItems.value[demoEditIndex.value];
-    if (!item) return;
-    demoEditTitle.value = item.title ?? '';
-    demoEditAttrsText.value = (item.attribute ?? [])
-        .map((a) => Object.entries(a).map(([k, v]) => `${k}: ${v}`).join('\n'))
-        .join('\n');
-}
-
-function applyBoardContent() {
-    const i = demoEditIndex.value;
-    const items = demoBoardItems.value;
-    if (i < 0 || i >= items.length) return;
-    const lines = demoEditAttrsText.value.split('\n').map((s) => s.trim()).filter(Boolean);
-    const attribute = lines.map((line) => {
-        const colon = line.indexOf(':');
-        if (colon <= 0) return { [line]: '' };
-        const key = line.slice(0, colon).trim();
-        const value = line.slice(colon + 1).trim();
-        return { [key]: value };
-    });
-    items[i] = {
-        ...items[i],
-        title: demoEditTitle.value.trim() || undefined,
-        attribute,
-    };
-    App.Instance.setInfoBoards([...items]);
-}
 
 /** 根据当前模型与动画更新裁剪范围为完整区间（不裁剪） */
 function updateClipRangeToDefault() {
@@ -649,31 +757,6 @@ function syncModelUiAfterLoaded() {
     updateClipRangeToDefault();
 }
 
-function initInfoBoardDemo() {
-    // 调试：生成多个循环运动的小球，并分别插入信息牌（配置来自 3D 层 demoConfig）
-    const center =
-        (App.Instance.getNodeByModelAndName('Soldier') as any)?.getAbsolutePosition?.() ??
-        undefined;
-    const ballIds = App.Instance.createDebugMovingBalls({
-        count: infoBoardDemoConfig.ballCount,
-        diameter: infoBoardDemoConfig.ballOptions.diameter,
-        radius: infoBoardDemoConfig.ballOptions.radius,
-        center,
-        speed: infoBoardDemoConfig.ballOptions.speed,
-        yAmplitude: infoBoardDemoConfig.ballOptions.yAmplitude,
-        namePrefix: infoBoardDemoConfig.ballOptions.namePrefix,
-    });
-    if (!ballIds.length) return;
-
-    const items: InfoBoardItem[] = infoBoardDemoConfig.createItems(ballIds);
-    App.Instance.setInfoBoards(items);
-    demoBoardIds.value = ballIds;
-    demoBoardItems.value = items.map((x) => ({ ...x, attribute: x.attribute.map((a) => ({ ...a })) }));
-    demoVisible.value = ballIds.map(() => true);
-    demoEditIndex.value = 0;
-    syncDemoEditFromItem();
-}
-
 function initRopeDemo() {
     // 绳子 Demo：根据配置初始化生成三根绳子，B 端通过模型名称绑定
     // 若某个模型名称不存在，则对应端点会退回到默认小球。
@@ -736,6 +819,8 @@ function initFlexibleRopeDemo() {
         }
     }
     flexibleRopeReady.value = true;
+    // 默认启用“相机距离过滤”时，初始化完柔性绳子后立刻应用一次，确保进入页面即生效
+    if (cameraDistanceFilterOn.value) applyFlexibleRopeCameraDistanceFilter();
 }
 
 async function loadSceneFromProjectUrl(url: string) {
@@ -768,10 +853,21 @@ onMounted(async () => {
 
 let currentIndex = ref(0);
 const propellerWaveOn = ref(true);
+const propellerParticlesOn = ref(true);
+const propellerWaveParticlesOn = ref(true);
 
 const togglePropellerWave = () => {
     propellerWaveOn.value = !propellerWaveOn.value;
     App.Instance.setPropellerWaveEffectEnabled(propellerWaveOn.value);
+};
+
+const togglePropellerParticles = () => {
+    propellerParticlesOn.value = !propellerParticlesOn.value;
+    App.Instance.setPropellerWaveParticlesEnabled(propellerParticlesOn.value);
+};
+
+const applyPropellerWaveParticlesEnabled = () => {
+    App.Instance.setPropellerWaveParticlesEnabled(propellerWaveParticlesOn.value);
 };
 
 const onModelChange = () => {
@@ -788,7 +884,6 @@ watch([currentModelName, currentAnimName], () => {
         updateClipRangeToDefault();
     }
 });
-watch(demoEditIndex, () => syncDemoEditFromItem());
 
 const next = () => {
     if (currentIndex.value < App.Instance.allCount - 1) {
@@ -937,36 +1032,7 @@ function resetSeaParams() {
     syncSeaParamsFromApp();
 }
 
-/** 校验并规范化信息牌数据 */
-function normalizeInfoBoardPayload(payload: unknown): InfoBoardItem[] | null {
-    if (!Array.isArray(payload)) return null;
-    return payload.map((item) => {
-        if (!item || typeof item !== 'object') return null;
-        const id = (item as any).id;
-        if (id == null || typeof id !== 'string') return null;
-        const title = (item as any).title;
-        const attribute = (item as any).attribute;
-        return {
-            id: String(id),
-            title: title != null ? String(title) : undefined,
-            attribute: Array.isArray(attribute) ? attribute : [],
-        };
-    }).filter(Boolean) as InfoBoardItem[];
-}
-
-/** 通过 onMessage 接收信息牌数据，数据格式: [{ id, title?, attribute }] 或 { type: 'infoBoards', data: [...] } */
-function onMessage(handler: (data: InfoBoardItem[]) => void) {
-    const fn = (event: MessageEvent) => {
-        let raw = event.data;
-        if (raw?.type === 'infoBoards' && Array.isArray(raw.data)) raw = raw.data;
-        const data = normalizeInfoBoardPayload(raw);
-        if (data) handler(data);
-    };
-    window.addEventListener('message', fn);
-    return () => window.removeEventListener('message', fn);
-}
-
-/** 统一 message 监听：信息牌、柔性绳子创建、柔性绳子更新 */
+/** 统一 message 监听：柔性绳子创建、柔性绳子更新 */
 function setupMessageListeners() {
     const onMessageFn = (event: MessageEvent) => {
         const raw = event.data;
@@ -979,10 +1045,6 @@ function setupMessageListeners() {
             App.Instance.updateFlexibleRopePoints(raw.data);
             return;
         }
-        let payload = raw;
-        if (raw.type === 'infoBoards' && Array.isArray(raw.data)) payload = raw.data;
-        const data = normalizeInfoBoardPayload(payload);
-        if (data) App.Instance.setInfoBoards(data);
     };
     window.addEventListener('message', onMessageFn);
     return () => window.removeEventListener('message', onMessageFn);
@@ -1032,7 +1094,73 @@ onUnmounted(() => {
     color: #fff;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 
-    > div:not(.anim-label):not(.anim-row) {
+    .panel-tabs {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px 0 10px;
+        background: linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.72),
+            rgba(0, 0, 0, 0.55) 60%,
+            rgba(0, 0, 0, 0)
+        );
+        backdrop-filter: blur(6px);
+    }
+
+    .tab-btn {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.35);
+        color: rgba(255, 255, 255, 0.92);
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        user-select: none;
+        transition:
+            background-color 0.2s ease,
+            border-color 0.2s ease,
+            transform 0.05s ease;
+
+        &:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        &:active {
+            transform: translateY(1px);
+        }
+
+        &.active {
+            border-color: rgba(0, 140, 255, 0.6);
+            background: rgba(0, 100, 200, 0.45);
+        }
+    }
+
+    .panel-body {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .panel {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 0;
+    }
+
+    .panel-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
         background-color: rgba(0, 0, 0, 0.5);
         padding: 5px;
         border-radius: 5px;

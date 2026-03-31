@@ -53,6 +53,7 @@ import {
   type AnimationSplitModelConfig,
   type AnimationSplitSourceConfig,
   type AnimationSplitSegmentConfig,
+  propellerWaveParticleEmitters,
 } from './demoConfig';
 import {
   createTimedShaderMaterial,
@@ -484,6 +485,8 @@ export class App {
   /** 移除 iTime 每帧更新的观察者，在 dispose 或不再需要时调用 */
   private propellerWaveRemoveTimeObserver: (() => void) | null = null;
   private propellerWaveEnabled = true;
+  /** 螺旋桨浪花粒子是否启用（仅影响粒子版；着色器版不受影响） */
+  private propellerWaveParticlesEnabled = true;
   private static readonly PROPELLER_WAVE_EMIT_RATE = 150;
   private propellerWaveEmitRateTween: gsap.core.Tween | null = null;
   /** 关闭时“从后往前”回收粒子的每帧观察者，回收完后移除 */
@@ -2241,6 +2244,15 @@ export class App {
     return state ? state.pointIds.slice() : [];
   }
 
+  /** 获取所有柔性绳子“控制点小球 mesh.id”（用于信息牌挂接与显隐控制） */
+  getAllFlexibleRopePointMeshIds(): string[] {
+    const ids: string[] = [];
+    for (const state of this.flexibleRopesMap.values()) {
+      state.pointMeshes.forEach((m) => ids.push(m.id));
+    }
+    return ids;
+  }
+
   /**
    * 切换所有柔性绳子上控制点小球的显示/隐藏。
    * 创建时小球默认隐藏，调用 setFlexibleRopePointsVisible(true) 可显示。
@@ -3087,6 +3099,7 @@ export class App {
 
     this.createPropellerWaveEffectShader();
     this.setPropellerWaveEffectEnabled(this.propellerWaveEnabled);
+    this.setPropellerWaveParticlesEnabled(this.propellerWaveParticlesEnabled);
     return waterGround;
   }
 
@@ -3222,48 +3235,77 @@ export class App {
    * 创建螺旋桨推动的波浪粒子效果（船尾两侧），独立效果可切换显示
    */
   private createPropellerWaveEffect() {
+    if (!this.propellerWaveParticlesEnabled) return;
     const capacity = 6000;
-    // 用一个“面”（盒状发射区域）代替左右两条尾流
-    const emitterCenter = new Vector3(15.7, 2, 0);
 
     const tex = new Texture('particle/smoke.png', this.scene, true, false, null);
     tex.hasAlpha = true;
 
-    const ps = new ParticleSystem('propellerWave', capacity, this.scene);
-    ps.emitter = emitterCenter;
-    ps.blendMode = ParticleSystem.BLENDMODE_ADD;
-    ps.particleTexture = tex;
-    ps.isAnimationSheetEnabled = true;
-    ps.spriteCellWidth = 256;
-    ps.spriteCellHeight = 256;
-    ps.startSpriteCellID = 0;
-    ps.endSpriteCellID = 4;
-    ps.spriteCellLoop = true;
-    ps.spriteCellChangeSpeed = 5;
-    ps.minScaleX = 10;
-    ps.minScaleY = 10;
-    ps.emitRate = App.PROPELLER_WAVE_EMIT_RATE;
-    ps.minSize = 0.5;
-    ps.maxSize = 1.5;
-    ps.minLifeTime = 5;
-    ps.maxLifeTime = 6;
-    // 发射区域：在水面附近的一个矩形面（扩大范围）
-    ps.createBoxEmitter(
-      new Vector3(30, 0, -3.5),
-      new Vector3(30, 0, 3.5),
-      new Vector3(-0.6, -0.08, -6),
-      new Vector3(0.6, 0.08, 6),
-    );
-    // 生命周期内前段就快速缩小，关闭螺旋桨后几乎看不到“浪带向后移”，只看到波浪在船尾处收掉
-    ps.addSizeGradient(0, 1);
-    ps.addSizeGradient(0.15, 0.4);
-    ps.addSizeGradient(0.35, 0.08);
-    ps.addSizeGradient(0.6, 0.02);
-    ps.addSizeGradient(1, 0);
+    const systems: ParticleSystem[] = [];
+    const emitters = propellerWaveParticleEmitters.length
+      ? propellerWaveParticleEmitters
+      : [{ x: 15.7, y: 2, z: 0 }];
+    emitters.forEach((e, i) => {
+      const ps = new ParticleSystem(`propellerWave_${i}`, capacity, this.scene);
+      ps.emitter = new Vector3(e.x, e.y, e.z);
+      ps.blendMode = ParticleSystem.BLENDMODE_ADD;
+      ps.particleTexture = tex;
+      ps.isAnimationSheetEnabled = true;
+      ps.spriteCellWidth = 256;
+      ps.spriteCellHeight = 256;
+      ps.startSpriteCellID = 0;
+      ps.endSpriteCellID = 4;
+      ps.spriteCellLoop = true;
+      ps.spriteCellChangeSpeed = 5;
+      ps.minScaleX = 10;
+      ps.minScaleY = 10;
+      ps.emitRate = App.PROPELLER_WAVE_EMIT_RATE;
+      ps.minSize = 0.5;
+      ps.maxSize = 1.5;
+      ps.minLifeTime = 5;
+      ps.maxLifeTime = 6;
+      // 发射区域：在水面附近的一个矩形面（扩大范围）；相对原方向绕 Y 轴旋转 90°（x,y,z -> z,y,-x）
+      ps.createBoxEmitter(
+        new Vector3(-3.5, 0, -30),
+        new Vector3(3.5, 0, -30),
+        new Vector3(-6, -0.08, 0.6),
+        new Vector3(6, 0.08, -0.6),
+      );
+      // 生命周期内前段就快速缩小，关闭螺旋桨后几乎看不到“浪带向后移”，只看到波浪在船尾处收掉
+      ps.addSizeGradient(0, 1);
+      ps.addSizeGradient(0.15, 0.4);
+      ps.addSizeGradient(0.35, 0.08);
+      ps.addSizeGradient(0.6, 0.02);
+      ps.addSizeGradient(1, 0);
 
-    ps.start();
+      ps.start();
+      systems.push(ps);
+    });
 
-    this.propellerWaveParticles = [ps];
+    this.propellerWaveParticles = systems;
+  }
+
+  /** 切换螺旋桨浪花粒子是否启用（仅影响粒子版；着色器版不受影响） */
+  setPropellerWaveParticlesEnabled(enabled: boolean) {
+    this.propellerWaveParticlesEnabled = enabled;
+    if (!enabled) {
+      if (this.propellerWaveEmitRateTween) {
+        this.propellerWaveEmitRateTween.kill();
+        this.propellerWaveEmitRateTween = null;
+      }
+      if (this.propellerWaveClosingObserver) {
+        this.scene.onBeforeRenderObservable.remove(this.propellerWaveClosingObserver);
+        this.propellerWaveClosingObserver = null;
+      }
+      this.propellerWaveParticles.forEach((ps) => {
+        ps.stop();
+        ps.dispose();
+      });
+      this.propellerWaveParticles = [];
+      return;
+    }
+    if (!this.propellerWaveEnabled) return;
+    if (this.propellerWaveParticles.length === 0) this.createPropellerWaveEffect();
   }
 
   /**
@@ -3292,8 +3334,9 @@ export class App {
       return;
     }
     if (this.propellerWaveParticles.length === 0) {
-      this.createPropellerWaveEffect();
+      if (this.propellerWaveParticlesEnabled) this.createPropellerWaveEffect();
     }
+    if (!this.propellerWaveParticlesEnabled) return;
     const rate = { value: 0 };
     const applyRate = () => {
       this.propellerWaveParticles.forEach((ps) => {

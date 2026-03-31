@@ -374,7 +374,7 @@ export const seaDemoDefaults: {
     // 更“波涛汹涌”的默认值（偏大浪 + 更强法线 + 更快流动）
     windDirection: { x: 1, y: 0.35 },
     windForce: 14,
-    waveHeight: 0.6,
+    waveHeight: 0,
     bumpHeight: 1.2,
     waveLength: 0.08,
     waveSpeed: 120,
@@ -385,6 +385,15 @@ export const seaDemoDefaults: {
   },
   colorHex: '#0a3b41',
 };
+
+/**
+ * 螺旋桨浪花粒子示例：发射器世界坐标数组（每个点会创建一组尾流/浪花粒子）。
+ * - 仅存放数据，方便在不同模型/场景下快速调整位置
+ */
+export const propellerWaveParticleEmitters: Array<{ x: number; y: number; z: number }> = [
+  // 默认示例：船尾附近（与 App.createPropellerWaveEffect 里的默认 emitterCenter 对齐）
+  { x: -2, y: -4, z: -28 },
+];
 
 
 
