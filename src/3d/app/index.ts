@@ -54,6 +54,7 @@ import {
   type AnimationSplitSourceConfig,
   type AnimationSplitSegmentConfig,
   propellerWaveParticleEmitters,
+  seaDemoDefaults,
 } from './demoConfig';
 import {
   createTimedShaderMaterial,
@@ -3073,24 +3074,17 @@ export class App {
     );
     const waterMaterial = new WaterMaterial('water', this.scene, new Vector2(1024, 1024));
     const normal = new Texture('waterbump.png', this.scene, true, false);
-    // 更密的法线平铺：更容易出现“浪花/碎波”的细节感
-    normal.uScale = 6;
-    normal.vScale = 6;
     waterMaterial.bumpTexture = normal;
-    // 默认海面效果：更汹涌
-    (waterMaterial as any).windDirection = new Vector2(1, 0.35);
-    waterMaterial.windForce = 14;
-    waterMaterial.waveHeight = 0.6;
-    waterMaterial.bumpHeight = 1.2;
-    // 更短波长会更“碎”，更像波涛汹涌
-    waterMaterial.waveLength = 0.08;
-    waterMaterial.waveSpeed = 120;
-    // 提高泡沫/颜色混合强度
-    waterMaterial.colorBlendFactor = 0.45;
-    waterMaterial.sideOrientation = 1;
-    // 略偏蓝绿色（更接近海水），浪花主要靠 colorBlendFactor+法线细节体现
-    waterMaterial.waterColor = Color3.FromHexString('#0a3b41');
+
+    // 海面参数默认值：由 seaDemoDefaults（demoConfig）统一驱动
+    // - 先设置 bumpTexture 平铺兜底，再通过 setSeaParams 覆盖（setSeaParams 依赖 bumpTexture 已存在）
+    normal.uScale = seaDemoDefaults.params.bumpTextureScale?.u ?? 6;
+    normal.vScale = seaDemoDefaults.params.bumpTextureScale?.v ?? 6;
+    waterMaterial.sideOrientation = seaDemoDefaults.params.sideOrientation ?? 1;
     this.waterMaterial = waterMaterial;
+    // 将默认参数真正应用到材质上（否则只改 UI 不会影响海面初始效果）
+    this.setSeaParams(seaDemoDefaults.params);
+    // 保存默认快照用于 reset
     this.seaParamsDefaults = this.getSeaParams();
 
     waterGround.material = waterMaterial;

@@ -364,7 +364,7 @@ export const skyboxDemoConfig = {
   defaultSize: 512,
 } as const;
 
-/** 海面参数 demo 默认值（仅用于 UI 初始值；真正默认值来自 App.getSeaParams） */
+/** 海面参数 demo 默认值（用于 UI 初始值 + 3D 水面初始化/重置默认值） */
 export const seaDemoDefaults: {
   params: SeaParams;
   /** UI 中使用的默认十六进制水色（便于重置） */
