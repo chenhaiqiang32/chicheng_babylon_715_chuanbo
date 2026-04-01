@@ -4,6 +4,7 @@ import {
   AnimationGroup,
   DirectionalLight,
   CascadedShadowGenerator,
+  DefaultRenderingPipeline,
   Engine,
   ExecuteCodeAction,
   ImportMeshAsync,
@@ -54,6 +55,7 @@ import {
   type AnimationSplitSourceConfig,
   type AnimationSplitSegmentConfig,
   propellerWaveParticleEmitters,
+  sceneSaturationDefaults,
   seaDemoDefaults,
 } from './demoConfig';
 import {
@@ -463,6 +465,12 @@ export class App {
   /** 海水下效果后处理 */
   private underwaterPostProcess: PostProcess | null = null;
   private underwaterTime = 0;
+  /** 场景饱和度后处理（DefaultRenderingPipeline + colorCurves） */
+  private saturationPipeline: DefaultRenderingPipeline | null = null;
+  private saturationPipelineSceneId: number | null = null;
+  private saturationEnabled: boolean = sceneSaturationDefaults.enabled;
+  /** 饱和度：Babylon colorCurves.globalSaturation，范围建议 -100~100 */
+  private saturationValue: number = sceneSaturationDefaults.value;
   /** 海水下效果自动切换：记录当前是否处于“水下”状态，避免重复开关 */
   private isUnderwaterAuto = false;
   /** 海水下效果自动切换：每帧监听句柄 */
@@ -600,6 +608,11 @@ export class App {
     this.cameraTargetHelper = null;
     this.infoBoardHelper?.dispose();
     this.infoBoardHelper = null;
+    if (this.saturationPipeline) {
+      this.saturationPipeline.dispose();
+      this.saturationPipeline = null;
+      this.saturationPipelineSceneId = null;
+    }
     if (this.scene) {
       for (const { mesh, observer } of this.debugMovingBalls.values()) {
         this.scene.onBeforeRenderObservable.remove(observer);
@@ -775,9 +788,11 @@ export class App {
       camera.minZ = 0.1;
       scene.activeCamera = camera;
       this.registerCameraClickDebug();
+      this.ensureSaturationPipeline();
     } else {
       // 复用已有场景时也确保已注册点击事件
       this.registerCameraClickDebug();
+      this.ensureSaturationPipeline();
     }
 
     progressCb?.(0.1);
@@ -2581,6 +2596,7 @@ export class App {
     scene.activeCamera.attachControl(this.canvas, true);
     this.registerCameraClickDebug();
     this.registerAction();
+    this.ensureSaturationPipeline();
     const groupCount = Math.ceil(padding.length / 20);
     const group = ArrayUtils.groupArray(padding, groupCount);
     for (let index = 0; index < group.length; index++) {
@@ -2611,6 +2627,53 @@ export class App {
     // });
     this.setGround();
     return scene;
+  }
+
+  /**
+   * 启用/禁用“场景饱和度”后处理，并设置强度。
+   * saturation 采用 Babylon colorCurves.globalSaturation 语义，建议范围 -100~100。
+   */
+  setSceneSaturationEffectEnabled(enabled: boolean, saturation = 20): void {
+    this.saturationEnabled = enabled;
+    this.setSceneSaturation(saturation);
+  }
+
+  /** 设置场景饱和度强度（建议范围 -100~100）。 */
+  setSceneSaturation(saturation: number): void {
+    const v = Number.isFinite(saturation) ? saturation : 0;
+    this.saturationValue = Math.max(-100, Math.min(100, v));
+    this.ensureSaturationPipeline();
+  }
+
+  private ensureSaturationPipeline(): void {
+    const scene = this.scene;
+    if (!scene) return;
+
+    if (this.saturationPipeline && this.saturationPipelineSceneId !== scene.uniqueId) {
+      this.saturationPipeline.dispose();
+      this.saturationPipeline = null;
+      this.saturationPipelineSceneId = null;
+    }
+
+    if (!this.saturationPipeline) {
+      this.saturationPipeline = new DefaultRenderingPipeline(
+        'AppSaturationPipeline',
+        true,
+        scene,
+        scene.cameras,
+      );
+      this.saturationPipelineSceneId = scene.uniqueId;
+      // 与编辑器默认保持一致的采样体验
+      this.saturationPipeline.samples = 8;
+    }
+
+    const ip = this.saturationPipeline.imageProcessing;
+    this.saturationPipeline.imageProcessingEnabled = this.saturationEnabled;
+    if (!ip) return;
+    ip.colorCurvesEnabled = this.saturationEnabled;
+    if (ip.colorCurves) {
+      ip.colorCurves.globalSaturation = this.saturationValue;
+    }
   }
 
   /**

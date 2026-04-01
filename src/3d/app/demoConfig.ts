@@ -419,6 +419,18 @@ export const infoBoardDemoConfig = {
   },
 } as const;
 
+/** 场景饱和度后处理默认配置（用于 UI 初始值 + 3D 初始化默认值） */
+export const sceneSaturationDefaults = {
+  /** 默认是否启用饱和度后处理 */
+  enabled: true,
+  /**
+   * 默认饱和度值：
+   * - 对应 Babylon `colorCurves.globalSaturation`
+   * - 建议范围：-100 ~ 100
+   */
+  value: 30,
+} as const;
+
 
 
 

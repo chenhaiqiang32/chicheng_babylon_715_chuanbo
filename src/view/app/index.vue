@@ -229,6 +229,23 @@
                 <div class="action-btn" @click="toggleUnderwater" :class="{ active: underwaterOn }">
                     海水下效果 {{ underwaterOn ? '开' : '关' }}
                 </div>
+
+                <div class="anim-label" style="margin-top:8px;">场景颜色饱和度</div>
+                <label class="anim-checkbox">
+                    <input type="checkbox" v-model="saturationOn" @change="applySaturation" />
+                    <span>启用饱和度增强</span>
+                </label>
+                <div class="anim-label">强度 {{ saturation.toFixed(0) }}</div>
+                <input
+                    type="range"
+                    class="anim-slider"
+                    min="-100"
+                    max="100"
+                    step="1"
+                    v-model.number="saturation"
+                    @input="applySaturation"
+                    :disabled="!saturationOn"
+                />
             </section>
 
             <section v-show="activePanel === 'rope'" class="panel">
@@ -376,6 +393,7 @@ import {
     hdrDemoConfig,
     skyboxDemoConfig,
     seaDemoDefaults,
+    sceneSaturationDefaults,
     ropeDemoConfig,
     ropeDemoModelBindings,
     flexibleRopeDemoConfig,
@@ -483,6 +501,8 @@ const seaColorHex = ref(
 const cameraDistanceFilterOn = ref(true);
 const cameraMaxDistance = ref(30);
 const underwaterOn = ref(false);
+const saturationOn = ref<boolean>(sceneSaturationDefaults.enabled);
+const saturation = ref<number>(sceneSaturationDefaults.value);
 
 // 相机限制 Demo（调试用）
 const cameraHelperOn = ref(false);
@@ -660,6 +680,10 @@ function applyFlexibleRopeCameraDistanceFilter() {
 function toggleUnderwater() {
     underwaterOn.value = !underwaterOn.value;
     App.Instance.setUnderwaterEffectEnabled(underwaterOn.value, 1);
+}
+
+function applySaturation() {
+    App.Instance.setSceneSaturationEffectEnabled(saturationOn.value, saturation.value);
 }
 
 
