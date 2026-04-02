@@ -391,6 +391,7 @@ import {
     cameraPresetsConfig,
     defaultCameraViewLimitConfig,
     hdrDemoConfig,
+    hdrEnvironmentRotationDefaults,
     skyboxDemoConfig,
     seaDemoDefaults,
     sceneSaturationDefaults,
@@ -761,6 +762,9 @@ async function initEnvironmentForModel() {
         onProgress: (p) => { loading.value = 0.85 + p * 0.15; },
     });
     App.Instance.setEnvironmentIntensity(hdrIntensity.value);
+    // 环境贴图逐渐旋转：用于模拟环境光方向变化（默认开启，可在 demoConfig.ts 配置）
+    App.Instance.setEnvironmentRotationEnabled(hdrEnvironmentRotationDefaults.enabled);
+    App.Instance.setEnvironmentRotationSpeedRadPerSec(hdrEnvironmentRotationDefaults.speedRadPerSec);
     loading.value = 1;
 
     // 海面参数 demo：读取当前水面参数作为 UI 默认值（不改变现有默认参数）
@@ -995,6 +999,8 @@ async function applyHdr() {
             onProgress: (p) => { loading.value = 0.9 + p * 0.1; },
         });
         App.Instance.setEnvironmentIntensity(hdrIntensity.value);
+        App.Instance.setEnvironmentRotationEnabled(hdrEnvironmentRotationDefaults.enabled);
+        App.Instance.setEnvironmentRotationSpeedRadPerSec(hdrEnvironmentRotationDefaults.speedRadPerSec);
     } catch (e) {
         console.error('应用 HDR 失败', e);
     } finally {

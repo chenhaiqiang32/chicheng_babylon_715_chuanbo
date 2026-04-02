@@ -289,6 +289,14 @@ export class App {
   scene: Scene;
   private canvas: HTMLCanvasElement;
   weakMap: Map<string, Node> = new Map();
+  /** 环境贴图旋转：每帧更新 environmentTexture.rotationY */
+  private environmentRotationObserver: ReturnType<
+    Scene['onBeforeRenderObservable']['add']
+  > | null = null;
+  private environmentRotationEnabled = true;
+  /** 环境贴图旋转速度（弧度/秒） */
+  private environmentRotationSpeedRadPerSec = 0.05;
+  private environmentRotationLastTimeMs: number | null = null;
   /** 相机视角限制：每帧钳制 target / beta / radius */
   private cameraViewLimitObserver: ReturnType<
     Scene['onBeforeRenderObservable']['add']
@@ -620,6 +628,11 @@ export class App {
       }
     }
     this.debugMovingBalls.clear();
+    if (this.environmentRotationObserver && this.scene) {
+      this.scene.onBeforeRenderObservable.remove(this.environmentRotationObserver);
+      this.environmentRotationObserver = null;
+    }
+    this.environmentRotationLastTimeMs = null;
     if (this.ropeObserver && this.scene) {
       this.scene.onBeforeRenderObservable.remove(this.ropeObserver);
       this.ropeObserver = null;
@@ -851,7 +864,7 @@ export class App {
     this.currentModelName = finalModelName;
     this.modelAnimationGroups = groups;
     if (sceneJustCreated) {
-      this.setGround();
+      // this.setGround();
     }
     progressCb?.(1);
     return this.scene;
@@ -2730,9 +2743,60 @@ export class App {
       hdr.onLoadObservable.addOnce(() => {
         this.scene.environmentTexture = hdr;
         this.scene.environmentIntensity = this.scene.environmentIntensity ?? 1;
+        this.ensureEnvironmentRotationObserver();
         onProgress?.(1);
         resolve(hdr);
       });
+    });
+  }
+
+  /** 启用/禁用 HDR 环境贴图旋转（用于逐渐照亮不同方向的效果）。 */
+  setEnvironmentRotationEnabled(enabled: boolean): void {
+    this.environmentRotationEnabled = !!enabled;
+    this.ensureEnvironmentRotationObserver();
+  }
+
+  /** 设置 HDR 环境贴图旋转速度（弧度/秒）。 */
+  setEnvironmentRotationSpeedRadPerSec(speed: number): void {
+    const v = Number.isFinite(speed) ? speed : 0;
+    this.environmentRotationSpeedRadPerSec = Math.max(0, v);
+    this.ensureEnvironmentRotationObserver();
+  }
+
+  private ensureEnvironmentRotationObserver(): void {
+    const scene = this.scene;
+    if (!scene) return;
+
+    const tex: any = scene.environmentTexture as any;
+    const hasRotY = tex && typeof tex === 'object' && 'rotationY' in tex;
+    const shouldRun =
+      this.environmentRotationEnabled && this.environmentRotationSpeedRadPerSec > 0 && hasRotY;
+
+    if (!shouldRun) {
+      if (this.environmentRotationObserver) {
+        scene.onBeforeRenderObservable.remove(this.environmentRotationObserver);
+        this.environmentRotationObserver = null;
+      }
+      this.environmentRotationLastTimeMs = null;
+      return;
+    }
+
+    if (this.environmentRotationObserver) return;
+
+    this.environmentRotationLastTimeMs = null;
+    this.environmentRotationObserver = scene.onBeforeRenderObservable.add(() => {
+      const t: any = scene.environmentTexture as any;
+      if (!t || !('rotationY' in t)) return;
+
+      const now = (typeof performance !== 'undefined' && performance.now)
+        ? performance.now()
+        : Date.now();
+      const last = this.environmentRotationLastTimeMs ?? now;
+      const dt = Math.max(0, (now - last) / 1000);
+      this.environmentRotationLastTimeMs = now;
+
+      // rotationY 单位为弧度
+      t.rotationY = (t.rotationY ?? 0) + this.environmentRotationSpeedRadPerSec * dt;
     });
   }
 

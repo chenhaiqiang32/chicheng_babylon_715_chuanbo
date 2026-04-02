@@ -358,6 +358,14 @@ export const hdrDemoConfig = {
   applyFallbackUrl: '/Dutch-Sky_0168_4k.hdr',
 } as const;
 
+/** HDR 环境贴图旋转默认配置：用于让环境光方向随时间变化 */
+export const hdrEnvironmentRotationDefaults = {
+  /** 是否启用环境贴图逐渐旋转（默认开启） */
+  enabled: false,
+  /** 旋转速度（弧度/秒），建议 0.01 ~ 0.2 */
+  speedRadPerSec: 0.2,
+} as const;
+
 /** 天空盒 + 水面反射 demo 默认配置 */
 export const skyboxDemoConfig = {
   defaultUrl: 'environment/512/TropicalSunnyDay',
