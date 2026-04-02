@@ -761,13 +761,6 @@ async function initEnvironmentForModel() {
         onProgress: (p) => { loading.value = 0.85 + p * 0.15; },
     });
     App.Instance.setEnvironmentIntensity(hdrIntensity.value);
-
-    // 默认创建一个天空盒并让水面反射它（与 HDR 环境分离）
-    await App.Instance.setSkyboxForWater({
-        url: skyboxUrl.value || skyboxDemoConfig.defaultUrl,
-        size: skyboxSize.value,
-        onProgress: (p) => { loading.value = 0.9 + p * 0.1; },
-    });
     loading.value = 1;
 
     // 海面参数 demo：读取当前水面参数作为 UI 默认值（不改变现有默认参数）
