@@ -110,7 +110,9 @@ export const ropeDemoModelBindings: Array<{
     textureHeightPx: number;
     /** 绳子渲染形状：tube（旧版管状）/ box（长方体六面贴图） */
     ropeShapeType: 'tube' | 'box';
-    /** 长方体类型：整体反转角度（度，绕绳子方向轴旋转） */
+    /** 长方体类型：绕绳轴自身旋转（度）；未填时回退 boxFlipAngleDeg */
+    boxSelfRotationDeg: number;
+    /** @deprecated 请优先使用 boxSelfRotationDeg，语义相同 */
     boxFlipAngleDeg: number;
     /** 长方体类型：六个面的贴图与像素尺寸（缺省将回退到 textureUrl/textureWidthPx/textureHeightPx） */
     boxFaces: Partial<Record<RopeBoxFaceName, Partial<RopeBoxFaceTextureConfig>>>;
@@ -168,8 +170,8 @@ export const ropeDemoModelBindings: Array<{
       // 截面宽/高：用于控制 box 的形状（front/back 的矩形宽高）
       boxWidth: 0.01,
       boxHeight: 0.24,
-      // boxFlipAngleDeg：用于控制长方体随 yaw/pitch 变化时的“纹理朝向/翻转”
-      boxFlipAngleDeg: 180,
+      // boxSelfRotationDeg：绕绳轴（A→B）自身旋转，用于纹理朝向等
+      boxSelfRotationDeg: 0,
       boxFaces: {
         front: {
           textureUrl: '/DefaultScene/amiga.jpg',

@@ -373,7 +373,13 @@ export class App {
       refLength: number;
       radius: number;
       /** 最近一次 UI/外部控制参数；存在时每帧重算，确保 B 始终贴合绳子末端 */
-      liveControl?: { distance: number; yawDeg: number; pitchDeg: number };
+      liveControl?: {
+        distance: number;
+        yawDeg: number;
+        pitchDeg: number;
+        /** 仅 box：绕绳轴自身旋转（度） */
+        boxSelfRotationDeg?: number;
+      };
       // tube / box 的专用字段在下面通过联合结构补齐（TS 通过 shapeType 做区分）
     } & (
       | {
@@ -391,7 +397,8 @@ export class App {
           boxDepthRef: number;
           boxWidth: number;
           boxHeight: number;
-          boxFlipAngleDeg: number;
+          /** 绕绳轴（A→B）自身旋转（度） */
+          boxSelfRotationDeg: number;
           boxFaces: Record<
             RopeBoxFaceName,
             {
@@ -1074,7 +1081,9 @@ export class App {
     boxWidth?: number;
     /** box 截面高（front/back 面的 world 高；未传则回退到 ropeRadius*2） */
     boxHeight?: number;
-    /** 长方体类型：整体反转角度（度，绕绳子方向轴旋转） */
+    /** 长方体：绕绳轴自身旋转（度） */
+    boxSelfRotationDeg?: number;
+    /** @deprecated 同 boxSelfRotationDeg */
     boxFlipAngleDeg?: number;
     /**
      * 长方体类型：六个面的贴图配置
@@ -1176,7 +1185,14 @@ export class App {
     }
 
     const ropeShapeType: RopeDemoShapeType = options?.ropeShapeType ?? 'tube';
-    const boxFlipAngleDeg = options?.boxFlipAngleDeg ?? 0;
+    const boxSelfRotationDegInit =
+      (typeof options?.boxSelfRotationDeg === 'number' && Number.isFinite(options.boxSelfRotationDeg)
+        ? options.boxSelfRotationDeg
+        : undefined) ??
+      (typeof options?.boxFlipAngleDeg === 'number' && Number.isFinite(options.boxFlipAngleDeg)
+        ? options.boxFlipAngleDeg
+        : undefined) ??
+      0;
 
     // 参考长度：以当前 A/B 位置距离为基准
     const posA = ballA.getAbsolutePosition();
@@ -1204,7 +1220,7 @@ export class App {
       // boxRoot：锚定在 A 端世界坐标，本地 +Z 指向 B（与 tube 仅拉伸两端之间的几何一致，避免以中点为 pivot 时拉远整段沿绳平移、带俯仰时像“整体下沉”）
       const boxRoot = new TransformNode(`ropeBoxRoot_${ropeKey}`, this.scene);
       boxRoot.position.copyFrom(posA);
-      boxRoot.rotationQuaternion = this.computeRopeBoxRotationQuaternion(forwardInit, boxFlipAngleDeg);
+      boxRoot.rotationQuaternion = this.computeRopeBoxRotationQuaternion(forwardInit, boxSelfRotationDegInit);
 
       const faceNames: RopeBoxFaceName[] = ['front', 'back', 'left', 'right', 'top', 'bottom'];
       const defaultWidthPx = this.ropeTextureWidthPx;
@@ -1400,7 +1416,7 @@ export class App {
         boxDepthRef: safeBoxDepthRef,
         boxWidth: safeBoxWidth,
         boxHeight: safeBoxHeight,
-        boxFlipAngleDeg,
+        boxSelfRotationDeg: boxSelfRotationDegInit,
         boxFaces,
         refLength: this.ropeRefLength,
         radius: ropeRadius,
@@ -1471,27 +1487,30 @@ export class App {
   }
 
   /**
-   * 计算绳子 Demo B 端目标世界坐标。
-   * - distance：水平面 XZ 上的长度；水平分量按 distance 计算。
-   * - pitchDeg：仅影响相对 A 的竖直偏移，竖直偏移按传入的 refLength 作参考尺度（refLength 由外部决定：可用 state.refLength 或当前 distance）。
+   * 计算绳子 Demo B 端目标世界坐标（tube / box 共用球坐标）。
+   * - distance：A→B 三维直线长度（绳长）；pitch=0 时其在 XZ 上的投影长度等于该值。
+   * - pitch：相对水平面仰角（向上为正），与 yaw 组合可在竖直方向转满 360°。
    */
   private computeRopeDemoTargetWorldPosB(
     posA: Vector3,
     distance: number,
     yawDeg: number,
     pitchDeg: number,
-    refLength: number,
   ): Vector3 {
     const yawRad = (yawDeg * Math.PI) / 180;
     const pitchRad = (pitchDeg * Math.PI) / 180;
-    const ref = Math.max(1e-6, refLength);
-    const horizontal = new Vector3(Math.cos(yawRad), 0, Math.sin(yawRad));
-    const dy = Math.sin(pitchRad) * ref;
-    return posA.add(horizontal.scale(distance)).add(new Vector3(0, dy, 0));
+    const d = Math.max(1e-6, distance);
+    const dir = new Vector3(
+      Math.cos(yawRad) * Math.cos(pitchRad),
+      Math.sin(pitchRad),
+      Math.sin(yawRad) * Math.cos(pitchRad),
+    );
+    return posA.add(dir.scale(d));
   }
 
   /**
    * 计算 box 绳子的朝向：本地 +Z 对齐 A->B，并可绕前向滚转。
+   * 使用 FromUnitVectors(本地 +Z → forward) 得到最短旋转，避免用世界 Up 叉乘 forward 时在俯仰变化时产生绕绳扭转（观感像自转）。
    */
   private computeRopeBoxRotationQuaternion(forward: Vector3, rollAngleDeg: number): Quaternion {
     const f = forward.clone();
@@ -1502,38 +1521,17 @@ export class App {
       f.scaleInPlace(1 / fLen);
     }
 
-    let worldUp = Vector3.Up();
-    if (Math.abs(Vector3.Dot(worldUp, f)) > 0.99) worldUp = Vector3.Right();
-    const right0 = Vector3.Cross(worldUp, f);
-    right0.normalize();
-    const up0 = Vector3.Cross(f, right0);
-    up0.normalize();
+    const localZ = new Vector3(0, 0, 1);
+    const qAlign = new Quaternion();
+    Quaternion.FromUnitVectorsToRef(localZ, f, qAlign);
 
     const rollRad = (rollAngleDeg * Math.PI) / 180;
-    const c = Math.cos(rollRad);
-    const s = Math.sin(rollRad);
-    const right = right0.scale(c).add(up0.scale(s));
-    const up = up0.scale(c).subtract(right0.scale(s));
+    if (Math.abs(rollRad) < 1e-10) {
+      return qAlign;
+    }
 
-    const m = Matrix.FromValues(
-      right.x,
-      up.x,
-      f.x,
-      0,
-      right.y,
-      up.y,
-      f.y,
-      0,
-      right.z,
-      up.z,
-      f.z,
-      0,
-      0,
-      0,
-      0,
-      1,
-    );
-    return Quaternion.FromRotationMatrix(m);
+    const qRoll = Quaternion.RotationAxis(f, rollRad);
+    return qRoll.multiply(qAlign);
   }
 
   /** 确保 rope demo 的控制目标在每帧都能保持“B 在绳子末端”。 */
@@ -1543,23 +1541,29 @@ export class App {
       for (const s of this.ropeStates.values()) {
         const c = s.liveControl;
         if (!c) continue;
-        this.updateRopeDemoByAngleDistance(s.name, c.distance, c.yawDeg, c.pitchDeg);
+        this.updateRopeDemoByAngleDistance(
+          s.name,
+          c.distance,
+          c.yawDeg,
+          c.pitchDeg,
+          c.boxSelfRotationDeg,
+        );
       }
     });
   }
 
   /**
    * 手动更新绳子 Demo：根据距离和三维角度更新 B 的位置与绳子形状/纹理。
-   * - distance：水平面 XZ 上的长度（非三维直线长度）。
+   * - tube / box：distance 均为 A→B 三维直线长度；pitch 为球坐标仰角（竖直方向可 360°）。
    * - yawDeg：绕 Y 轴的水平角度（度），0 表示从 A 指向 +X，正角度沿 +Z 旋转，可 0~360。
-   * - pitchDeg：绕 X 轴的俯仰角（度），0 在水平面上，正值向上，负值向下；
-   *   tube 模式下竖直偏移会随 distance 缩放，box 模式下按 state.refLength 缩放。
+   * - boxSelfRotationDeg：仅 box 有效，绕绳轴（A→B）自身旋转（度）；tube 忽略。
    */
   updateRopeDemoByAngleDistance(
     name: string,
     distance: number,
     yawDeg: number,
     pitchDeg = 0,
+    boxSelfRotationDeg?: number,
   ): void {
     if (!this.scene) return;
 
@@ -1590,8 +1594,6 @@ export class App {
         distFallback,
         yawDeg,
         pitchDeg,
-        // tube 模式：让 pitch 幅度随当前水平距离变化
-        distFallback,
       );
 
       this.ropeBallB.setAbsolutePosition(posBFallback);
@@ -1629,14 +1631,20 @@ export class App {
     }
 
     // 记录控制参数，并启用每帧同步，避免 B 被动画/父节点联动拉离绳子末端。
-    state.liveControl = { distance, yawDeg, pitchDeg };
+    if (state.shapeType === 'box') {
+      if (typeof boxSelfRotationDeg === 'number' && Number.isFinite(boxSelfRotationDeg)) {
+        state.boxSelfRotationDeg = boxSelfRotationDeg;
+      }
+    }
+    state.liveControl = {
+      distance,
+      yawDeg,
+      pitchDeg,
+      ...(state.shapeType === 'box' ? { boxSelfRotationDeg: state.boxSelfRotationDeg } : {}),
+    };
     this.ensureRopeDemoLiveSyncObserver();
 
     const dist = Math.max(0.01, distance);
-
-    // 统一语义：pitch 的竖直偏移按“当前 distance”计算。
-    // 这样 box 在调 distance / yaw / pitch 时不会因为固定 refLength 产生目标点偏差。
-    const pitchRefLength = dist;
 
     // 若 A/B 存在父子链联动，单次修正会在 distance 变大时累积误差。
     // 这里做少量迭代收敛，确保 B 的最终世界坐标与由“当前 A + 参数”计算的目标一致。
@@ -1649,7 +1657,6 @@ export class App {
         dist,
         yawDeg,
         pitchDeg,
-        pitchRefLength,
       );
       // 注意：targetPosB 是世界坐标；若 meshB 有 parent（group），直接写 position 会当成局部坐标导致偏移。
       state.meshB.setAbsolutePosition(targetPosB);
@@ -1663,7 +1670,6 @@ export class App {
         dist,
         yawDeg,
         pitchDeg,
-        pitchRefLength,
       );
       if (Vector3.Distance(targetNext, targetPosB) <= 1e-4) {
         targetPosB = targetNext;
@@ -1694,7 +1700,7 @@ export class App {
 
       // 与 create 一致：根节点在 A，仅向 +Z（B）方向延伸，拉远时不再随中点漂移
       boxRoot.position.copyFrom(posA);
-      boxRoot.rotationQuaternion = this.computeRopeBoxRotationQuaternion(forward, state.boxFlipAngleDeg);
+      boxRoot.rotationQuaternion = this.computeRopeBoxRotationQuaternion(forward, state.boxSelfRotationDeg);
 
       // 前后端面 + 侧面/顶底 的 z（原点= A）
       state.boxFaces.front.plane.position.z = length;

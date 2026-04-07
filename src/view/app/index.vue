@@ -257,7 +257,7 @@
                             {{ opt.label }}
                         </option>
                     </select>
-                    <div class="anim-label">距离（相对 A）: {{ ropeDistance.toFixed(2) }}</div>
+                    <div class="anim-label">绳长 A→B（三维直线）: {{ ropeDistance.toFixed(2) }}</div>
                     <input
                         type="range"
                         class="anim-slider"
@@ -277,16 +277,28 @@
                         v-model.number="ropeYaw"
                         @input="onRopeParamsChange"
                     />
-                    <div class="anim-label">俯仰角 pitch（度，向上为正）: {{ ropePitch.toFixed(1) }}</div>
+                    <div class="anim-label">俯仰角 pitch（度，相对水平面，向上为正）: {{ ropePitch.toFixed(1) }}</div>
                     <input
                         type="range"
                         class="anim-slider"
-                        min="-89"
-                        max="89"
+                        min="-180"
+                        max="180"
                         step="1"
                         v-model.number="ropePitch"
                         @input="onRopeParamsChange"
                     />
+                    <template v-if="ropeControlShapeType === 'box'">
+                        <div class="anim-label">自身旋转（度，绕绳轴 A→B）: {{ ropeBoxSelfRotation.toFixed(1) }}</div>
+                        <input
+                            type="range"
+                            class="anim-slider"
+                            min="-180"
+                            max="180"
+                            step="1"
+                            v-model.number="ropeBoxSelfRotation"
+                            @input="onRopeParamsChange"
+                        />
+                    </template>
                 </template>
 
                 <template v-if="flexibleRopeReady">
@@ -309,8 +321,8 @@
                     <input
                         type="range"
                         class="anim-slider"
-                        min="-89"
-                        max="89"
+                        min="-180"
+                        max="180"
                         step="1"
                         v-model.number="flexibleRopePitch"
                         @input="onFlexibleRopeDirectionChange"
@@ -342,8 +354,8 @@
                         <input
                             type="range"
                             class="anim-slider"
-                            min="-89"
-                            max="89"
+                            min="-180"
+                            max="180"
                             step="1"
                             v-model.number="flexibleRopePointPitches[idx]"
                             @input="applyFlexibleRopeOffsets"
@@ -566,7 +578,7 @@ function getRopeInitConfigById(id: string) {
         initialPitchDeg: c.initialPitchDeg ?? ropeDemoConfig.initialPitchDeg,
         ropeRadius: c.ropeRadius ?? ropeDemoConfig.ropeRadius,
         ropeShapeType: c.ropeShapeType ?? 'tube',
-        boxFlipAngleDeg: c.boxFlipAngleDeg ?? 0,
+        boxSelfRotationDeg: c.boxSelfRotationDeg ?? c.boxFlipAngleDeg ?? 0,
         boxFaces: c.boxFaces,
         boxWidth: c.boxWidth,
         boxHeight: c.boxHeight,
@@ -577,6 +589,14 @@ function getRopeInitConfigById(id: string) {
 const ropeDistance = ref<number>(Number(ropeDemoConfig.initialDistance));
 const ropeYaw = ref<number>(Number(ropeDemoConfig.initialYawDeg));
 const ropePitch = ref<number>(Number(ropeDemoConfig.initialPitchDeg));
+/** 仅 box：绕绳轴自身旋转（度） */
+const ropeBoxSelfRotation = ref(0);
+
+const ropeControlShapeType = computed(() => {
+    const id = ropeControlTarget.value || resolvedRopeBindings.value[0]?.id || '';
+    if (!id) return 'tube' as const;
+    return getRopeInitConfigById(id).ropeShapeType === 'box' ? ('box' as const) : ('tube' as const);
+});
 
 const ropeControlOptions = computed(() => {
     return resolvedRopeBindings.value.map((b) => ({
@@ -604,7 +624,13 @@ function onRopeParamsChange() {
     // 使用“当前操控目标（绳子 id）”更新对应绳子的 B 端位置
     const targetId = ropeControlTarget.value || resolvedRopeBindings.value[0]?.id || '';
     if (!targetId) return;
-    App.Instance.updateRopeDemoByAngleDistance(targetId, ropeDistance.value, ropeYaw.value, ropePitch.value);
+    App.Instance.updateRopeDemoByAngleDistance(
+        targetId,
+        ropeDistance.value,
+        ropeYaw.value,
+        ropePitch.value,
+        ropeBoxSelfRotation.value,
+    );
 }
 
 function onRopeControlTargetChange() {
@@ -614,6 +640,7 @@ function onRopeControlTargetChange() {
     ropeDistance.value = initCfg.initialDistance;
     ropeYaw.value = initCfg.initialYawDeg;
     ropePitch.value = initCfg.initialPitchDeg;
+    ropeBoxSelfRotation.value = initCfg.boxSelfRotationDeg;
     onRopeParamsChange();
 }
 
@@ -795,7 +822,7 @@ function initRopeDemo() {
             textureHeightPx: initCfg.textureHeightPx,
             ropeRadius: initCfg.ropeRadius,
             ropeShapeType: initCfg.ropeShapeType,
-            boxFlipAngleDeg: initCfg.boxFlipAngleDeg,
+            boxSelfRotationDeg: initCfg.boxSelfRotationDeg,
             boxFaces: initCfg.boxFaces,
             boxWidth: initCfg.boxWidth,
             boxHeight: initCfg.boxHeight,
@@ -809,6 +836,7 @@ function initRopeDemo() {
             initCfg.initialDistance,
             initCfg.initialYawDeg,
             initCfg.initialPitchDeg,
+            initCfg.boxSelfRotationDeg,
         );
     });
 
@@ -820,6 +848,7 @@ function initRopeDemo() {
         ropeDistance.value = initCfg.initialDistance;
         ropeYaw.value = initCfg.initialYawDeg;
         ropePitch.value = initCfg.initialPitchDeg;
+        ropeBoxSelfRotation.value = initCfg.boxSelfRotationDeg;
     }
 }
 
