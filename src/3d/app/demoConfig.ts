@@ -66,6 +66,34 @@ export const cameraPresetsConfig: Record<
       offset: { x: 0, y: 60, z: 0 },
     },
   },
+  /**
+   * 业务侧命名的镜头预设（供 public/demo-3d-host.html 发送 cmd: switchCamera 使用）
+   * - param: 'default' | 'czz' | 'ttz' | 'jsz'
+   */
+  czz: {
+    label: '垂直阵',
+    preset: {
+      target: { x: 0, y: 0, z: 0 },
+      // 垂直俯视
+      position: { x: 0, y: 80, z: 0 },
+    },
+  },
+  ttz: {
+    label: '托体阵',
+    preset: {
+      target: { x: 0, y: 0, z: 0 },
+      // 正面视角
+      position: { x: 0, y: 20, z: 80 },
+    },
+  },
+  jsz: {
+    label: '接收阵',
+    preset: {
+      target: { x: 0, y: 0, z: 0 },
+      // 侧面视角
+      position: { x: -80, y: 20, z: 0 },
+    },
+  },
 };
 /** 绳子 demo 默认配置 */
 export const ropeDemoConfig = {

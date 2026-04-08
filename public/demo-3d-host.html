@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>三维宿主页（iframe + postMessage）</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      h1 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+        padding: 8px 12px;
+        background: #1a1a2e;
+        color: #eee;
+      }
+      h1 code {
+        font-size: 12px;
+      }
+      .main {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+      .side {
+        width: 300px;
+        padding: 12px;
+        background: #16213e;
+        color: #eee;
+        overflow: auto;
+        font-size: 12px;
+      }
+      .side button {
+        margin: 4px 6px 4px 0;
+        padding: 6px 10px;
+        cursor: pointer;
+        border-radius: 6px;
+        border: 1px solid #444;
+        background: #0f3460;
+        color: #fff;
+      }
+      .side button:hover {
+        background: #1a508b;
+      }
+      .frame-wrap {
+        flex: 1;
+        min-width: 0;
+        background: #000;
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+      }
+      pre {
+        background: #0f3460;
+        padding: 8px;
+        border-radius: 6px;
+        overflow: auto;
+        max-height: 120px;
+        font-size: 11px;
+      }
+      .log {
+        font-size: 11px;
+        color: #aaa;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 200px;
+        overflow: auto;
+        background: #0a0a12;
+        padding: 8px;
+        border-radius: 6px;
+      }
+      .hint {
+        color: #8ab4f8;
+        margin: 8px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      独立 HTML 宿主 — iframe 加载 Vue 三维页（<code>#/3d-viewer</code>），与
+      <code>/app</code>（index.vue）无绑定。请用开发/部署服务器打开本页（勿用 file://）。
+    </h1>
+    <div class="main">
+      <div class="side">
+        <p class="hint">模拟业务侧数据（可改脚本内 <code>mock</code>）</p>
+        <pre id="mock"></pre>
+        <p><strong>业务指令（cmd）</strong></p>
+        <div style="margin: 6px 0 10px 0">
+          <select id="cameraPreset" style="width: 100%; padding: 6px; border-radius: 6px">
+            <option value="default">default：默认</option>
+            <option value="czz">czz：垂直阵</option>
+            <option value="ttz">ttz：托体阵</option>
+            <option value="jsz">jsz：接收阵</option>
+          </select>
+          <button type="button" id="btn-switchCamera" style="width: 100%; margin-top: 6px">
+            cmd: switchCamera
+          </button>
+        </div>
+        <p><strong>postMessage 调用 App 方法（invoke）</strong></p>
+        <button type="button" id="btn-models">getModelNames</button>
+        <button type="button" id="btn-env">环境强度 +0.05</button>
+        <button type="button" id="btn-cam">getArcRotateCameraDebugState</button>
+        <p><strong>子页上报（source: cc-3d）</strong></p>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="frame-wrap">
+        <iframe id="viewer" title="cc-3d"></iframe>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var CC_APP = 'cc-app';
+        var CC_3D = 'cc-3d';
+
+        var mock = {
+          projectId: '',
+          businessId: 'demo-business-001',
+        };
+
+        document.getElementById('mock').textContent = JSON.stringify(mock, null, 2);
+
+        var pathRoot = location.pathname.replace(/[^/]+$/, '');
+        if (!pathRoot.endsWith('/')) pathRoot += '/';
+        var appEntry = location.origin + pathRoot + 'index.html';
+        var q = new URLSearchParams();
+        if (mock.projectId) q.set('projectId', mock.projectId);
+        var qs = q.toString();
+        var hash = '#/3d-viewer' + (qs ? '?' + qs : '');
+        document.getElementById('viewer').src = 'https://localhost:51741/#/3d-viewer/';
+
+        var iframe = document.getElementById('viewer');
+        var logEl = document.getElementById('log');
+
+        function logLine(msg) {
+          logEl.textContent = (logEl.textContent || '') + msg + '\n';
+        }
+
+        function createCcIframeBridge(options) {
+          var targetWindow = options.targetWindow;
+          var appSource = options.appSource;
+          var childSource = options.childSource;
+
+          function post(payload) {
+            targetWindow.postMessage(payload, '*');
+          }
+
+          function onMessage(handler) {
+            function onMsg(ev) {
+              if (ev.source !== targetWindow) return;
+              handler(ev.data, ev);
+            }
+            window.addEventListener('message', onMsg);
+            return function () {
+              window.removeEventListener('message', onMsg);
+            };
+          }
+
+          function invoke(method, args) {
+            var id = String(Date.now()) + '-' + Math.random();
+            return new Promise(function (resolve, reject) {
+              var off = onMessage(function (data) {
+                if (!data || data.source !== childSource || data.type !== 'invokeResult' || data.id !== id)
+                  return;
+                off();
+                if (data.error) reject(new Error(data.error));
+                else resolve(data.result);
+              });
+              post({ source: appSource, type: 'invoke', id: id, method: method, args: args || [] });
+            });
+          }
+
+          function sendCmd(cmd, param) {
+            console.log('sendCmd', cmd, param);
+            post({ cmd: cmd, param: param });
+          }
+
+          return { onMessage: onMessage, invoke: invoke, sendCmd: sendCmd };
+        }
+
+        var bridge = createCcIframeBridge({
+          targetWindow: iframe.contentWindow,
+          appSource: CC_APP,
+          childSource: CC_3D,
+        });
+
+        bridge.onMessage(function (d) {
+          if (!d || d.source !== CC_3D) return;
+          var s = typeof d === 'object' ? JSON.stringify(d) : String(d);
+          if (s.length > 600) s = s.slice(0, 600) + '…';
+          logLine(s);
+        });
+
+        document.getElementById('btn-models').onclick = function () {
+          bridge
+            .invoke('getModelNames', [])
+            .then(function (r) {
+              logLine('[invoke 结果] getModelNames: ' + JSON.stringify(r));
+            })
+            .catch(function (err) {
+              logLine('[错误] ' + err.message);
+            });
+        };
+
+        document.getElementById('btn-env').onclick = function () {
+          bridge
+            .invoke('getEnvironmentIntensity', [])
+            .then(function (v) {
+              var n = Number(v) + 0.05;
+              return bridge.invoke('setEnvironmentIntensity', [n]);
+            })
+            .then(function () {
+              logLine('[invoke] setEnvironmentIntensity 已执行');
+            })
+            .catch(function (err) {
+              logLine('[错误] ' + err.message);
+            });
+        };
+
+        document.getElementById('btn-cam').onclick = function () {
+          bridge
+            .invoke('getArcRotateCameraDebugState', [])
+            .then(function (r) {
+              logLine('[invoke 结果] camera: ' + JSON.stringify(r));
+            })
+            .catch(function (err) {
+              logLine('[错误] ' + err.message);
+            });
+        };
+
+        document.getElementById('btn-switchCamera').onclick = function () {
+          var preset = document.getElementById('cameraPreset').value;
+          bridge.sendCmd('switchCamera', preset);
+          logLine('[cmd] switchCamera: ' + preset);
+        };
+      })();
+    </script>
+  </body>
+</html>

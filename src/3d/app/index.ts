@@ -3937,3 +3937,13 @@ function getNodeByUUid(node: Node, uuid: string, weakMap?: Map<string, Node>): N
     }
   }
 }
+
+export {
+  bootstrapAppDemo,
+  setupAppDemoChildBridge,
+  CC_APP_SOURCE,
+  CC_3D_SOURCE,
+  type AppDemoBootstrapOptions,
+  type AppDemoReadyPayload,
+  type CcAppToChildMessage,
+} from './appDemoBootstrap';
