@@ -63,6 +63,37 @@
                     </div>
                 </div>
 
+                <div class="anim-label" style="margin-top:10px;">方向控制 Demo（directionControl）</div>
+                <div class="anim-row">
+                    <div class="anim-label" style="margin:0;">
+                        角度（0~360，顺时针）{{ directionControlDeg.toFixed(0) }}°
+                    </div>
+                </div>
+                <div class="anim-row">
+                    <input
+                        type="range"
+                        class="anim-slider"
+                        min="0"
+                        max="360"
+                        step="1"
+                        v-model.number="directionControlDeg"
+                        @input="applyDirectionControl"
+                    />
+                </div>
+                <div class="anim-row">
+                    <input
+                        type="number"
+                        class="anim-input"
+                        min="0"
+                        max="360"
+                        step="1"
+                        v-model.number="directionControlDeg"
+                    />
+                    <div class="preset-btn" style="margin-left:10px;" @click="applyDirectionControl">
+                        应用到 {{ directionControlModelNames.join(', ') }}
+                    </div>
+                </div>
+
                 <div class="anim-label" style="margin-top:8px;">相机限制 Demo（调试）</div>
                 <div class="preset-btn" @click="applyDefaultCameraViewLimits">应用默认限制范围</div>
                 <div class="anim-row">
@@ -402,6 +433,7 @@ import { App, MODEL_URLS, HDR_URLS, type CameraViewPreset, type SeaParams } from
 import {
     cameraPresetsConfig,
     defaultCameraViewLimitConfig,
+    directionControlConfig,
     hdrDemoConfig,
     hdrEnvironmentRotationDefaults,
     skyboxDemoConfig,
@@ -744,6 +776,15 @@ const cameraPresets: Record<string, { label: string; preset: CameraViewPreset }>
 function switchCamera(presetKey: string) {
     const item = cameraPresets[presetKey];
     if (item) App.Instance.switchCameraView(item.preset, { duration: 0.8 });
+}
+
+/** 业务指令 demo：directionControl（触发 App.setModelYawDegClockwise） */
+const directionControlDeg = ref(0);
+const directionControlModelNames = directionControlConfig.modelNames;
+function applyDirectionControl() {
+    directionControlModelNames.forEach((name) => {
+        App.Instance.setModelYawDegClockwise(name, directionControlDeg.value);
+    });
 }
 
 const modelUrl = () => props.projectId || './Dancing.fbx';

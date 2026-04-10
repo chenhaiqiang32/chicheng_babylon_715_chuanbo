@@ -108,6 +108,21 @@
             cmd: switchCamera
           </button>
         </div>
+        <div style="margin: 6px 0 10px 0">
+          <div style="margin: 6px 0">directionControl 角度（0~360，顺时针）</div>
+          <input
+            id="dirAngle"
+            type="number"
+            min="0"
+            max="360"
+            step="1"
+            value="0"
+            style="width: 100%; padding: 6px; border-radius: 6px"
+          />
+          <button type="button" id="btn-direction" style="width: 100%; margin-top: 6px">
+            cmd: directionControl
+          </button>
+        </div>
         <p><strong>postMessage 调用 App 方法（invoke）</strong></p>
         <button type="button" id="btn-models">getModelNames</button>
         <button type="button" id="btn-env">环境强度 +0.05</button>
@@ -138,7 +153,7 @@
         if (mock.projectId) q.set('projectId', mock.projectId);
         var qs = q.toString();
         var hash = '#/3d-viewer' + (qs ? '?' + qs : '');
-        document.getElementById('viewer').src = 'https://localhost:51741/#/3d-viewer/';
+        document.getElementById('viewer').src = 'https://localhost:51741/#/3d-viewer';
 
         var iframe = document.getElementById('viewer');
         var logEl = document.getElementById('log');
@@ -243,6 +258,12 @@
           var preset = document.getElementById('cameraPreset').value;
           bridge.sendCmd('switchCamera', preset);
           logLine('[cmd] switchCamera: ' + preset);
+        };
+
+        document.getElementById('btn-direction').onclick = function () {
+          var v = String(document.getElementById('dirAngle').value || '0');
+          bridge.sendCmd('directionControl', v);
+          logLine('[cmd] directionControl: ' + v);
         };
       })();
     </script>

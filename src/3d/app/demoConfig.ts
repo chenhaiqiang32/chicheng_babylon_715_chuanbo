@@ -15,7 +15,7 @@ export const cameraPresetsConfig: Record<
     label: '默认',
     preset: {
       target: { x: 0, y: 0, z: 0 },
-      position: { x: 0.20738870009251056, y: -80.36847884128419, z: -6.392548598726246 },
+      position: { x: 0, y: 10, z: -90 },
     },
   },
   front: {
@@ -95,6 +95,15 @@ export const cameraPresetsConfig: Record<
     },
   },
 };
+
+/** 业务指令：directionControl 的受控模型配置 */
+export const directionControlConfig = {
+  /**
+   * 受控模型名称数组（会从已加载模型 root 节点中按名称查找）。
+   * - demo 默认用 Dancing；业务接入时改成你的模型名数组即可。
+   */
+  modelNames: ['Dancing','Soldier'],
+} as const;
 /** 绳子 demo 默认配置 */
 export const ropeDemoConfig = {
   /** 默认绳子纹理路径（public 下） */

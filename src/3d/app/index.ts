@@ -1,11 +1,14 @@
 import {
   AbstractEngine,
   ActionManager,
+  Animation,
   AnimationGroup,
+  CubicEase,
   DirectionalLight,
   CascadedShadowGenerator,
   DefaultRenderingPipeline,
   Engine,
+  EasingFunction,
   ExecuteCodeAction,
   ImportMeshAsync,
   Mesh,
@@ -36,6 +39,8 @@ import {
   Quaternion,
   Matrix,
   ShaderMaterial,
+  StandardMaterial,
+  Material,
   PostProcess,
   Effect,
   PointerEventTypes,
@@ -54,6 +59,7 @@ import {
   type AnimationSplitModelConfig,
   type AnimationSplitSourceConfig,
   type AnimationSplitSegmentConfig,
+  cameraPresetsConfig,
   propellerWaveParticleEmitters,
   sceneSaturationDefaults,
   seaDemoDefaults,
@@ -491,6 +497,19 @@ export class App {
   /** 海水下效果自动切换：每帧监听句柄 */
   private underwaterAutoObserver: ReturnType<Scene['onBeforeRenderObservable']['add']> | null =
     null;
+
+  /** 右上角北向（指南针）叠加 3D 小挂件 */
+  private compassWidget:
+    | {
+        root: TransformNode;
+        plane: Mesh;
+        material: StandardMaterial;
+        texture: Texture;
+        observer: ReturnType<Scene['onBeforeRenderObservable']['add']>;
+      }
+    | null = null;
+  private compassWidgetEnabled = true;
+
   static get Instance(): App {
     if (!this.instance) {
       this.instance = new App();
@@ -686,11 +705,112 @@ export class App {
       this.scene.onBeforeRenderObservable.remove(this.underwaterAutoObserver);
       this.underwaterAutoObserver = null;
     }
+    if (this.compassWidget && this.scene) {
+      this.scene.onBeforeRenderObservable.remove(this.compassWidget.observer);
+      this.compassWidget.plane.dispose();
+      this.compassWidget.material.dispose();
+      this.compassWidget.texture.dispose();
+      this.compassWidget.root.dispose();
+      this.compassWidget = null;
+    }
     this.engine.dispose();
     if (this.skyObserver) {
       this.scene.onBeforeRenderObservable.remove(this.skyObserver);
       this.skyObserver = null;
     }
+  }
+
+  /**
+   * 启用/禁用右上角北向挂件（默认启用）。
+   * - 挂件为一个带透明贴图的平面，按屏幕像素定位到右上角，并根据相机 yaw 旋转。
+   */
+  setCompassWidgetEnabled(enabled: boolean) {
+    this.compassWidgetEnabled = !!enabled;
+    if (!enabled) {
+      if (this.compassWidget && this.scene) {
+        this.scene.onBeforeRenderObservable.remove(this.compassWidget.observer);
+        this.compassWidget.plane.dispose();
+        this.compassWidget.material.dispose();
+        this.compassWidget.texture.dispose();
+        this.compassWidget.root.dispose();
+        this.compassWidget = null;
+      }
+      return;
+    }
+    this.ensureCompassWidget();
+  }
+
+  private ensureCompassWidget() {
+    if (!this.compassWidgetEnabled) return;
+    const scene = this.scene;
+    if (!scene) return;
+    if (this.compassWidget) return;
+    const cam = scene.activeCamera;
+    if (!cam) return;
+
+    const root = new TransformNode('cc_compass_root', scene);
+    root.parent = cam;
+
+    const plane = MeshBuilder.CreatePlane(
+      'cc_compass_plane',
+      { size: 1, sideOrientation: Mesh.DOUBLESIDE },
+      scene,
+    );
+    plane.parent = root;
+    plane.isPickable = false;
+    plane.renderingGroupId = 3;
+    plane.alwaysSelectAsActiveMesh = true;
+
+    const material = new StandardMaterial('cc_compass_mat', scene);
+    material.disableLighting = true;
+    material.emissiveColor = Color3.White();
+    material.backFaceCulling = false;
+    material.useAlphaFromDiffuseTexture = true;
+    material.transparencyMode = Material.MATERIAL_ALPHABLEND;
+    material.disableDepthWrite = true;
+
+    const texture = new Texture('/northSource.png', scene, true, false, Texture.TRILINEAR_SAMPLINGMODE);
+    texture.hasAlpha = true;
+    material.diffuseTexture = texture;
+    plane.material = material;
+
+    const sizePx = 110; // 指南针直径（像素）
+    const marginPx = 14; // 距离右上角边距（像素）
+    const depth = 2; // 距离相机的“前方深度”（世界单位），越大越不容易被裁剪
+
+    const observer = scene.onBeforeRenderObservable.add(() => {
+      const camera = scene.activeCamera;
+      if (!camera) return;
+
+      const w = this.engine.getRenderWidth(true);
+      const h = this.engine.getRenderHeight(true);
+      if (w <= 0 || h <= 0) return;
+
+      const aspect = w / h;
+      const fov = (camera as any).fov as number | undefined;
+      const fovRad = typeof fov === 'number' && Number.isFinite(fov) ? fov : 0.8;
+      const halfH = Math.tan(fovRad * 0.5) * depth;
+      const halfW = halfH * aspect;
+
+      const worldPerPx = (halfH * 2) / h;
+      const sizeWorld = sizePx * worldPerPx;
+      const marginWorld = marginPx * worldPerPx;
+
+      plane.scaling.set(sizeWorld, sizeWorld, 1);
+      root.position.set(
+        halfW - marginWorld - sizeWorld * 0.5,
+        halfH - marginWorld - sizeWorld * 0.5,
+        depth,
+      );
+
+      // 根据相机 yaw 旋转（ArcRotateCamera.alpha 绕 Y 轴；这里投影到屏幕做 2D 旋转）
+      const alpha = (camera as any).alpha as number | undefined;
+      if (typeof alpha === 'number' && Number.isFinite(alpha)) {
+        plane.rotation.z = -alpha;
+      }
+    });
+
+    this.compassWidget = { root, plane, material, texture, observer };
   }
 
   setAssetsLibrary(assets: AppAssets) {
@@ -796,9 +916,17 @@ export class App {
         Vector3.Zero(),
         scene,
       );
-      // 默认相机位置 (0,0,0)，目标点 (0,0,15)，便于看到相机辅助线
-      camera.target = new Vector3(0, 0, 0);
-      camera.setPosition(new Vector3(-80, 10, 0));
+      // 相机初始化位置读取 demoConfig.ts 中 cameraPresetsConfig.default.preset
+      const defaultPreset = cameraPresetsConfig.default?.preset;
+      const toVec3 = (v: { x: number; y: number; z: number } | Vector3) =>
+        v instanceof Vector3 ? v : new Vector3(v.x, v.y, v.z);
+      const target = defaultPreset?.target ? toVec3(defaultPreset.target as any) : new Vector3(0, 0, 0);
+      const position = defaultPreset?.position
+        ? toVec3(defaultPreset.position as any)
+        : new Vector3(-80, 10, 0);
+      camera.target = target;
+      // 使用 setPosition 以同时更新 alpha/beta/radius
+      camera.setPosition(position);
       // 调整滚轮缩放比例（数值越大缩放越慢）
       camera.wheelPrecision = 10;
       // 调整右键拖动平移灵敏度（数值越小拖动同样距离移动越远）
@@ -809,10 +937,12 @@ export class App {
       scene.activeCamera = camera;
       this.registerCameraClickDebug();
       this.ensureSaturationPipeline();
+      this.ensureCompassWidget();
     } else {
       // 复用已有场景时也确保已注册点击事件
       this.registerCameraClickDebug();
       this.ensureSaturationPipeline();
+      this.ensureCompassWidget();
     }
 
     progressCb?.(0.1);
@@ -2399,6 +2529,60 @@ export class App {
   }
 
   /**
+   * 业务指令：方向控制（绕 Y 轴旋转）。
+   * @param modelName 受控模型名称（建议使用 demoConfig.ts 中配置）
+   * @param angleDeg 0~360（顺时针）。会被归一化到 [0,360)。
+   * @returns 是否成功找到并设置
+   */
+  setModelYawDegClockwise(modelName: string, angleDeg: number): boolean {
+    const root = this.getModelRootNode(modelName);
+    if (!root) return false;
+
+    const deg = Number(angleDeg);
+    if (!Number.isFinite(deg)) return false;
+    const normalized = ((deg % 360) + 360) % 360;
+    const rad = (normalized * Math.PI) / 180;
+
+    // Babylon 默认是左手系（除非显式切换）。这里按“业务侧：顺时针为正角度”的约定设置。
+    const toQ = Quaternion.RotationAxis(Vector3.Up(), rad);
+
+    // 1 秒平滑过渡：用四元数动画避免欧拉角万向节问题
+    const scene = this.scene;
+    const fromQ = (root.rotationQuaternion ?? Quaternion.Identity()).clone();
+    root.rotationQuaternion = fromQ;
+
+    if (scene) {
+      // 防止连续指令叠加导致抖动：先停掉该节点上的旧动画
+      scene.stopAnimation(root);
+
+      const durationSec = 1.0;
+      const fps = 60;
+      const totalFrames = Math.max(1, Math.round(durationSec * fps));
+
+      const ease = new CubicEase();
+      ease.setEasingMode(EasingFunction.EASINGMODE_EASEINOUT);
+
+      const anim = new Animation(
+        'modelYawQuaternion',
+        'rotationQuaternion',
+        fps,
+        Animation.ANIMATIONTYPE_QUATERNION,
+        Animation.ANIMATIONLOOPMODE_CONSTANT,
+      );
+      anim.setEasingFunction(ease);
+      anim.setKeys([
+        { frame: 0, value: fromQ },
+        { frame: totalFrames, value: toQ },
+      ]);
+      scene.beginDirectAnimation(root, [anim], 0, totalFrames, false);
+    } else {
+      // 没有 scene（极早期调用）时退化为直接设置
+      root.rotationQuaternion = toQ;
+    }
+    return true;
+  }
+
+  /**
    * 注册动画结束回调。每次有动画（正放或倒放）播放完成时触发一次。
    */
   onAnimationEnd(
@@ -2616,6 +2800,7 @@ export class App {
     this.registerCameraClickDebug();
     this.registerAction();
     this.ensureSaturationPipeline();
+    this.ensureCompassWidget();
     const groupCount = Math.ceil(padding.length / 20);
     const group = ArrayUtils.groupArray(padding, groupCount);
     for (let index = 0; index < group.length; index++) {

@@ -5,6 +5,7 @@ import { AppAssets } from '../assets/PublishLibrary';
 import { MODEL_URLS } from './modelUrls.generated';
 import {
   cameraPresetsConfig,
+  directionControlConfig,
   defaultCameraViewLimitConfig,
   flexibleRopeCreateExample,
   flexibleRopeDemoConfig,
@@ -322,6 +323,18 @@ export function setupAppDemoChildBridge(): () => void {
         if (item?.preset) {
           app.switchCameraView(item.preset, { duration: 0.8 });
         }
+        return;
+      }
+
+      // 业务侧简化指令格式：
+      // { cmd: 'directionControl', param: '0~360'(string) } 顺时针旋转受控模型
+      if ((data as any).cmd === 'directionControl') {
+        const raw = String((data as any).param ?? '');
+        const deg = Number(raw);
+        // 使用 demoConfig 中指定的受控模型名数组
+        directionControlConfig.modelNames.forEach((name) => {
+          app.setModelYawDegClockwise(name, deg);
+        });
         return;
       }
 
