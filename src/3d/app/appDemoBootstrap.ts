@@ -186,8 +186,6 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
     app.setEnvironmentRotationSpeedRadPerSec(hdrEnvironmentRotationDefaults.speedRadPerSec);
     postLoading(1);
 
-    initRopeDemo(app);
-
     app.createFlexibleRopes(flexibleRopeCreateExample);
     const ropeIds = app.getFlexibleRopeIds();
     applyFlexibleRopeCameraDistanceFilter(app);
@@ -258,7 +256,7 @@ function buildReadyPayload(
   rope: { ropeIds: string[]; firstId: string },
 ): AppDemoReadyPayload {
   const bindings = ropeDemoModelBindings;
-  const ropeControlTarget = bindings[2]?.id || bindings[0]?.id || '';
+  const ropeControlTarget = '';
 
   let flexibleRopePointIds: string[] = [];
   let flexibleRopePointYaws: number[] = Array.from(
@@ -291,7 +289,7 @@ function buildReadyPayload(
     loadedAsModel,
     cameraHelperOn: app.isCameraHelperEnabled,
     cameraTargetHelperOn: app.isCameraTargetHelperEnabled,
-    ropeDemoReady: loadedAsModel,
+    ropeDemoReady: false,
     ropeControlTarget,
     flexibleRopeReady: loadedAsModel && rope.ropeIds.length > 0,
     flexibleRopeIds: rope.ropeIds,

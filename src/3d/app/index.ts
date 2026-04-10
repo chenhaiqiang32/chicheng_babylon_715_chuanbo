@@ -61,6 +61,8 @@ import {
   type AnimationSplitSegmentConfig,
   cameraPresetsConfig,
   propellerWaveParticleEmitters,
+  ropeDemoConfig,
+  ropeDemoModelBindings,
   sceneSaturationDefaults,
   seaDemoDefaults,
 } from './demoConfig';
@@ -332,6 +334,20 @@ export class App {
    * 注意：该索引是全局的，不区分模型层级；当多个模型存在同名节点时，后写入的会覆盖旧值。
    */
   private modelNodesByNameMap: Map<string, Node> = new Map();
+  /**
+   * 模型/节点初始变换快照（用于“恢复到初始位置”）。
+   * - key 使用 Babylon 的 uniqueId
+   * - 存储的是本地空间的 position/rotation(or quaternion)/scaling
+   */
+  private nodeInitialTransformById: Map<
+    number,
+    {
+      position: Vector3;
+      scaling: Vector3;
+      rotation: Vector3;
+      rotationQuaternion: Quaternion | null;
+    }
+  > = new Map();
   /** 当前正在播放的动画组（按模型名称），用于 seek/进度 */
   private currentPlayingGroupByModel: Map<string, AnimationGroup> = new Map();
   /** 动画播放结束时回调（正放/倒放均会触发） */
@@ -994,6 +1010,9 @@ export class App {
         if (!key) continue;
         // 单层索引：同名覆盖
         this.modelNodesByNameMap.set(key, node);
+        if (node instanceof TransformNode) {
+          this.ensureNodeInitialTransform(node);
+        }
       }
       // 重要：写入“模型名 -> root”别名，兼容外部用 modelName 直接查根节点
       this.modelNodesByNameMap.set(finalModelName, root);
@@ -1054,6 +1073,10 @@ export class App {
       const key = (n as any).name || (n as any).id;
       if (key) {
         this.modelNodesByNameMap.set(key, n);
+        // 懒存初始 transform：只有 TransformNode 才有 position/rotation/scaling
+        if (n instanceof TransformNode) {
+          this.ensureNodeInitialTransform(n);
+        }
         if (key === modelName) return n;
       }
 
@@ -1064,6 +1087,38 @@ export class App {
     }
 
     return this.modelNodesByNameMap.get(modelName) ?? null;
+  }
+
+  private ensureNodeInitialTransform(node: TransformNode): void {
+    const uid = (node as any)?.uniqueId;
+    if (typeof uid !== 'number') return;
+    if (this.nodeInitialTransformById.has(uid)) return;
+
+    this.nodeInitialTransformById.set(uid, {
+      position: node.position.clone(),
+      scaling: node.scaling.clone(),
+      rotation: node.rotation.clone(),
+      rotationQuaternion: node.rotationQuaternion ? node.rotationQuaternion.clone() : null,
+    });
+  }
+
+  private restoreNodeToInitialTransform(node: TransformNode): boolean {
+    const uid = (node as any)?.uniqueId;
+    if (typeof uid !== 'number') return false;
+    const snap = this.nodeInitialTransformById.get(uid);
+    if (!snap) return false;
+
+    node.position.copyFrom(snap.position);
+    node.scaling.copyFrom(snap.scaling);
+    if (snap.rotationQuaternion) {
+      node.rotationQuaternion = snap.rotationQuaternion.clone();
+    } else {
+      node.rotationQuaternion = null;
+      node.rotation.copyFrom(snap.rotation);
+    }
+    // 强制刷新 world matrix，避免首帧/父子链导致的延迟表现
+    node.computeWorldMatrix(true);
+    return true;
   }
 
   /** 获取指定模型的根节点（用于信息牌挂接等），不存在则返回 null */
@@ -1171,6 +1226,196 @@ export class App {
       if (id) ids.push(id);
     }
     return ids;
+  }
+
+  /**
+   * 绳子 Demo：从 `demoConfig.ts` 的 `ropeDemoModelBindings` 按 id 创建/绑定一根绳子。
+   * - 默认不会自动创建任何绳子；需要业务侧按需调用本方法。
+   * - 会自动应用 demoConfig 的初始 distance/yaw/pitch（即使 B 端绑定到模型节点）。
+   * - 若 meshAName/meshBName 找不到节点，则对应端点会回退到默认小球。
+   */
+  createRopeDemoFromDemoConfig(
+    id: string,
+    overrides?: Partial<{
+      meshAName: string;
+      meshBName: string;
+      textureUrl: string;
+      textureWidthPx: number;
+      textureHeightPx: number;
+      ropeShapeType: RopeDemoShapeType;
+      boxSelfRotationDeg: number;
+      /** @deprecated 同 boxSelfRotationDeg */
+      boxFlipAngleDeg: number;
+      boxFaces: Partial<Record<RopeBoxFaceName, Partial<RopeBoxFaceTextureConfig>>>;
+      boxWidth: number;
+      boxHeight: number;
+      initialDistance: number;
+      initialYawDeg: number;
+      initialPitchDeg: number;
+      ropeRadius: number;
+    }>,
+  ): {
+    id: string;
+    meshAName: string;
+    meshBName: string;
+    textureUrl: string;
+    textureWidthPx: number;
+    textureHeightPx: number;
+    ropeRadius: number;
+    ropeShapeType: RopeDemoShapeType;
+    boxSelfRotationDeg: number;
+    boxFaces?: Partial<Record<RopeBoxFaceName, Partial<RopeBoxFaceTextureConfig>>>;
+    boxWidth?: number;
+    boxHeight?: number;
+    initialDistance: number;
+    initialYawDeg: number;
+    initialPitchDeg: number;
+  } | null {
+    const binding = ropeDemoModelBindings.find((x) => x.id === id);
+    if (!binding) return null;
+
+    const cfg = { ...(binding.config ?? {}), ...(overrides ?? {}) } as any;
+    const meshAName = (overrides?.meshAName ?? binding.meshAName) || '';
+    const meshBName = (overrides?.meshBName ?? binding.modelBName) || '';
+
+    // 创建前先把参与绑定的模型节点恢复到“初始位置”
+    // 这样可避免上一次 rope demo 修改了 B 端位置，导致本次创建的参考姿态不一致。
+    const nodeA = meshAName ? this.getNodeByModelAndName(meshAName) : null;
+    if (nodeA && nodeA instanceof TransformNode) {
+      this.ensureNodeInitialTransform(nodeA);
+      this.restoreNodeToInitialTransform(nodeA);
+    }
+    const nodeB = meshBName ? this.getNodeByModelAndName(meshBName) : null;
+    if (nodeB && nodeB instanceof TransformNode) {
+      this.ensureNodeInitialTransform(nodeB);
+      this.restoreNodeToInitialTransform(nodeB);
+    }
+
+    const initCfg = {
+      id,
+      meshAName,
+      meshBName,
+      textureUrl: (cfg.textureUrl ?? ropeDemoConfig.textureUrl) as string,
+      textureWidthPx: (cfg.textureWidthPx ?? ropeDemoConfig.textureWidthPx) as number,
+      textureHeightPx: (cfg.textureHeightPx ?? ropeDemoConfig.textureHeightPx) as number,
+      initialDistance: (cfg.initialDistance ?? ropeDemoConfig.initialDistance) as number,
+      initialYawDeg: (cfg.initialYawDeg ?? ropeDemoConfig.initialYawDeg) as number,
+      initialPitchDeg: (cfg.initialPitchDeg ?? ropeDemoConfig.initialPitchDeg) as number,
+      ropeRadius: (cfg.ropeRadius ?? ropeDemoConfig.ropeRadius) as number,
+      ropeShapeType: (cfg.ropeShapeType ?? 'tube') as RopeDemoShapeType,
+      boxSelfRotationDeg: (cfg.boxSelfRotationDeg ?? cfg.boxFlipAngleDeg ?? 0) as number,
+      boxFaces: cfg.boxFaces as
+        | Partial<Record<RopeBoxFaceName, Partial<RopeBoxFaceTextureConfig>>>
+        | undefined,
+      boxWidth: cfg.boxWidth as number | undefined,
+      boxHeight: cfg.boxHeight as number | undefined,
+    };
+
+    this.createRopeDemo({
+      name: initCfg.id,
+      meshAName: initCfg.meshAName,
+      meshBName: initCfg.meshBName,
+      textureUrl: initCfg.textureUrl,
+      textureWidthPx: initCfg.textureWidthPx,
+      textureHeightPx: initCfg.textureHeightPx,
+      ropeRadius: initCfg.ropeRadius,
+      ropeShapeType: initCfg.ropeShapeType,
+      boxSelfRotationDeg: initCfg.boxSelfRotationDeg,
+      boxFaces: initCfg.boxFaces,
+      boxWidth: initCfg.boxWidth,
+      boxHeight: initCfg.boxHeight,
+      initialDistance: initCfg.initialDistance,
+      // 兼容 createRopeDemo 的旧字段名：yaw
+      initialAngleDeg: initCfg.initialYawDeg,
+    });
+
+    this.updateRopeDemoByAngleDistance(
+      initCfg.id,
+      initCfg.initialDistance,
+      initCfg.initialYawDeg,
+      initCfg.initialPitchDeg,
+      initCfg.boxSelfRotationDeg,
+    );
+
+    return initCfg;
+  }
+
+  /** 绳子 Demo：按 demoConfig 批量创建/绑定多根绳子（默认创建全部 bindings）。 */
+  createRopeDemosFromDemoConfig(ids?: string[]): string[] {
+    const targetIds =
+      Array.isArray(ids) && ids.length > 0
+        ? ids
+        : ropeDemoModelBindings.map((b) => b.id);
+
+    const created: string[] = [];
+    for (const id of targetIds) {
+      const r = this.createRopeDemoFromDemoConfig(id);
+      if (r) created.push(r.id);
+    }
+    return created;
+  }
+
+  /** 绳子 Demo：返回当前已创建的绳子 id 列表（即 createRopeDemo 时的 name/key）。 */
+  getRopeDemoIds(): string[] {
+    return Array.from(this.ropeStates.keys());
+  }
+
+  /**
+   * 绳子 Demo：移除/解除绑定并释放资源（不 dispose A/B 节点）。
+   * - name 通常为 createRopeDemo 的 options.name（本项目中为 rope_1/rope_2/rope_3）。
+   */
+  removeRopeDemo(name: string): boolean {
+    const state = this.ropeStates.get(name);
+    if (!state) return false;
+
+    if (state.shapeType === 'tube') {
+      state.tube.dispose();
+      state.material.dispose();
+      state.texture.dispose();
+    } else {
+      for (const face of Object.values(state.boxFaces)) {
+        face.plane.dispose();
+        face.material.dispose();
+        face.texture.dispose();
+      }
+      state.boxRoot.dispose();
+    }
+
+    this.ropeStates.delete(name);
+
+    // 移除后也恢复参与绑定的模型节点到初始位置
+    //（rope demo 通过 updateRopeDemoByAngleDistance 会移动 B 端模型）
+    this.ensureNodeInitialTransform(state.meshA);
+    this.restoreNodeToInitialTransform(state.meshA);
+    this.ensureNodeInitialTransform(state.meshB);
+    this.restoreNodeToInitialTransform(state.meshB);
+
+    // 若不再需要每帧同步（无任何 liveControl），移除 observer 以节省开销
+    if (this.ropeObserver && this.scene) {
+      let needsLiveSync = false;
+      for (const s of this.ropeStates.values()) {
+        if (s.liveControl) {
+          needsLiveSync = true;
+          break;
+        }
+      }
+      if (!needsLiveSync) {
+        this.scene.onBeforeRenderObservable.remove(this.ropeObserver);
+        this.ropeObserver = null;
+      }
+    }
+
+    return true;
+  }
+
+  /** 绳子 Demo：移除全部已创建绳子（返回移除数量）。 */
+  removeAllRopeDemos(): number {
+    const ids = this.getRopeDemoIds();
+    let removed = 0;
+    for (const id of ids) {
+      if (this.removeRopeDemo(id)) removed++;
+    }
+    return removed;
   }
 
   /**
@@ -1328,7 +1573,14 @@ export class App {
     const posA = ballA.getAbsolutePosition();
     const posB = ballB.getAbsolutePosition();
     const initialLength = Vector3.Distance(posA, posB);
-    this.ropeRefLength = Math.max(0.1, initialLength);
+    // 注意：若 B 端绑定到模型节点，首次创建时其 absolutePosition 可能还未在首帧前刷新，
+    // 从而使 initialLength 极小，导致 boxDepthRef 与纹理缩放计算异常（表现为贴图“错乱”）。
+    // 因此优先使用 options.initialDistance（demo 中会传入）作为参考长度。
+    const refLengthCandidate =
+      typeof options?.initialDistance === 'number' && Number.isFinite(options.initialDistance) && options.initialDistance > 0
+        ? options.initialDistance
+        : initialLength;
+    this.ropeRefLength = Math.max(0.1, refLengthCandidate);
     this.ropeFlowOffset = 0;
     this.ropePhase = 0;
     this.ropePrevBPos.copyFrom(posB);
@@ -1609,7 +1861,7 @@ export class App {
     // 管状：按 textureWidthPx / textureHeightPx / ropeRadius / 绳长 保持截面与轴向 texel 比例（与柔性绳一致）
     this.applyFlexibleRopeTubeTextureScale(
       ropeTex,
-      initialLength,
+      this.ropeRefLength,
       textureWidthPxTube,
       textureHeightPxTube,
       ropeRadius,

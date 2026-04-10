@@ -280,6 +280,20 @@
             </section>
 
             <section v-show="activePanel === 'rope'" class="panel">
+                <template v-if="!ropeDemoReady">
+                    <div class="anim-label">绳子 Demo（按需创建）</div>
+                    <div class="anim-label">选择要创建/绑定的绳子</div>
+                    <select v-model="ropeControlTarget" class="anim-select">
+                        <option v-for="opt in ropeControlOptions" :key="opt.value" :value="opt.value">
+                            {{ opt.label }}
+                        </option>
+                    </select>
+                    <div class="anim-row sea-actions" style="margin-top:8px;">
+                        <div class="preset-btn" @click="createSelectedRopeDemo">创建当前绳子</div>
+                        <div class="preset-btn" @click="createAllRopeDemos">创建全部绳子</div>
+                    </div>
+                </template>
+
                 <template v-if="ropeDemoReady">
                     <div class="anim-label">绳子 Demo</div>
                     <div class="anim-label">当前操控绳子</div>
@@ -288,6 +302,10 @@
                             {{ opt.label }}
                         </option>
                     </select>
+                    <div class="anim-row sea-actions" style="margin-top:8px;">
+                        <div class="preset-btn" @click="removeSelectedRopeDemo">移除当前绳子</div>
+                        <div class="preset-btn" @click="removeAllRopeDemos">移除全部绳子</div>
+                    </div>
                     <div class="anim-label">绳长 A→B（三维直线）: {{ ropeDistance.toFixed(2) }}</div>
                     <input
                         type="range"
@@ -589,6 +607,10 @@ function updateCameraDebugText() {
 const ropeDemoReady = ref(false);
 // 绳子 Demo：当前要操控哪一根（用“绳子 id”作为更新定位 key）
 const ropeControlTarget = ref<string>('');
+// 默认选中第一根，便于“一键创建当前绳子”
+if (!ropeControlTarget.value) {
+    ropeControlTarget.value = ropeDemoModelBindings[0]?.id || '';
+}
 
 const resolvedRopeBindings = computed(() => {
     const fallback = currentModelName.value || App.Instance.getCurrentModelName() || '';
@@ -847,50 +869,49 @@ function syncModelUiAfterLoaded() {
 }
 
 function initRopeDemo() {
-    // 绳子 Demo：根据配置初始化生成三根绳子，B 端通过模型名称绑定
-    // 若某个模型名称不存在，则对应端点会退回到默认小球。
+    // 兼容旧入口：现在改为“按 demoConfig 批量创建”，默认不自动调用。
     const bindings = resolvedRopeBindings.value;
-    bindings.forEach((cfg) => {
-        const initCfg = getRopeInitConfigById(cfg.id);
-        App.Instance.createRopeDemo({
-            // 多绳子管理 key：使用唯一 id，避免 rope_Third 重名覆盖
-            name: cfg.id,
-            // A/B 端按绑定模型名称查找
-            meshAName: cfg.meshAName,
-            meshBName: cfg.modelBName,
-            textureUrl: initCfg.textureUrl,
-            textureWidthPx: initCfg.textureWidthPx,
-            textureHeightPx: initCfg.textureHeightPx,
-            ropeRadius: initCfg.ropeRadius,
-            ropeShapeType: initCfg.ropeShapeType,
-            boxSelfRotationDeg: initCfg.boxSelfRotationDeg,
-            boxFaces: initCfg.boxFaces,
-            boxWidth: initCfg.boxWidth,
-            boxHeight: initCfg.boxHeight,
-            // 仅在 B 未绑定到模型时生效；若 B 已绑定模型，下面会用 updateRopeDemoByAngleDistance 统一初始化
-            initialDistance: initCfg.initialDistance,
-            initialAngleDeg: initCfg.initialYawDeg,
-        });
-        // 统一把“每根绳子的初始角度/距离/pitch”应用到该绳子（即使 B 端绑定了模型）
-        App.Instance.updateRopeDemoByAngleDistance(
-            cfg.id,
-            initCfg.initialDistance,
-            initCfg.initialYawDeg,
-            initCfg.initialPitchDeg,
-            initCfg.boxSelfRotationDeg,
-        );
-    });
-
+    App.Instance.createRopeDemosFromDemoConfig(bindings.map((b) => b.id));
     ropeDemoReady.value = true;
-    // 默认操控第三根，否则第一根
     ropeControlTarget.value = bindings[2]?.id || bindings[0]?.id || '';
-    if (ropeControlTarget.value) {
-        const initCfg = getRopeInitConfigById(ropeControlTarget.value);
-        ropeDistance.value = initCfg.initialDistance;
-        ropeYaw.value = initCfg.initialYawDeg;
-        ropePitch.value = initCfg.initialPitchDeg;
-        ropeBoxSelfRotation.value = initCfg.boxSelfRotationDeg;
+    onRopeControlTargetChange();
+}
+
+function createSelectedRopeDemo() {
+    const targetId = ropeControlTarget.value || resolvedRopeBindings.value[0]?.id || '';
+    if (!targetId) return;
+    const r = App.Instance.createRopeDemoFromDemoConfig(targetId);
+    if (!r) return;
+    ropeDemoReady.value = true;
+    ropeControlTarget.value = r.id;
+    ropeDistance.value = r.initialDistance;
+    ropeYaw.value = r.initialYawDeg;
+    ropePitch.value = r.initialPitchDeg;
+    ropeBoxSelfRotation.value = r.boxSelfRotationDeg;
+    onRopeParamsChange();
+}
+
+function createAllRopeDemos() {
+    initRopeDemo();
+}
+
+function removeSelectedRopeDemo() {
+    const targetId = ropeControlTarget.value || resolvedRopeBindings.value[0]?.id || '';
+    if (!targetId) return;
+    App.Instance.removeRopeDemo(targetId);
+    const left = App.Instance.getRopeDemoIds();
+    if (left.length === 0) {
+        ropeDemoReady.value = false;
+        return;
     }
+    // 选中一个仍存在的 id
+    ropeControlTarget.value = left.includes(targetId) ? targetId : left[0];
+    onRopeControlTargetChange();
+}
+
+function removeAllRopeDemos() {
+    App.Instance.removeAllRopeDemos();
+    ropeDemoReady.value = false;
 }
 
 function initFlexibleRopeDemo() {
@@ -935,7 +956,7 @@ onMounted(async () => {
         await initEnvironmentForModel();
         syncModelUiAfterLoaded();
         // initInfoBoardDemo();
-        initRopeDemo();
+        // 绳子 demo 默认不自动创建；在“绳子”面板中按需创建/绑定
         initFlexibleRopeDemo();
     } else {
         await loadSceneFromProjectUrl(url);
