@@ -105,6 +105,7 @@ interface BoardEntity {
   sep: Rectangle;
   attrTexts: TextBlock[];
   targetMesh: Nullable<AbstractMesh>;
+  clickReport?: InfoBoardItem['clickReport'];
   /** id 维度的显隐（setVisibleIds 控制） */
   baseVisible: boolean;
   /** 相机距离维度的显隐（相机距离开关控制） */
@@ -130,6 +131,7 @@ export class InfoBoardHelper {
     ReturnType<Scene['onBeforeRenderObservable']['add']>
   > = null;
   private onItemClick?: (item: InfoBoardItem) => void;
+  private onSelectionChange?: (selected: InfoBoardItem['clickReport'] | null) => void;
   private selectedId: string | null = null;
   private suppressNextDeselect = false;
   private deselectObserver: Nullable<
@@ -140,13 +142,17 @@ export class InfoBoardHelper {
     scene: Scene,
     getNodeById: (id: string) => Node | null,
     styleOptions: InfoBoardStyleOptions = {},
-    options?: { onItemClick?: (item: InfoBoardItem) => void },
+    options?: {
+      onItemClick?: (item: InfoBoardItem) => void;
+      onSelectionChange?: (selected: InfoBoardItem['clickReport'] | null) => void;
+    },
   ) {
     this.scene = scene;
     this.getNodeById = getNodeById;
     this.style = { ...DEFAULT_STYLE, ...styleOptions };
     this.ui = AdvancedDynamicTexture.CreateFullscreenUI('infoBoardsUI', true, this.scene);
     this.onItemClick = options?.onItemClick;
+    this.onSelectionChange = options?.onSelectionChange;
     // 点击非信息牌区域时，清除选中效果（信息牌点击会设置 suppressNextDeselect）
     this.deselectObserver = this.scene.onPointerObservable.add((pi: any) => {
       // PointerInfoType.POINTERDOWN === 1
@@ -383,6 +389,7 @@ export class InfoBoardHelper {
       sep,
       attrTexts,
       targetMesh,
+      clickReport: item.clickReport,
       baseVisible: true,
       distanceVisible: true,
     };
@@ -395,9 +402,15 @@ export class InfoBoardHelper {
   setSelectedId(id: string | null): void {
     const next = id ? String(id) : null;
     if (this.selectedId === next) return;
+    const prevId = this.selectedId;
+    const prevReport = prevId ? this.boards.get(prevId)?.clickReport ?? null : null;
     this.selectedId = next;
     for (const [bid, entity] of this.boards) {
       this.applySelectionStyle(entity, bid === this.selectedId);
+    }
+    // 仅在“从有选中 -> 无选中”时上报；首次选中由 App 的点击逻辑上报
+    if (prevId && !this.selectedId && prevReport?.type) {
+      this.onSelectionChange?.({ type: prevReport.type, data: null });
     }
   }
 
@@ -454,6 +467,7 @@ export class InfoBoardHelper {
 
     // 内容变化可能导致 rect 自适应高度变化，这里同步一次连线锚点到底部
     entity.line.y2 = entity.rect.heightInPixels / 2;
+    entity.clickReport = item.clickReport;
     this.applySelectionStyle(entity, entity.id === this.selectedId);
     this.applyFinalVisibility(entity);
   }

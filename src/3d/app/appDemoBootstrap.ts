@@ -261,7 +261,10 @@ function flushMergedSensorInfoBoards(app: import('./index').App) {
     return;
   }
   app.setSensorInfoBoards(merged);
-  app.setInfoBoardsCameraDistanceVisibility(true, 0, 120);
+  // 不要覆盖 UI 已设置的距离范围；仅在尚未开启时兜底开启
+  if (!app.isInfoBoardsCameraDistanceVisibilityEnabled()) {
+    app.setInfoBoardsCameraDistanceVisibility(true, 0, 120);
+  }
   app.syncInfoBoardCameraFilterVisibleIds();
 }
 

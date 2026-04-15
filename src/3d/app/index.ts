@@ -3700,6 +3700,16 @@ export class App {
               param: { type: rep.type, data: rep.data },
             });
           },
+          onSelectionChange: (selected) => {
+            // 取消选中时：向父页面上报 data=null
+            if (selected?.type) {
+              postToParent({
+                source: CC_3D_SOURCE,
+                cmd: 'switchDevice_3d',
+                param: { type: selected.type, data: null },
+              });
+            }
+          },
         },
       );
     }
@@ -3753,6 +3763,15 @@ export class App {
             cmd: 'switchDevice_3d',
             param: { type: rep.type, data: rep.data },
           });
+        },
+        onSelectionChange: (selected) => {
+          if (selected?.type) {
+            postToParent({
+              source: CC_3D_SOURCE,
+              cmd: 'switchDevice_3d',
+              param: { type: selected.type, data: null },
+            });
+          }
         },
       },
     );
@@ -3830,6 +3849,10 @@ export class App {
     max?: number,
   ): void {
     this.infoBoardHelper?.setCameraDistanceVisibility(enabled, { min, max });
+  }
+
+  isInfoBoardsCameraDistanceVisibilityEnabled(): boolean {
+    return this.infoBoardHelper?.isCameraDistanceVisibilityEnabled() ?? false;
   }
 
   registerAction() {
