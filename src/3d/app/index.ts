@@ -49,6 +49,7 @@ import { FBXLoader } from 'babylonjs-fbx-loader';
 import { DirectionalLightHelper } from './DirectionalLightHelper';
 import { CameraHelper } from './CameraHelper';
 import { CameraTargetHelper } from './CameraTargetHelper';
+import { postToParent, CC_3D_SOURCE } from './ccPostMessageBridge';
 import {
   InfoBoardHelper,
   type InfoBoardItem,
@@ -136,8 +137,8 @@ export interface FlexibleRopeCreateItem {
    * - 当 start 为坐标时建议传入（兼容旧数据）。
    */
   end?: { x: number; y: number; z: number };
-  /** 中间控制点：每项为到起点的距离及该点的唯一 id */
-  length: Array<{ id: string; distance: number }>;
+  /** 中间控制点：每项为到起点的距离及该点的唯一 id；可选 depth 为下潜深度（世界单位，沿 Y 向下） */
+  length: Array<{ id: string; distance: number; depth?: number }>;
   /** 绳子纹理 URL（可选；用于覆盖默认纹理） */
   textureUrl?: string;
   /** 绳子纹理宽像素（可选；用于按像素密度校正纹理在 Tube 上的映射） */
@@ -155,9 +156,18 @@ export interface FlexibleRopeUpdatePayload {
   /**
    * 要更新的节点列表：id 为 length[].id
    * - 新语义：每个点支持 yaw/pitch 控制偏移（度）
+   * - depth：控制点相对绳子起点的下潜深度（世界单位，沿 Y 轴向下的距离）
    * - 兼容旧语义：若只提供 angle，则按 pitch=angle、yaw=0 进行映射
    */
-  length: Array<{ id: string; yaw?: number; pitch?: number; angle?: number }>;
+  length: Array<{
+    id: string;
+    yaw?: number;
+    pitch?: number;
+    depth?: number;
+    angle?: number;
+    /** 接收阵 5202H cgqArray 项中的翻滚原始值，仅用于信息牌展示，不参与几何 */
+    fgssz?: number;
+  }>;
 }
 
 /** 海面（水面）材质参数：用于 demo 面板配置 WaterMaterial。 */
@@ -373,6 +383,16 @@ export class App {
   private cameraTargetHelperEnabledByDefault = false;
   /** 3D 信息牌：底部连线到指定节点，显示 title 与 attribute */
   private infoBoardHelper: InfoBoardHelper | null = null;
+  /** 柔性绳（5202H）信息牌缓存：用于与传感器信息牌合并显示 */
+  private flexibleRopeInfoBoardItems: InfoBoardItem[] = [];
+  /** 传感器（5206H/5208H 等）信息牌缓存：用于与柔性绳信息牌合并显示 */
+  private sensorInfoBoardItems: InfoBoardItem[] = [];
+  /** 5206H/5208H 等传感器信息牌挂接目标 id（与 InfoBoardItem.id 一致），供相机距离过滤与柔性绳合并显隐 */
+  private sensorBindInfoBoardTargetIds: string[] = [];
+  /**
+   * 5203H 与 5202H param.cgqArray 同序（34 点）：每点翻滚/俯仰/航向是否异常，用于柔性绳信息牌 attributeAlarm
+   */
+  private receiveArray5203Alarm: { fg: boolean[]; fy: boolean[]; hx: boolean[] } | null = null;
   /** 调试：循环移动的小球 */
   private debugMovingBalls: Map<
     string,
@@ -479,6 +499,10 @@ export class App {
       pointYawDegs: number[];
       /** 每个控制点的俯仰偏移 pitch（度） */
       pointPitchDegs: number[];
+      /** 每个控制点的偏移深度系数（用于缩放该点偏移幅度，默认 1） */
+      pointDepths: number[];
+      /** 接收阵推送的翻滚值 fgsszRaw（仅展示） */
+      pointFgsszRaw: number[];
       /** 纹理宽/高像素：用于 uScale/vScale 归一化 */
       textureWidthPx: number;
       textureHeightPx: number;
@@ -525,6 +549,13 @@ export class App {
       }
     | null = null;
   private compassWidgetEnabled = true;
+  /**
+   * directionControl 修改 ArcRotateCamera.alpha 时累加的补偿（弧度），使指北针平面 rotation.z 不随该指令变化；
+   * 鼠标拖动仍改变 alpha，指北针仍随 `-alpha + compensation` 正常联动。
+   */
+  private compassArcAlphaCompensationRad = 0;
+  /** 上一次 directionControl 指令的角度参数（0~360），用于与本次作差做「叠加」旋转，避免覆盖鼠标转过的 alpha */
+  private directionControlLastParamDeg: number | null = null;
 
   static get Instance(): App {
     if (!this.instance) {
@@ -820,9 +851,10 @@ export class App {
       );
 
       // 根据相机 yaw 旋转（ArcRotateCamera.alpha 绕 Y 轴；这里投影到屏幕做 2D 旋转）
+      // directionControl 改 alpha 时已累加 compassArcAlphaCompensationRad，使该指令下挂件朝向不转，鼠标拖动仍随 alpha 变化
       const alpha = (camera as any).alpha as number | undefined;
       if (typeof alpha === 'number' && Number.isFinite(alpha)) {
-        plane.rotation.z = -alpha;
+        plane.rotation.z = -alpha + this.compassArcAlphaCompensationRad;
       }
     });
 
@@ -921,6 +953,8 @@ export class App {
     const sceneJustCreated = !this.scene;
     const scene = this.scene ?? new Scene(this.engine);
     if (!this.scene) {
+      this.compassArcAlphaCompensationRad = 0;
+      this.directionControlLastParamDeg = null;
       this.scene = scene;
       scene.fogEnabled = false;
 
@@ -1124,6 +1158,53 @@ export class App {
   /** 获取指定模型的根节点（用于信息牌挂接等），不存在则返回 null */
   getModelRootNode(modelName: string): AbstractMesh | null {
     return this.modelRootMap.get(modelName) ?? null;
+  }
+
+  private getLoadedModelRootByName(modelRootName: string): AbstractMesh | null {
+    if (!modelRootName) return null;
+    const direct = this.modelRootMap.get(modelRootName);
+    if (direct) return direct;
+    const lower = modelRootName.toLowerCase();
+    for (const [k, v] of this.modelRootMap.entries()) {
+      if (k.toLowerCase() === lower) return v;
+    }
+    return null;
+  }
+
+  /**
+   * 在指定已加载模型根下按节点名查找，避免多模型场景下同名子节点冲突。
+   */
+  getNodeUnderModelByName(modelRootName: string, nodeName: string): Node | null {
+    const root = this.getLoadedModelRootByName(modelRootName);
+    if (!root || !nodeName) return null;
+    const stack: Node[] = [root];
+    while (stack.length) {
+      const n = stack.pop()!;
+      const key = (n as any).name || (n as any).id;
+      if (key === nodeName) return n;
+      const children = n.getChildren();
+      for (let i = children.length - 1; i >= 0; i--) {
+        stack.push(children[i]);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 信息牌连线目标需为 AbstractMesh；若绑定节点为 TransformNode 等，则取子树中第一个网格。
+   */
+  getAbstractMeshUnderNode(node: Node): AbstractMesh | null {
+    if (node instanceof AbstractMesh) return node;
+    const stack: Node[] = [...node.getChildren()];
+    while (stack.length) {
+      const n = stack.pop()!;
+      if (n instanceof AbstractMesh) return n;
+      const children = n.getChildren();
+      for (let i = children.length - 1; i >= 0; i--) {
+        stack.push(children[i]);
+      }
+    }
+    return null;
   }
 
   /**
@@ -2208,6 +2289,10 @@ export class App {
       const distancesRaw = lengthArr.map((l) =>
         Math.max(0, Number.isFinite(l?.distance) ? Number(l!.distance) : 0),
       );
+      const depthsRaw = lengthArr.map((l) => {
+        const d = (l as { depth?: number })?.depth;
+        return typeof d === 'number' && Number.isFinite(d) ? Math.max(0, d) : 0;
+      });
       const pointIds = lengthArr.map((l) => (l?.id != null ? String(l.id) : ''));
       const pointCount = distancesRaw.length;
       if (pointCount === 0) continue;
@@ -2338,7 +2423,8 @@ export class App {
         pointMeshes.push(sphere);
       }
 
-      const controlPoints = [start.clone(), ...midPoints.map((p) => p.clone()), end.clone()];
+      // 约定：最后一个控制点就是绳尾（end），因此控制点序列不再额外追加 end，避免末端出现“多一段”
+      const controlPoints = [start.clone(), ...midPoints.map((p) => p.clone())];
       const curve = Curve3.CreateCatmullRomSpline(controlPoints, 20, false);
       const path = curve.getPoints();
       let totalLen = 0;
@@ -2380,6 +2466,8 @@ export class App {
         refLength,
         pointYawDegs: new Array(pointCount).fill(0),
         pointPitchDegs: new Array(pointCount).fill(0),
+        pointDepths: depthsRaw.slice(),
+        pointFgsszRaw: new Array(pointCount).fill(0),
         textureWidthPx,
         textureHeightPx,
         radius: ropeRadius,
@@ -2432,6 +2520,11 @@ export class App {
           }
         });
       }
+
+      // 创建时若配置了非零下潜深度，需走与运行时相同的曲线重建逻辑，否则首帧 Tube 仍按无 depth 的直线采样
+      if (state && depthsRaw.some((d) => d > 1e-9)) {
+        this.updateSingleFlexibleRope(state);
+      }
     }
 
     this.refreshAllFlexibleRopeInfoBoards();
@@ -2453,6 +2546,13 @@ export class App {
       const yaw = typeof item?.yaw === 'number' && Number.isFinite(item.yaw) ? item.yaw : undefined;
       const pitch =
         typeof item?.pitch === 'number' && Number.isFinite(item.pitch) ? item.pitch : undefined;
+      const depth =
+        typeof item?.depth === 'number' && Number.isFinite(item.depth) ? item.depth : undefined;
+      const fgssz =
+        typeof (item as { fgssz?: number })?.fgssz === 'number' &&
+        Number.isFinite((item as { fgssz?: number }).fgssz!)
+          ? (item as { fgssz: number }).fgssz
+          : undefined;
       const legacyAngle =
         typeof item?.angle === 'number' && Number.isFinite(item.angle) ? item.angle : undefined;
 
@@ -2465,6 +2565,14 @@ export class App {
 
       if (yaw !== undefined) state.pointYawDegs[idx] = yaw;
       if (pitch !== undefined) state.pointPitchDegs[idx] = pitch;
+      if (depth !== undefined) (state as any).pointDepths[idx] = Math.max(0, depth);
+      if (fgssz !== undefined) {
+        const st = state as { pointFgsszRaw?: number[]; pointYawDegs: number[] };
+        if (!Array.isArray(st.pointFgsszRaw) || st.pointFgsszRaw.length !== st.pointYawDegs.length) {
+          st.pointFgsszRaw = new Array(st.pointYawDegs.length).fill(0);
+        }
+        st.pointFgsszRaw[idx] = fgssz;
+      }
     }
     this.updateSingleFlexibleRope(state);
     this.refreshAllFlexibleRopeInfoBoards();
@@ -2517,6 +2625,32 @@ export class App {
   }
 
   /**
+   * 获取指定绳子的每个控制点偏移（yaw/pitch/depth），顺序与创建时 length[].id 一致。
+   * - yaw：水平旋转角（度，范围建议 0~360）
+   * - pitch：垂直方向角（度，水平向上为正，范围建议 -90~90）
+   * - depth：控制点相对绳子起点的下潜深度（世界单位，沿 Y 轴向下的距离）
+   */
+  getFlexibleRopePointYawPitchDepth(ropeId: string): {
+    yawsDeg: number[];
+    pitchesDeg: number[];
+    depths: number[];
+    /** 与 5202H cgqArray.fgsszRaw 对应，供 UI/信息牌 */
+    fgsszRaws: number[];
+  } {
+    const state = this.flexibleRopesMap.get(ropeId) as any;
+    return state
+      ? {
+          yawsDeg: state.pointYawDegs.slice(),
+          pitchesDeg: state.pointPitchDegs.slice(),
+          depths: Array.isArray(state.pointDepths) ? state.pointDepths.slice() : [],
+          fgsszRaws: Array.isArray(state.pointFgsszRaw)
+            ? state.pointFgsszRaw.slice()
+            : new Array(state.pointYawDegs.length).fill(0),
+        }
+      : { yawsDeg: [], pitchesDeg: [], depths: [], fgsszRaws: [] };
+  }
+
+  /**
    * 兼容旧接口：返回 pitch 偏移（把旧 angle 语义映射成 pitch）。
    * 若需要 yaw/pitch，请使用 getFlexibleRopePointYawPitch。
    */
@@ -2558,6 +2692,7 @@ export class App {
     refLength: number;
     pointYawDegs: number[];
     pointPitchDegs: number[];
+    pointDepths?: number[];
     textureWidthPx: number;
     textureHeightPx: number;
     radius: number;
@@ -2582,21 +2717,39 @@ export class App {
       const d = state.distances[i] ?? (length * (i + 1)) / (pointCount + 1);
       const clampedD = Math.max(0, Math.min(length, d));
       const basePos = start.add(tangent.scale(clampedD));
-      const yawDeg = state.pointYawDegs[i] ?? 0;
-      const pitchDeg = state.pointPitchDegs[i] ?? 0;
+      const yawDegRaw = state.pointYawDegs[i] ?? 0;
+      const pitchDegRaw = state.pointPitchDegs[i] ?? 0;
+      const depthRaw = (state.pointDepths?.[i] ?? 0) as number;
+
+      // yaw: 0~360（也允许外部传入任意值，这里做归一化）
+      const yawDeg = ((Number(yawDegRaw) % 360) + 360) % 360;
+      // pitch: -90~90（超出则夹断）
+      const pitchDeg = Math.max(-90, Math.min(90, Number(pitchDegRaw)));
+      // depth: 起点向下的 Y 距离（世界单位）
+      const depth = Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 0;
       const yawRad = (yawDeg * Math.PI) / 180;
       const pitchRad = (pitchDeg * Math.PI) / 180;
 
-      const offsetMagnitude = amplitude * Math.sin(pitchRad);
-      const offsetDir = right
-        .scale(Math.cos(yawRad))
-        .add(upLocal.scale(Math.sin(yawRad)));
-      const pos = basePos.add(offsetDir.scale(offsetMagnitude));
+      // yaw/pitch 用“世界坐标”定义方向（yaw 绕 Y，pitch 为垂直方向角）
+      const cosPitch = Math.cos(pitchRad);
+      const offsetDirWorld = new Vector3(
+        cosPitch * Math.cos(yawRad),
+        Math.sin(pitchRad),
+        cosPitch * Math.sin(yawRad),
+      );
+      // 在 basePos 上叠加一个固定幅度的方向偏移（控制“弯曲程度”）
+      const pos = basePos.add(offsetDirWorld.scale(amplitude));
+      // depth：强制把控制点压到 “起点 start.y - depth” 的高度
+      pos.y = start.y - depth;
       midPositions.push(pos);
       pointMeshes[i].position.copyFrom(pos);
     }
 
-    const controlPoints = [start.clone(), ...midPositions.map((p) => p.clone()), end.clone()];
+    // 约定：最后一个控制点就是绳尾（end）
+    if (midPositions.length) {
+      end.copyFrom(midPositions[midPositions.length - 1]);
+    }
+    const controlPoints = [start.clone(), ...midPositions.map((p) => p.clone())];
     const curve = Curve3.CreateCatmullRomSpline(controlPoints, 20, false);
     const path = curve.getPoints();
     let totalLen = 0;
@@ -2632,22 +2785,64 @@ export class App {
   /** 汇总所有柔性绳子的控制点信息牌并调用 setInfoBoards */
   private refreshAllFlexibleRopeInfoBoards(): void {
     const items: InfoBoardItem[] = [];
+    let globalIdx = 0;
+    const al = this.receiveArray5203Alarm;
     for (const state of this.flexibleRopesMap.values()) {
       for (let i = 0; i < state.pointMeshes.length; i++) {
         const mesh = state.pointMeshes[i];
         const yaw = state.pointYawDegs[i] ?? 0;
         const pitch = state.pointPitchDegs[i] ?? 0;
+        const depth = (state as any).pointDepths?.[i] ?? 0;
+        const fg =
+          (state as { pointFgsszRaw?: number[] }).pointFgsszRaw?.[i] ?? 0;
+        const aFg = al?.fg[globalIdx] === true;
+        const aHx = al?.hx[globalIdx] === true;
+        const aFy = al?.fy[globalIdx] === true;
         items.push({
           id: mesh.id,
           title: `洋流点 ${state.pointIds[i] ?? i + 1}`,
           attribute: [
+            { '翻滚值 fgsszRaw': String(Number.isFinite(fg) ? fg : 0) },
             { '水平偏移 yaw': `${yaw.toFixed(1)}°` },
             { '俯仰偏移 pitch': `${pitch.toFixed(1)}°` },
+            { '深度 depth': `${Number(depth).toFixed(2)}` },
           ],
+          attributeAlarm: [aFg, aHx, aFy, false],
+          clickReport: { type: '5202H', data: globalIdx },
         });
+        globalIdx++;
       }
     }
-    if (items.length) this.setInfoBoards(items);
+    if (items.length) this.setFlexibleRopeInfoBoards(items);
+  }
+
+  /**
+   * 接收阵告警 5203H：param.cgqArray 与 5202H 同序共 34 项；
+   * fgztRaw/fyztRaw/hxztRaw 为 1 时，对应点信息牌「翻滚 / 俯仰 / 航向(yaw)」行文字变红。
+   */
+  apply5203HReceiveArrayAlarm(param: unknown): void {
+    if (!param || typeof param !== 'object') {
+      this.receiveArray5203Alarm = null;
+      this.refreshAllFlexibleRopeInfoBoards();
+      return;
+    }
+    const cgq = (param as { cgqArray?: unknown }).cgqArray;
+    if (!Array.isArray(cgq) || cgq.length !== 34) {
+      this.receiveArray5203Alarm = null;
+      this.refreshAllFlexibleRopeInfoBoards();
+      return;
+    }
+    const fg: boolean[] = [];
+    const fy: boolean[] = [];
+    const hx: boolean[] = [];
+    for (let i = 0; i < 34; i++) {
+      const o = cgq[i] as Record<string, unknown>;
+      fg.push(String(o?.fgztRaw ?? '').trim() === '1');
+      fy.push(String(o?.fyztRaw ?? '').trim() === '1');
+      hx.push(String(o?.hxztRaw ?? '').trim() === '1');
+    }
+    this.receiveArray5203Alarm = { fg, fy, hx };
+    this.refreshAllFlexibleRopeInfoBoards();
   }
 
   /** 获取已创建的柔性绳子 id 列表 */
@@ -2778,6 +2973,47 @@ export class App {
   /** 获取当前激活模型名称 */
   getCurrentModelName(): string | null {
     return this.currentModelName;
+  }
+
+  /**
+   * 两方向角（度）之间的最短有符号差，约 (-180, 180]，用于滑条连续变化时的叠加。
+   */
+  private shortestDirectionControlDeltaDeg(fromDeg: number, toDeg: number): number {
+    const a = ((fromDeg % 360) + 360) % 360;
+    const b = ((toDeg % 360) + 360) % 360;
+    let d = b - a;
+    if (d > 180) d -= 360;
+    if (d <= -180) d += 360;
+    return d;
+  }
+
+  /**
+   * 业务指令 directionControl：在当前 ArcRotateCamera.alpha 上**叠加**旋转（与鼠标绕目标同源），不重置到固定基准。
+   * 本次相对上一次的参数变化量会转为 alpha 增量；首次调用（或新场景后）以上一次参数为 0 与本次作差。
+   * 指北针：累加补偿，使本指令引起的 alpha 变化不带动挂件旋转；鼠标拖动仍正常联动。
+   * @param angleDeg 0~360，与上一次指令值的差值决定旋转量（非绝对对准 -π/2）
+   */
+  setDirectionControlCameraYawDegClockwise(angleDeg: number): boolean {
+    const scene = this.scene;
+    if (!scene) return false;
+    const cam = scene.activeCamera;
+    if (!(cam instanceof ArcRotateCamera)) return false;
+
+    const deg = Number(angleDeg);
+    if (!Number.isFinite(deg)) return false;
+    const normalized = ((deg % 360) + 360) % 360;
+
+    const fromDeg = this.directionControlLastParamDeg ?? 0;
+    const deltaDeg = this.shortestDirectionControlDeltaDeg(fromDeg, normalized);
+    this.directionControlLastParamDeg = normalized;
+
+    const deltaRad = (deltaDeg * Math.PI) / 180;
+    const oldAlpha = cam.alpha;
+    const targetAlpha = oldAlpha + deltaRad;
+
+    this.compassArcAlphaCompensationRad += targetAlpha - oldAlpha;
+    cam.alpha = targetAlpha;
+    return true;
   }
 
   /**
@@ -3039,6 +3275,8 @@ export class App {
     const scene = new Scene(this.engine);
     const padding = new Array<Padding>();
     this.assets.deserializeScene(scene, sceneNode, padding);
+    this.compassArcAlphaCompensationRad = 0;
+    this.directionControlLastParamDeg = null;
     this.scene = scene;
     this.scene.fogEnabled = false;
     scene.activeCamera.maxZ = 10000;
@@ -3428,6 +3666,13 @@ export class App {
     } catch {
       // ignore
     }
+    if (/^\d+$/.test(identifier)) {
+      const uid = Number(identifier);
+      if (Number.isFinite(uid)) {
+        const byUnique = this.scene.getMeshByUniqueId(uid);
+        if (byUnique) return byUnique;
+      }
+    }
     const mesh = this.scene.getMeshById(identifier);
     return mesh ?? null;
   }
@@ -3442,9 +3687,48 @@ export class App {
       this.infoBoardHelper = new InfoBoardHelper(
         this.scene,
         (id) => this.getNodeByIdOrMeshId(id),
+        {},
+        {
+          onItemClick: (item) => {
+            this.focusCameraToInfoBoardTarget(item.id, { duration: 0.8 });
+            this.infoBoardHelper?.setSelectedId(item.id);
+            const rep = (item as InfoBoardItem).clickReport;
+            if (!rep?.type) return;
+            postToParent({
+              source: CC_3D_SOURCE,
+              cmd: 'switchDevice_3d',
+              param: { type: rep.type, data: rep.data },
+            });
+          },
+        },
       );
     }
     this.infoBoardHelper.update(data);
+  }
+
+  /** 将柔性绳信息牌写入缓存并与传感器牌子合并刷新 */
+  setFlexibleRopeInfoBoards(items: InfoBoardItem[]): void {
+    this.flexibleRopeInfoBoardItems = Array.isArray(items) ? items : [];
+    this.flushMergedInfoBoards();
+  }
+
+  /** 将传感器信息牌写入缓存并与柔性绳牌子合并刷新 */
+  setSensorInfoBoards(items: InfoBoardItem[]): void {
+    this.sensorInfoBoardItems = Array.isArray(items) ? items : [];
+    this.flushMergedInfoBoards();
+  }
+
+  /** 内部：合并两路信息牌并 setInfoBoards（id 去重：后写入者覆盖前者） */
+  private flushMergedInfoBoards(): void {
+    const map = new Map<string, InfoBoardItem>();
+    for (const it of this.flexibleRopeInfoBoardItems) {
+      if (it?.id) map.set(String(it.id), it);
+    }
+    for (const it of this.sensorInfoBoardItems) {
+      if (it?.id) map.set(String(it.id), it);
+    }
+    const merged = Array.from(map.values());
+    if (merged.length) this.setInfoBoards(merged);
   }
 
   /**
@@ -3458,7 +3742,37 @@ export class App {
       this.scene,
       (id) => this.getNodeByIdOrMeshId(id),
       options,
+      {
+        onItemClick: (item) => {
+          this.focusCameraToInfoBoardTarget(item.id, { duration: 0.8 });
+          this.infoBoardHelper?.setSelectedId(item.id);
+          const rep = (item as InfoBoardItem).clickReport;
+          if (!rep?.type) return;
+          postToParent({
+            source: CC_3D_SOURCE,
+            cmd: 'switchDevice_3d',
+            param: { type: rep.type, data: rep.data },
+          });
+        },
+      },
     );
+  }
+
+  /** 点击信息牌后：将相机 target 拉到该牌子挂接点并拉近视角 */
+  focusCameraToInfoBoardTarget(identifier: string, options?: { duration?: number; radiusScale?: number }): void {
+    const cam = this.scene?.activeCamera;
+    if (!this.scene || !cam || !(cam instanceof ArcRotateCamera)) return;
+    const node = this.getNodeByIdOrMeshId(identifier);
+    const mesh = (node as any) instanceof AbstractMesh ? (node as AbstractMesh) : null;
+    if (!mesh) return;
+    const target = mesh.getAbsolutePosition().clone();
+    const dir = cam.position.subtract(cam.target);
+    const len = dir.length();
+    const unit = len > 1e-6 ? dir.scale(1 / len) : new Vector3(0, 0, 1);
+    const scale = options?.radiusScale ?? 0.55;
+    const newRadius = Math.max(2, cam.radius * scale);
+    const position = target.add(unit.scale(newRadius));
+    this.switchCameraView({ target, position }, { duration: options?.duration ?? 0.8 });
   }
 
   /**
@@ -3474,6 +3788,33 @@ export class App {
    */
   setInfoBoardsVisible(visibleIds: string[]): void {
     this.infoBoardHelper?.setVisibleIds(visibleIds ?? []);
+  }
+
+  /**
+   * 更新传感器类信息牌（如 5206H/5208H）挂接点 id，便于与柔性绳控制点一起做相机距离过滤。
+   */
+  setSensorBindInfoBoardTargetIds(ids: string[]): void {
+    this.sensorBindInfoBoardTargetIds = ids?.length ? ids.slice() : [];
+  }
+
+  getSensorBindInfoBoardTargetIds(): string[] {
+    return this.sensorBindInfoBoardTargetIds.slice();
+  }
+
+  /** 柔性绳控制点 + 传感器绑定信息牌：合并去重，供开启相机距离过滤时的 setInfoBoardsVisible */
+  getInfoBoardCameraDistanceFilterTargetIds(): string[] {
+    const rope = this.getAllFlexibleRopePointMeshIds();
+    const sensor = this.sensorBindInfoBoardTargetIds;
+    return [...new Set([...rope, ...sensor])];
+  }
+
+  /**
+   * 相机距离过滤已开启时，按当前柔性绳 + 传感器挂接 id 刷新 setInfoBoardsVisible；
+   * 用于 5206H/5208H 推送后在仍适用距离过滤的前提下纳入新牌子。
+   */
+  syncInfoBoardCameraFilterVisibleIds(): void {
+    if (!this.infoBoardHelper?.isCameraDistanceVisibilityEnabled()) return;
+    this.setInfoBoardsVisible(this.getInfoBoardCameraDistanceFilterTargetIds());
   }
 
   /**

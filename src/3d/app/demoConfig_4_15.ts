@@ -12,34 +12,58 @@ export const cameraPresetsConfig: Record<
   { label: string; preset: CameraViewPreset }
 > = {
   default: {
-    label: '重置视角',
+    label: '默认',
     preset: {
       target: { x: 0, y: 0, z: 0 },
       position: { x: 0, y: 10, z: -90 },
     },
   },
   front: {
-    label: '切换到视角1',
+    label: '正面',
     preset: {
-      target: {x: 1.7885575972922312, y: -16.781598255145852, z: -4.368928323228072},
+      target: { x: 0, y: 0, z: 0 },
       // 相机在目标前方稍微抬高
-      position: {x: -48.15475591107311, y: -23.514919508935012, z: -9.533224360509042},
+      position: { x: 0, y: 20, z: 80 },
     },
   },
   side: {
-    label: '切换到视角2',
+    label: '侧面',
     preset: {
-      target: {x: -1.6979212016149199, y: -9.494988660788001, z: -5.307022957324194},
+      target: { x: 0, y: 0, z: 0 },
       // 相机在目标左侧稍微抬高
-      position: {x: -5.8082561100814925, y: 5.114003734876908, z: -42.27591496299824},
+      position: { x: -80, y: 20, z: 0 },
     },
   },
   top: {
-    label: '切换到视角3',
+    label: '俯视',
     preset: {
-      target: {x: -11.674704370780752, y: -7.04441194738163, z: -17.215962182100814},
+      target: { x: 0, y: 0, z: 0 },
       // 相机在目标正上方
-      position: {x: 10.793017840888066, y: 4.672317515647392, z: -39.526294176341366},
+      position: { x: 0, y: 80, z: 0 },
+    },
+  },
+  close: {
+    label: '特写',
+    preset: {
+      target: { x: 0, y: 0, z: 0 },
+      // 更靠近目标一点
+      position: { x: -25, y: 8, z: 0 },
+    },
+  },
+  // 基于模型包围盒中心点 + 偏移量的示例（以 Soldier 模型为例）
+  soldierFrontClose: {
+    label: 'Dancing 前方近景',
+    preset: {
+      modelName: 'Dancing',
+      // 以 Soldier 包围盒中心点为 target，向前方 + 稍微抬高的偏移作为 position
+      offset: { x: 0, y: 0, z: 0 },
+    },
+  },
+  soldierTop: {
+    label: 'Soldier 俯视',
+    preset: {
+      modelName: 'Soldier',
+      offset: { x: 0, y: 60, z: 0 },
     },
   },
   /**
@@ -49,64 +73,36 @@ export const cameraPresetsConfig: Record<
   czz: {
     label: '垂直阵',
     preset: {
-      target: {x: 1.7885575972922312, y: -16.781598255145852, z: -4.368928323228072},
-      // 相机在目标前方稍微抬高
-      position: {x: -48.15475591107311, y: -23.514919508935012, z: -9.533224360509042},
+      target: { x: 0, y: 0, z: 0 },
+      // 垂直俯视
+      position: { x: 0, y: 80, z: 0 },
     },
   },
   ttz: {
     label: '托体阵',
     preset: {
-      target: {x: -1.6979212016149199, y: -9.494988660788001, z: -5.307022957324194},
-      // 相机在目标左侧稍微抬高
-      position: {x: -5.8082561100814925, y: 5.114003734876908, z: -42.27591496299824},
+      target: { x: 0, y: 0, z: 0 },
+      // 正面视角
+      position: { x: 0, y: 20, z: 80 },
     },
   },
   jsz: {
     label: '接收阵',
     preset: {
-      target: {x: -11.674704370780752, y: -7.04441194738163, z: -17.215962182100814},
-      // 相机在目标正上方
-      position: {x: 10.793017840888066, y: 4.672317515647392, z: -39.526294176341366},
+      target: { x: 0, y: 0, z: 0 },
+      // 侧面视角
+      position: { x: -80, y: 20, z: 0 },
     },
   },
-  // close: {
-  //   label: '特写',
-  //   preset: {
-  //     target: { x: 0, y: 0, z: 0 },
-  //     // 更靠近目标一点
-  //     position: { x: -25, y: 8, z: 0 },
-  //   },
-  // },
-  // // 基于模型包围盒中心点 + 偏移量的示例（以 Soldier 模型为例）
-  // soldierFrontClose: {
-  //   label: 'Dancing 前方近景',
-  //   preset: {
-  //     modelName: 'Dancing',
-  //     // 以 Soldier 包围盒中心点为 target，向前方 + 稍微抬高的偏移作为 position
-  //     offset: { x: 0, y: 0, z: 0 },
-  //   },
-  // },
-  // soldierTop: {
-  //   label: 'Soldier 俯视',
-  //   preset: {
-  //     modelName: 'Soldier',
-  //     offset: { x: 0, y: 60, z: 0 },
-  //   },
-  // },
 };
+
 /**
  * 业务指令 directionControl：已改为直接调整 ArcRotateCamera 的水平角 alpha（与鼠标控制器一致），
  * 不再按模型名单旋转根节点。以下字段仅保留兼容旧代码/引用。
  */
 export const directionControlConfig = {
   /** @deprecated 不再使用 */
-  modelNames: [ '20new',
-  'chuanti02',
-  'donghua01new',
-  'donghua02new',
-  'donghua03new',
-  'gaiban',],
+  modelNames: ['Dancing', 'Soldier'],
 } as const;
 /** 绳子 demo 默认配置 */
 export const ropeDemoConfig = {
@@ -170,78 +166,78 @@ export const ropeDemoModelBindings: Array<{
 }> = [
   {
     id: 'rope_1',
-    meshAName: '20fromA',
-    modelBName: 'liantou001',
+    meshAName: 'DamagedHelmet',
+    modelBName: 'Soldier',
     config: {
-       // rope_1：默认绳子纹理
-      textureUrl: '/wenli/hei.png',
-      textureWidthPx: 397,
-      textureHeightPx: 4096,
+      // rope_1：默认绳子纹理
+      textureUrl: '/1712285623239_7670.jpeg',
+      textureWidthPx: 1600,
+      textureHeightPx: 1200,
       // rope_1：偏短、水平
-      initialDistance: 0.5,
-      initialYawDeg: -180,
-      initialPitchDeg: -89,
-      ropeRadius:0.032,
+      initialDistance: 6,
+      initialYawDeg: 0,
+      initialPitchDeg: 0,
+      ropeRadius: 0.12,
     },
   },
   {
     id: 'rope_2',
-    meshAName: '01fromA',
-    modelBName: 'donghua01-004',
+    meshAName: 'rope_Third',
+    modelBName: 'Dancing',
     config: {
       // rope_2：使用另一张纹理（与 rope_1 不同）
-      textureUrl: '/wenli/lvsheng.png',
+      textureUrl: '/1711002072994_1522.jpeg',
       // 未知真实像素尺寸时也可不填；这里给出占位值，便于 UI/缩放策略一致
-      textureWidthPx: 397,
-      textureHeightPx: 4096,
+      textureWidthPx: 1600,
+      textureHeightPx: 1200,
       // rope_2：更长、向右前方、略向上
-      initialDistance: 0.5,
-      initialYawDeg: -89,
-      initialPitchDeg: -28,
-      ropeRadius:0.01,
+      initialDistance: 9,
+      initialYawDeg: 45,
+      initialPitchDeg: 8,
+      ropeRadius: 0.09,
     },
   },
   // 第三根使用一个通用 B 端名称，实际绑定时可根据当前选中模型名称覆盖
   {
     id: 'rope_3',
-    meshAName: '02fromA',
-    modelBName: 'donghua02-011',
+    meshAName: 'rope_Third',
+    modelBName: 'Soldier',
     config: {
       ropeShapeType: 'box',
       // 截面宽/高：用于控制 box 的形状（front/back 的矩形宽高）
-      boxWidth: 0.02,
+      boxWidth: 0.01,
       boxHeight: 0.24,
       // boxSelfRotationDeg：绕绳轴（A→B）自身旋转，用于纹理朝向等
       boxSelfRotationDeg: 0,
       boxFaces: {
         front: {
-          textureUrl: '/wenli/donghau02.png',
+          textureUrl: '/DefaultScene/amiga.jpg',
           textureWidthPx: 1024,
           textureHeightPx: 1024,
         },
         back: {
-          textureUrl: '/wenli/donghau02.png',
-          textureWidthPx: 1024,
-          textureHeightPx: 1024,
+          textureUrl: '/1712285623239_7670.jpeg',
+          textureWidthPx: 1600,
+          textureHeightPx: 1200,
         },
         left: {
-          textureUrl: '/wenli/donghau0201.png',
-          textureWidthPx: 1024,
-          textureHeightPx: 66,
+          textureUrl: '/f3ce60e08dd2a40aba5ab8536e79269a.jpg',
+          textureWidthPx: 2667,
+          textureHeightPx: 1600,
         },
         right: {
-          textureUrl: '/wenli/donghau0201.png',
-          textureWidthPx: 1024,
-          textureHeightPx: 66,
+          textureUrl: '/f3ce60e08dd2a40aba5ab8536e79269a.jpg',
+          textureWidthPx: 2667,
+          textureHeightPx: 1600,
         },
         top: {
-          textureUrl: '/wenli/donghau02shang.png',
-          textureWidthPx: 27,
-          textureHeightPx: 1024,
+          textureUrl: '/1711002072994_1522.jpeg',
+          textureWidthPx: 1600,
+          textureHeightPx: 1200,
         },
         bottom: {
-          textureUrl: '/wenli/donghau02xia.png',
-          textureWidthPx: 5,
+          textureUrl: '/DefaultScene/amiga.jpg',
+          textureWidthPx: 1024,
           textureHeightPx: 1024,
         },
       },
@@ -250,9 +246,9 @@ export const ropeDemoModelBindings: Array<{
       textureWidthPx: 1024,
       textureHeightPx: 1024,
       // rope_3：中等长度、向左前方、略向下
-      initialDistance: 0,
-      initialYawDeg: -91,
-      initialPitchDeg: 34,
+      initialDistance: 7,
+      initialYawDeg: 315,
+      initialPitchDeg: -6,
       ropeRadius: 0.16,
     },
   },
@@ -265,23 +261,24 @@ export const flexibleRopeDemoConfig = {
   /** 起点：模型名称（会在已加载模型节点中查找并跟随移动） */
   start: 'Soldier',
   /** 起点到终点方向：水平角 yaw（度，绕 Y 轴，0 为 +X） */
-  angle: -91,
+  angle: 0,
   /** 起点到终点方向：俯仰角 pitch（度，0 为水平，向上为正） */
-  pitch: -29,
+  pitch: 0,
   /** 绳子半径 */
-  ropeRadius: 0.01,
+  ropeRadius: 0.12,
   /** 绳子纹理宽像素（public 纹理的原始宽度，用于按像素密度校正 tiling） */
-  textureWidthPx: 372,
+  textureWidthPx: 1600,
   /** 绳子纹理高像素（public 纹理的原始高度，用于按像素密度校正 tiling） */
-  textureHeightPx: 4096,
+  textureHeightPx: 1200,
   /** 纹理路径（沿用绳子 demo） */
-  textureUrl: '/wenli/lansheng.png',
-   /**
+  textureUrl: '/1712285623239_7670.jpeg',
+  /**
    * 最远端控制点相对起点的下潜深度（世界单位，沿 Y 向下）；
    * 各控制点深度从 0 线性递增到此值，用于模拟沿绳向逐渐加深。
    */
   maxPointDepth: 2.5,
 } as const;
+
 /** 与 flexibleRopeDemoConfig 一致：控制点下潜深度自近端向远端线性递增 */
 export function getFlexibleRopeDefaultPointDepths(): number[] {
   const n = flexibleRopeDemoConfig.pointCount;
@@ -297,7 +294,7 @@ export const flexibleRopeCreateExample: FlexibleRopeCreateItem[] = [
     id: 'rope_1',
     angle: flexibleRopeDemoConfig.angle,
     pitch: flexibleRopeDemoConfig.pitch,
-    start: 'A',
+    start: flexibleRopeDemoConfig.start,
     textureUrl: flexibleRopeDemoConfig.textureUrl,
     textureWidthPx: flexibleRopeDemoConfig.textureWidthPx,
     textureHeightPx: flexibleRopeDemoConfig.textureHeightPx,
@@ -310,9 +307,9 @@ export const flexibleRopeCreateExample: FlexibleRopeCreateItem[] = [
   },
   {
     id: 'rope_2',
-    angle: flexibleRopeDemoConfig.angle,
-    pitch: flexibleRopeDemoConfig.pitch,
-    start: 'A.001',
+    angle: 35,
+    pitch: 0,
+    start: 'Dancing',
     textureUrl: flexibleRopeDemoConfig.textureUrl,
     textureWidthPx: flexibleRopeDemoConfig.textureWidthPx,
     textureHeightPx: flexibleRopeDemoConfig.textureHeightPx,
@@ -380,20 +377,19 @@ export const animationSplitDemoConfig: Record<string, AnimationSplitModelConfig>
   //     },
   //   ],
   // },
-  donghua02new: {
+  Dancing: {
     sources: [
       {
-        sourceAnimationNames: ['Animation'],
+        sourceAnimationNames: ['AnimStack::mixamo.com'],
         keepSourceAnimation: false,
         segments: [
-          { name: 'donghua02_first', from: 0, to: 744 },
-          { name: 'donghua02_second', from:744, to: -1 },
+          { name: '001', from: 0, to: 10 },
+          { name: '002', from: 10, to: -1 },
         ],
       },
     ],
   },
 };
-
 /** 相机限制 demo 的默认参数 */
 export const defaultCameraViewLimitConfig = {
   panRadius: 12,
@@ -406,13 +402,13 @@ export const defaultCameraViewLimitConfig = {
 /** HDR 环境 demo 默认配置 */
 export const hdrDemoConfig = {
   /** 面板上默认展示与编辑的 URL */
-  defaultUrl: '/hdr/grasslands_sunset_1k.hdr',
+  defaultUrl: '/venice_sunset_1k.hdr',
   /** 默认尺寸 */
   defaultSize: 512,
   /** 默认环境强度 */
   defaultIntensity: 1,
   /** 初始化（加载模型后）时若未填写使用的兜底 URL */
-  initFallbackUrl: '/hdr/grasslands_sunset_1k.hdr',
+  initFallbackUrl: '/charolettenbrunn_park_1k.hdr',
   /** 点击“应用 HDR 环境”时若未填写使用的兜底 URL */
   applyFallbackUrl: '/Dutch-Sky_0168_4k.hdr',
 } as const;
@@ -431,7 +427,7 @@ export const skyboxDemoConfig = {
   defaultSize: 512,
 } as const;
 
-/** 海面参数 demo 默认值（仅用于 UI 初始值；真正默认值来自 App.getSeaParams） */
+/** 海面参数 demo 默认值（用于 UI 初始值 + 3D 水面初始化/重置默认值） */
 export const seaDemoDefaults: {
   params: SeaParams;
   /** UI 中使用的默认十六进制水色（便于重置） */
@@ -485,10 +481,9 @@ export const infoBoardDemoConfig = {
     }));
   },
 } as const;
-
 /** 传感器绑定信息牌子绑定配置*/
 export const infoBoardBindConfig = {
-  czz:{ // 垂直阵
+  czz:{ // 接收阵传感器
     modelName: "20new", // 关联的模型名称
     boardBindCmd: "5206H", // 绑定的指令cmd名称
     sensorList: [ // 传感器数组
@@ -679,11 +674,11 @@ export const infoBoardBindConfig = {
     ],
   },
   ttz:{ // 托体阵传感器
-    modelName: "donghua02new", // 关联的模型名称
+    modelName: "Soldier", // 关联的模型名称
     boardBindCmd: "5208H", // 绑定的指令cmd名称
     sensorList: [ // 传感器数组
       {
-        childModelName: "donghua02-010", // 关联的子模型名称
+        childModelName: "Character", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -813,27 +808,9 @@ export const infoBoardAlarmBindConfig = {
         },
       ],
     },
-    {
-      cmdName:"5209H", // 命令码
-      cmdBindCmd: "5208H", // 关联的命令码
-      sensorList: [
-        {
-          cmdKey: "fsdyfgztRaw",
-          cmdKeyBind: "ttzcgqObject.fgsszRaw",
-        },
-        {
-          cmdKey: "fsdyfyztRaw",
-          cmdKeyBind: "ttzcgqObject.fysszRaw",
-        },
-        {
-          cmdKey: "fsdyhxztRaw",
-          cmdKeyBind: "ttzcgqObject.hxsszRaw",
-        }
-      ]
-   }
+    // 5203H 已改为与 5202H 同构的 param.cgqArray×34，由 App.apply5203HReceiveArrayAlarm 单独处理（不再在此枚举 cmdKey）
   ]
 } as const;
-
 /** 场景饱和度后处理默认配置（用于 UI 初始值 + 3D 初始化默认值） */
 export const sceneSaturationDefaults = {
   /** 默认是否启用饱和度后处理 */
@@ -845,5 +822,7 @@ export const sceneSaturationDefaults = {
    */
   value: 30,
 } as const;
+
+
 
 

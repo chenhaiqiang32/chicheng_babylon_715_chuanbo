@@ -90,7 +90,7 @@
                         v-model.number="directionControlDeg"
                     />
                     <div class="preset-btn" style="margin-left:10px;" @click="applyDirectionControl">
-                        应用到 {{ directionControlModelNames.join(', ') }}
+                        应用到相机（水平角）
                     </div>
                 </div>
 
@@ -386,27 +386,39 @@
                     </label>
                     <div v-for="(yaw, idx) in flexibleRopePointYaws" :key="idx" class="anim-row">
                         <div class="anim-label">
-                            点 #{{ idx + 1 }} 偏移 yaw: {{ yaw.toFixed(1) }}° / pitch:
-                            {{ flexibleRopePointPitches[idx]?.toFixed(1) }}°
+                            点 #{{ idx + 1 }} fgssz: {{ flexibleRopePointFgssz[idx]?.toFixed(2) ?? '0' }} / yaw:
+                            {{ yaw.toFixed(1) }}° / pitch:
+                            {{ flexibleRopePointPitches[idx]?.toFixed(1) }}° / depth:
+                            {{ flexibleRopePointDepths[idx]?.toFixed(2) }}
                         </div>
-                        <div class="anim-label" style="margin-top:4px;">水平偏移 yaw（度）</div>
+                        <div class="anim-label" style="margin-top:4px;">水平偏移 yaw（度，0~360）</div>
                         <input
                             type="range"
                             class="anim-slider"
-                            min="-180"
-                            max="180"
+                            min="0"
+                            max="360"
                             step="1"
                             v-model.number="flexibleRopePointYaws[idx]"
                             @input="applyFlexibleRopeOffsets"
                         />
-                        <div class="anim-label" style="margin-top:4px;">俯仰偏移 pitch（度）</div>
+                        <div class="anim-label" style="margin-top:4px;">俯仰偏移 pitch（度，-90~90，向上为正）</div>
                         <input
                             type="range"
                             class="anim-slider"
-                            min="-180"
-                            max="180"
+                            min="-90"
+                            max="90"
                             step="1"
                             v-model.number="flexibleRopePointPitches[idx]"
+                            @input="applyFlexibleRopeOffsets"
+                        />
+                        <div class="anim-label" style="margin-top:4px;">深度 depth（起点向下的 Y 距离）</div>
+                        <input
+                            type="range"
+                            class="anim-slider"
+                            min="0"
+                            max="60"
+                            step="0.1"
+                            v-model.number="flexibleRopePointDepths[idx]"
                             @input="applyFlexibleRopeOffsets"
                         />
                     </div>
@@ -451,7 +463,6 @@ import { App, MODEL_URLS, HDR_URLS, type CameraViewPreset, type SeaParams } from
 import {
     cameraPresetsConfig,
     defaultCameraViewLimitConfig,
-    directionControlConfig,
     hdrDemoConfig,
     hdrEnvironmentRotationDefaults,
     skyboxDemoConfig,
@@ -461,6 +472,7 @@ import {
     ropeDemoModelBindings,
     flexibleRopeDemoConfig,
     flexibleRopeCreateExample,
+    getFlexibleRopeDefaultPointDepths,
 } from '@/3d/app/demoConfig';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import { AppAssets } from '@/3d/assets/PublishLibrary';
@@ -671,6 +683,10 @@ const flexibleRopePointYaws = ref<number[]>(
 const flexibleRopePointPitches = ref<number[]>(
     Array.from({ length: flexibleRopeDemoConfig.pointCount }, () => 0),
 );
+const flexibleRopePointDepths = ref<number[]>(getFlexibleRopeDefaultPointDepths());
+const flexibleRopePointFgssz = ref<number[]>(
+    Array.from({ length: flexibleRopeDemoConfig.pointCount }, () => 0),
+);
 const flexibleRopeYaw = ref(0);
 const flexibleRopePitch = ref(0);
 
@@ -706,9 +722,15 @@ function onFlexibleRopeControlTargetChange() {
     const id = flexibleRopeFirstId.value;
     if (!id) return;
     flexibleRopePointIds.value = App.Instance.getFlexibleRopePointIds(id);
-    const offsets = App.Instance.getFlexibleRopePointYawPitch(id);
+    const offsets = App.Instance.getFlexibleRopePointYawPitchDepth(id);
     flexibleRopePointYaws.value = offsets.yawsDeg;
     flexibleRopePointPitches.value = offsets.pitchesDeg;
+    flexibleRopePointDepths.value =
+        offsets.depths?.length ? offsets.depths : Array.from({ length: flexibleRopePointIds.value.length }, () => 0);
+    flexibleRopePointFgssz.value =
+        offsets.fgsszRaws?.length === flexibleRopePointIds.value.length
+            ? offsets.fgsszRaws
+            : Array.from({ length: flexibleRopePointIds.value.length }, () => 0);
     const dir = App.Instance.getFlexibleRopeDirection(id);
     if (dir) {
         flexibleRopeYaw.value = dir.yaw;
@@ -733,6 +755,8 @@ function applyFlexibleRopeOffsets() {
             id,
             yaw: flexibleRopePointYaws.value[i] ?? 0,
             pitch: flexibleRopePointPitches.value[i] ?? 0,
+            depth: flexibleRopePointDepths.value[i] ?? 0,
+            fgssz: flexibleRopePointFgssz.value[i] ?? 0,
         })),
     });
 }
@@ -746,10 +770,9 @@ function hideAllFlexibleRopeBoards() {
 }
 
 function applyFlexibleRopeCameraDistanceFilter() {
-    // 这里的距离过滤是作用在“信息牌系统”层面的；为了确保控制对象是柔性绳子牌子，
-    // 在开启过滤时先把可见集合切到柔性绳子控制点对应的 mesh.id 列表。
+    // 相机距离过滤作用在信息牌系统：可见 id 需同时包含柔性绳控制点 + 5206H/5208H 等传感器牌子挂接点。
     if (cameraDistanceFilterOn.value) {
-        const ids = App.Instance.getAllFlexibleRopePointMeshIds();
+        const ids = App.Instance.getInfoBoardCameraDistanceFilterTargetIds();
         App.Instance.setInfoBoardsVisible(ids);
     }
     App.Instance.setInfoBoardsCameraDistanceVisibility(
@@ -800,13 +823,10 @@ function switchCamera(presetKey: string) {
     if (item) App.Instance.switchCameraView(item.preset, { duration: 0.8 });
 }
 
-/** 业务指令 demo：directionControl（触发 App.setModelYawDegClockwise） */
+/** 业务指令 demo：directionControl（旋转 ArcRotateCamera.alpha，与鼠标拖场景同源；指北针对本操作不转） */
 const directionControlDeg = ref(0);
-const directionControlModelNames = directionControlConfig.modelNames;
 function applyDirectionControl() {
-    directionControlModelNames.forEach((name) => {
-        App.Instance.setModelYawDegClockwise(name, directionControlDeg.value);
-    });
+    App.Instance.setDirectionControlCameraYawDegClockwise(directionControlDeg.value);
 }
 
 const modelUrl = () => props.projectId || './Dancing.fbx';
@@ -915,15 +935,22 @@ function removeAllRopeDemos() {
 }
 
 function initFlexibleRopeDemo() {
+    // 柔性绳子 demo：默认先用配置创建一份，后续可通过 window message / 5202H 全量推送重建与更新
     App.Instance.createFlexibleRopes(flexibleRopeCreateExample);
     const ropeIds = App.Instance.getFlexibleRopeIds();
     flexibleRopeIds.value = ropeIds;
     if (ropeIds.length > 0) {
         flexibleRopeFirstId.value = ropeIds[0];
         flexibleRopePointIds.value = App.Instance.getFlexibleRopePointIds(ropeIds[0]);
-        const offsets = App.Instance.getFlexibleRopePointYawPitch(ropeIds[0]);
+        const offsets = App.Instance.getFlexibleRopePointYawPitchDepth(ropeIds[0]);
         flexibleRopePointYaws.value = offsets.yawsDeg;
         flexibleRopePointPitches.value = offsets.pitchesDeg;
+        flexibleRopePointDepths.value =
+            offsets.depths?.length ? offsets.depths : Array.from({ length: flexibleRopePointIds.value.length }, () => 0);
+        flexibleRopePointFgssz.value =
+            offsets.fgsszRaws?.length === flexibleRopePointIds.value.length
+                ? offsets.fgsszRaws
+                : Array.from({ length: flexibleRopePointIds.value.length }, () => 0);
         const dir = App.Instance.getFlexibleRopeDirection(ropeIds[0]);
         if (dir) {
             flexibleRopeYaw.value = dir.yaw;
@@ -1151,6 +1178,15 @@ function setupMessageListeners() {
     const onMessageFn = (event: MessageEvent) => {
         const raw = event.data;
         if (!raw || typeof raw !== 'object') return;
+        // 接收阵：5202H，param.cgqArray 共 34 项
+        if ((raw as any).cmd === '5202H') {
+            apply5202ToFlexibleRopes((raw as any).param);
+            return;
+        }
+        if ((raw as any).cmd === '5203H') {
+            App.Instance.apply5203HReceiveArrayAlarm((raw as any).param);
+            return;
+        }
         if (raw.type === 'flexibleRopeCreate' && Array.isArray(raw.data)) {
             App.Instance.createFlexibleRopes(raw.data);
             return;
@@ -1162,6 +1198,71 @@ function setupMessageListeners() {
     };
     window.addEventListener('message', onMessageFn);
     return () => window.removeEventListener('message', onMessageFn);
+}
+
+const JSZ_SEG_LEN = 20 / 18;
+
+type JszCgqItem = { fgsszRaw: string; fysszRaw: string; hxsszRaw: string; sdsszRaw: string };
+
+function parse5202Param(param: unknown): JszCgqItem[] | null {
+    if (!param || typeof param !== 'object') return null;
+    const cgqArray = (param as { cgqArray?: unknown }).cgqArray;
+    if (!Array.isArray(cgqArray) || cgqArray.length !== 34) return null;
+    return cgqArray.map((raw) => {
+        const o = raw as Record<string, unknown>;
+        return {
+            fgsszRaw: String(o.fgsszRaw ?? ''),
+            fysszRaw: String(o.fysszRaw ?? ''),
+            hxsszRaw: String(o.hxsszRaw ?? ''),
+            sdsszRaw: String(o.sdsszRaw ?? ''),
+        };
+    });
+}
+
+function apply5202ToFlexibleRopes(param: unknown) {
+    const sensorList = parse5202Param(param);
+    if (!sensorList) return;
+
+    const groups: Array<{ id: string; sensors: JszCgqItem[] }> = [
+        { id: 'rope_1', sensors: sensorList.slice(0, 17) },
+        { id: 'rope_2', sensors: sensorList.slice(17, 34) },
+    ];
+
+    const baseById = new Map(flexibleRopeCreateExample.map((x) => [x.id, x] as const));
+    const createItems = groups
+        .map((g) => {
+            const base = baseById.get(g.id);
+            if (!base) return null;
+            if (g.sensors.length !== base.length.length) return null;
+            let acc = 0;
+            const length = base.length.map((p) => {
+                acc += JSZ_SEG_LEN;
+                return { id: p.id, distance: acc };
+            });
+            return { ...base, length };
+        })
+        .filter(Boolean) as typeof flexibleRopeCreateExample;
+
+    if (createItems.length) {
+        App.Instance.createFlexibleRopes(createItems as any);
+    }
+
+    for (const g of groups) {
+        const base = baseById.get(g.id);
+        if (!base) continue;
+        App.Instance.updateFlexibleRopePoints({
+            parentId: base.id,
+            length: base.length.map((p, i) => ({
+                id: p.id,
+                yaw: Number(g.sensors[i]?.hxsszRaw ?? 0),
+                pitch: Number(g.sensors[i]?.fysszRaw ?? 0),
+                depth: Math.max(0, Number(g.sensors[i]?.sdsszRaw ?? 0)),
+                fgssz: Number(g.sensors[i]?.fgsszRaw ?? 0),
+            })),
+        });
+    }
+
+    onFlexibleRopeControlTargetChange();
 }
 
 onMounted(() => {

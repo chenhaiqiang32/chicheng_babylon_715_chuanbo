@@ -20,6 +20,12 @@ export interface InfoBoardItem {
   title?: string;
   /** 属性列表，每项为 { key: value }，显示为 "key: value" */
   attribute: InfoBoardAttribute[];
+  /**
+   * 与 attribute 等长（可选）；对应行为 true 时该行属性文字使用告警色（如传感器状态 1：异常）。
+   */
+  attributeAlarm?: boolean[];
+  /** 点击信息牌时上报给父页面的数据（可选） */
+  clickReport?: { type: string; data: string | number };
 }
 
 /** 信息牌样式配置 */
@@ -66,6 +72,9 @@ export interface InfoBoardStyleOptions {
    */
   attributeCharSpacing?: number;
 }
+
+/** 传感器等业务告警时属性行文字颜色 */
+const ATTRIBUTE_LINE_ALARM_COLOR = '#f87171';
 
 const DEFAULT_STYLE: Required<InfoBoardStyleOptions> = {
   widthPx: 260,
@@ -120,16 +129,34 @@ export class InfoBoardHelper {
   private cameraDistanceObserver: Nullable<
     ReturnType<Scene['onBeforeRenderObservable']['add']>
   > = null;
+  private onItemClick?: (item: InfoBoardItem) => void;
+  private selectedId: string | null = null;
+  private suppressNextDeselect = false;
+  private deselectObserver: Nullable<
+    ReturnType<Scene['onPointerObservable']['add']>
+  > = null;
 
   constructor(
     scene: Scene,
     getNodeById: (id: string) => Node | null,
     styleOptions: InfoBoardStyleOptions = {},
+    options?: { onItemClick?: (item: InfoBoardItem) => void },
   ) {
     this.scene = scene;
     this.getNodeById = getNodeById;
     this.style = { ...DEFAULT_STYLE, ...styleOptions };
     this.ui = AdvancedDynamicTexture.CreateFullscreenUI('infoBoardsUI', true, this.scene);
+    this.onItemClick = options?.onItemClick;
+    // 点击非信息牌区域时，清除选中效果（信息牌点击会设置 suppressNextDeselect）
+    this.deselectObserver = this.scene.onPointerObservable.add((pi: any) => {
+      // PointerInfoType.POINTERDOWN === 1
+      if (pi?.type !== 1) return;
+      if (this.suppressNextDeselect) {
+        this.suppressNextDeselect = false;
+        return;
+      }
+      this.setSelectedId(null);
+    });
     // 不使用 idealWidth/idealHeight：避免 UI 随窗口尺寸缩放，保持像素尺寸一致
   }
 
@@ -183,6 +210,9 @@ export class InfoBoardHelper {
         this.boards.delete(id);
       }
     }
+    if (this.selectedId && !ids.has(this.selectedId)) {
+      this.selectedId = null;
+    }
 
     for (const item of data) {
       const existing = this.boards.get(item.id);
@@ -225,6 +255,10 @@ export class InfoBoardHelper {
   dispose(): void {
     this.clear();
     this.ui.dispose();
+    if (this.deselectObserver) {
+      this.scene.onPointerObservable.remove(this.deselectObserver);
+      this.deselectObserver = null;
+    }
   }
   private createBoard(item: InfoBoardItem, targetMesh: AbstractMesh): BoardEntity | null {
     const rect = new Rectangle(`infoBoardRect_${item.id}`);
@@ -234,7 +268,8 @@ export class InfoBoardHelper {
     rect.cornerRadius = 10;
     rect.background = this.style.backgroundColor;
     rect.color = this.style.borderColor;
-    rect.isPointerBlocker = false;
+    // 允许点击信息牌（用于 switchDevice_3d）
+    rect.isPointerBlocker = true;
     rect.zIndex = 10;
     rect.overlapGroup = this.style.overlapGroup;
     rect.alpha = 1;
@@ -263,6 +298,11 @@ export class InfoBoardHelper {
     stack.paddingBottomInPixels = paddingY;
     stack.isVertical = true;
     rect.addControl(stack);
+    rect.onPointerClickObservable.add(() => {
+      // 当前 pointerdown 来自信息牌：避免紧接着的 scene POINTERDOWN 触发“取消选中”
+      this.suppressNextDeselect = true;
+      this.onItemClick?.(item);
+    });
 
     const titleText = new TextBlock(`infoBoardTitle_${item.id}`);
     titleText.text = '';
@@ -351,6 +391,32 @@ export class InfoBoardHelper {
     return entity;
   }
 
+  /** 设置当前选中信息牌（用于轮廓高亮） */
+  setSelectedId(id: string | null): void {
+    const next = id ? String(id) : null;
+    if (this.selectedId === next) return;
+    this.selectedId = next;
+    for (const [bid, entity] of this.boards) {
+      this.applySelectionStyle(entity, bid === this.selectedId);
+    }
+  }
+
+  private applySelectionStyle(entity: BoardEntity, selected: boolean): void {
+    if (selected) {
+      entity.rect.thickness = 2.5;
+      entity.rect.color = 'rgba(248, 250, 252, 0.98)'; // near-white
+      entity.rect.shadowBlur = 16;
+      entity.rect.shadowColor = 'rgba(96, 165, 250, 0.55)'; // blue glow
+      entity.line.alpha = 1;
+    } else {
+      entity.rect.thickness = 1;
+      entity.rect.color = this.style.borderColor;
+      entity.rect.shadowBlur = 10;
+      entity.rect.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      entity.line.alpha = 0.9;
+    }
+  }
+
   private linkBoard(entity: BoardEntity): void {
     if (!entity.targetMesh) return;
     entity.rect.linkWithMesh(entity.targetMesh);
@@ -375,15 +441,20 @@ export class InfoBoardHelper {
       )
       .filter((x) => x.trim().length > 0);
 
+    const alarms = item.attributeAlarm ?? [];
     for (let i = 0; i < entity.attrTexts.length; i++) {
       const t = entity.attrTexts[i];
       const text = lines[i] ?? '';
       t.text = this.applyAttributeCharSpacing(text);
       t.isVisible = text.length > 0;
+      t.color = alarms[i]
+        ? ATTRIBUTE_LINE_ALARM_COLOR
+        : this.style.attributeColor;
     }
 
     // 内容变化可能导致 rect 自适应高度变化，这里同步一次连线锚点到底部
     entity.line.y2 = entity.rect.heightInPixels / 2;
+    this.applySelectionStyle(entity, entity.id === this.selectedId);
     this.applyFinalVisibility(entity);
   }
 
@@ -444,5 +515,9 @@ export class InfoBoardHelper {
         }
       });
     }
+  }
+
+  isCameraDistanceVisibilityEnabled(): boolean {
+    return this.cameraDistanceVisibilityEnabled;
   }
 }

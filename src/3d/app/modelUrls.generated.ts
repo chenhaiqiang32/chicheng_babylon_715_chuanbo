@@ -1,6 +1,8 @@
 /** Auto-generated from public/test. Do not edit. */
 export const MODEL_URLS: string[] = [
-  './test/DamagedHelmet.glb',
-  './test/Dancing.fbx',
-  './test/Soldier.glb',
+  './test/20new.glb',
+  './test/donghua01new.glb',
+  './test/donghua02new.glb',
+  './test/donghua03new.glb',
+  './test/gaiban.glb',
 ];

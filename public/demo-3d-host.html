@@ -51,6 +51,19 @@
       .side button:hover {
         background: #1a508b;
       }
+      .side textarea {
+        width: 100%;
+        min-height: 260px;
+        resize: vertical;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #444;
+        background: #0a0a12;
+        color: #eee;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+        font-size: 11px;
+        line-height: 1.35;
+      }
       .frame-wrap {
         flex: 1;
         min-width: 0;
@@ -129,6 +142,53 @@
         <button type="button" id="btn-cam">getArcRotateCameraDebugState</button>
         <p><strong>子页上报（source: cc-3d）</strong></p>
         <div class="log" id="log"></div>
+
+        <p style="margin-top: 10px"><strong>接收阵 5202H（cgqArray 共 34 项）</strong></p>
+        <div class="hint">
+          格式：<code>{ cmd:"5202H", param:{ localDateTime, cgqArray:[{fgsszRaw,fysszRaw,hxsszRaw,sdsszRaw}, …×34] } }</code>。hx→水平角
+          yaw，fy→俯仰 pitch，sd→深度 depth；段长由引擎按默认累加。
+        </div>
+        <textarea id="jszSensorEditor" spellcheck="false"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-jszSend" style="width: 100%">发送 cmd: 5202H</button>
+          <button type="button" id="btn-jszReset" style="width: 100%; margin-top: 6px">重置为示例数据</button>
+        </div>
+
+        <p style="margin-top: 14px"><strong>传感器信息牌（5206H / 5208H）</strong></p>
+        <div class="hint">
+          与 <code>demoConfig.infoBoardBindConfig</code> 绑定：垂直阵 <code>5206H</code>（模型
+          <code>20new</code>）、托体阵 <code>5208H</code>（<code>test01</code>）。发送前请先
+          <code>switchCamera</code> 到对应视角并确保已加载对应 GLB。
+        </div>
+        <textarea id="sensorBoard5206" spellcheck="false" style="min-height: 140px"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-5206" style="width: 100%">发送 cmd: 5206H（垂直阵）</button>
+        </div>
+        <textarea id="sensorBoard5208" spellcheck="false" style="min-height: 100px; margin-top: 10px"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-5208" style="width: 100%">发送 cmd: 5208H（托体阵）</button>
+        </div>
+
+        <p style="margin-top: 14px"><strong>传感器信息牌告警（5207H / 5203H）</strong></p>
+        <div class="hint">
+          <strong>5207H</strong>：状态 <code>0/1</code> 对应 <code>5206H</code> 牌子行。 <strong>5203H</strong>：
+          <code>param.cgqArray</code> 共 34 项（与 <code>5202H</code> 同序），每项
+          <code>fgztRaw/fyztRaw/hxztRaw</code> 控制该点「翻滚 / 俯仰 / yaw」行变红；请先发送
+          <code>5202H</code> 拉出柔性绳信息牌。
+        </div>
+        <textarea id="sensorAlarm5207" spellcheck="false" style="min-height: 160px"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-5207" style="width: 100%">发送 cmd: 5207H（关联 5206H）</button>
+        </div>
+        <textarea id="sensorAlarm5203" spellcheck="false" style="min-height: 220px; margin-top: 10px"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-5203" style="width: 100%">发送 cmd: 5203H（关联 5202H 柔性绳信息牌）</button>
+        </div>
+
+        <textarea id="sensorAlarm5209" spellcheck="false" style="min-height: 90px; margin-top: 10px"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-5209" style="width: 100%">发送 cmd: 5209H（关联 5208H）</button>
+        </div>
       </div>
       <div class="frame-wrap">
         <iframe id="viewer" title="cc-3d"></iframe>
@@ -215,6 +275,10 @@
           var s = typeof d === 'object' ? JSON.stringify(d) : String(d);
           if (s.length > 600) s = s.slice(0, 600) + '…';
           logLine(s);
+          if (d && d.cmd === 'switchDevice_3d') {
+            console.log('switchDevice_3d', d);
+            logLine('[switchDevice_3d] type=' + d.param.type + ' data=' + JSON.stringify(d.param.data));
+          }
         });
 
         document.getElementById('btn-models').onclick = function () {
@@ -264,6 +328,172 @@
           var v = String(document.getElementById('dirAngle').value || '0');
           bridge.sendCmd('directionControl', v);
           logLine('[cmd] directionControl: ' + v);
+        };
+
+        // ---- 接收阵 5202H：cgqArray 34 项 ----
+        function buildDefault5202Param() {
+          var cgqArray = [];
+          function pushRope(ropeIndex) {
+            for (var i = 0; i < 17; i++) {
+              var phase = (i / 16) * Math.PI * 2;
+              var hx = (ropeIndex * 40 + i * 22) % 360;
+              var fy = Math.max(-90, Math.min(90, Math.sin(phase) * 25));
+              var sd = Math.max(0, 6 + Math.sin(phase + ropeIndex) * 2);
+              cgqArray.push({
+                fgsszRaw: String((1.0 + ropeIndex * 0.1 + i * 0.01).toFixed(2)),
+                fysszRaw: String(fy.toFixed(1)),
+                hxsszRaw: String(hx.toFixed(1)),
+                sdsszRaw: String(sd.toFixed(2)),
+              });
+            }
+          }
+          pushRope(0);
+          pushRope(1);
+          return {
+            localDateTime: '2023-10-25T10:00:00',
+            cgqArray: cgqArray,
+          };
+        }
+
+        var jszEditor = document.getElementById('jszSensorEditor');
+        function setEditor5202(param) {
+          jszEditor.value = JSON.stringify(param, null, 2);
+        }
+        setEditor5202(buildDefault5202Param());
+
+        document.getElementById('btn-jszReset').onclick = function () {
+          setEditor5202(buildDefault5202Param());
+          logLine('[mock] 5202H 已重置为示例数据');
+        };
+
+        document.getElementById('btn-jszSend').onclick = function () {
+          try {
+            var param = JSON.parse(jszEditor.value || '{}');
+            if (!param.cgqArray || !Array.isArray(param.cgqArray) || param.cgqArray.length !== 34) {
+              throw new Error('param.cgqArray 必须是长度为 34 的数组');
+            }
+            bridge.sendCmd('5202H', param);
+            logLine('[cmd] 5202H: cgqArray=' + param.cgqArray.length);
+          } catch (e) {
+            logLine('[错误] 5202H JSON：' + (e && e.message ? e.message : String(e)));
+          }
+        };
+
+        // ---- 5206H / 5208H：传感器信息牌（与 demoConfig.infoBoardBindConfig 一致）----
+        var el5206 = document.getElementById('sensorBoard5206');
+        var el5208 = document.getElementById('sensorBoard5208');
+        el5206.value = JSON.stringify(
+          {
+            localDateTime: '2023-10-25T10:00:00',
+            skpdyObject: { fgsszRaw: '1.1', fysszRaw: '2.2', hxsszRaw: '3.3' },
+            xkpdyObject: { fgsszRaw: '1.1', fysszRaw: '1.1', hxsszRaw: '1.1' },
+            sbdyObject: { fgsszRaw: '2.0', fysszRaw: '2.1', hxsszRaw: '2.2' },
+            onefsdyObject: { fgsszRaw: '3.0', fysszRaw: '3.1', hxsszRaw: '3.2' },
+            twofsdyObject: { fgsszRaw: '4.0', fysszRaw: '4.1', hxsszRaw: '4.2' },
+            threefsdyObject: { fgsszRaw: '5.0', fysszRaw: '5.1', hxsszRaw: '5.2' },
+            fourfsdyObject: { fgsszRaw: '6.0', fysszRaw: '6.1', hxsszRaw: '6.2' },
+            fivefsdyObject: { fgsszRaw: '7.0', fysszRaw: '7.1', hxsszRaw: '7.2' },
+          },
+          null,
+          2,
+        );
+        el5208.value = JSON.stringify(
+          {
+            localDateTime: '2023-10-25T10:00:00',
+            ttzcgqObject: { fgsszRaw: '1.1', fysszRaw: '2.2', hxsszRaw: '3.3' },
+          },
+          null,
+          2,
+        );
+
+        document.getElementById('btn-5206').onclick = function () {
+          try {
+            var param = JSON.parse(el5206.value || '{}');
+            bridge.sendCmd('5206H', param);
+            logLine('[cmd] 5206H 已发送');
+          } catch (e) {
+            logLine('[错误] 5206H JSON：' + (e && e.message ? e.message : String(e)));
+          }
+        };
+        document.getElementById('btn-5208').onclick = function () {
+          try {
+            var param = JSON.parse(el5208.value || '{}');
+            bridge.sendCmd('5208H', param);
+            logLine('[cmd] 5208H 已发送');
+          } catch (e) {
+            logLine('[错误] 5208H JSON：' + (e && e.message ? e.message : String(e)));
+          }
+        };
+
+        // ---- 5207H / 5203H：与 infoBoardAlarmBindConfig 一致，推送后再用 5206/5208 的数值牌着色 ----
+        var el5207 = document.getElementById('sensorAlarm5207');
+        var el5203 = document.getElementById('sensorAlarm5203');
+        var el5209 = document.getElementById('sensorAlarm5209');
+        el5207.value = JSON.stringify(
+          {
+            localDateTime: '2023-10-25T10:00:00',
+            skpdyObject: { fgztRaw: '1', fyztRaw: '0' },
+            xkpdyObject: { fgztRaw: '0', fyztRaw: '0' },
+            sbdyObject: { fgztRaw: '0', fyztRaw: '0', hxztRaw: '1' },
+            onefsdyObject: { fgztRaw: '0', fyztRaw: '0', hxztRaw: '0' },
+            twofsdyObject: { fgztRaw: '0', fyztRaw: '0', hxztRaw: '0' },
+            threefsdyObject: { fgztRaw: '0', fyztRaw: '0', hxztRaw: '0' },
+            fourfsdyObject: { fgztRaw: '0', fyztRaw: '0', hxztRaw: '0' },
+            fivefsdyObject: { fgztRaw: '0', fyztRaw: '0', hxztRaw: '0' },
+          },
+          null,
+          2,
+        );
+        function buildDefault5203AlarmParam() {
+          var cgqArray = [];
+          for (var i = 0; i < 34; i++) {
+            var isHot = i === 0 || i === 5 || i === 17;
+            cgqArray.push({
+              fgztRaw: isHot ? '1' : '0',
+              fyztRaw: i === 2 ? '1' : '0',
+              hxztRaw: i === 3 ? '1' : '0',
+            });
+          }
+          return { localDateTime: '2023-10-25T10:00:00', cgqArray: cgqArray };
+        }
+        el5203.value = JSON.stringify(buildDefault5203AlarmParam(), null, 2);
+        el5209.value = JSON.stringify(
+          {
+            localDateTime: '2023-10-25T10:00:00',
+            fsdyfgztRaw: '0',
+            fsdyfyztRaw: '0',
+            fsdyhxztRaw: '0',
+          },
+          null,
+          2,
+        );
+
+        document.getElementById('btn-5207').onclick = function () {
+          try {
+            var param = JSON.parse(el5207.value || '{}');
+            bridge.sendCmd('5207H', param);
+            logLine('[cmd] 5207H 已发送');
+          } catch (e) {
+            logLine('[错误] 5207H JSON：' + (e && e.message ? e.message : String(e)));
+          }
+        };
+        document.getElementById('btn-5203').onclick = function () {
+          try {
+            var param = JSON.parse(el5203.value || '{}');
+            bridge.sendCmd('5203H', param);
+            logLine('[cmd] 5203H 已发送');
+          } catch (e) {
+            logLine('[错误] 5203H JSON：' + (e && e.message ? e.message : String(e)));
+          }
+        };
+        document.getElementById('btn-5209').onclick = function () {
+          try {
+            var param = JSON.parse(el5209.value || '{}');
+            bridge.sendCmd('5209H', param);
+            logLine('[cmd] 5209H 已发送');
+          } catch (e) {
+            logLine('[错误] 5209H JSON：' + (e && e.message ? e.message : String(e)));
+          }
         };
       })();
     </script>
