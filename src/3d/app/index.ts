@@ -427,7 +427,9 @@ export class App {
       | {
           shapeType: 'tube';
           tube: Mesh;
-          material: PBRMaterial;
+          // tube 绳子材质：历史上使用 PBRMaterial，但在部分环境下可能出现 shader program 失效导致不可见。
+          // 这里放宽类型以允许 StandardMaterial 等更稳的材质实现。
+          material: Material;
           texture: Texture;
           /** 与柔性绳一致：用于管状纹理无拉伸平铺 */
           textureWidthPx: number;
@@ -467,7 +469,7 @@ export class App {
   private ropeBallA: Mesh | null = null;
   private ropeBallB: Mesh | null = null;
   private ropeTube: Mesh | null = null;
-  private ropeMaterial: PBRMaterial | null = null;
+  private ropeMaterial: Material | null = null;
   private ropeTexture: Texture | null = null;
   private ropeObserver: ReturnType<Scene['onBeforeRenderObservable']['add']> | null = null;
   private ropeRefLength = 1;
@@ -523,6 +525,11 @@ export class App {
   > = new Map();
   /** 柔性绳子默认半径（新建时未指定时使用） */
   private flexibleRopeRadius = 0.12;
+  /**
+   * 柔性绳 Tube 期望显隐（setFlexibleRopeTubesVisible）。
+   * updateSingleFlexibleRope 每帧/每次更新会重建 Tube 几何，Babylon 可能把 enabled 重置为可见，需在更新后再次套用本标志。
+   */
+  private flexibleRopeTubesWantedVisible = true;
   /** 海水下效果后处理 */
   private underwaterPostProcess: PostProcess | null = null;
   private underwaterTime = 0;
@@ -744,6 +751,7 @@ export class App {
       state.texture.dispose();
     }
     this.flexibleRopesMap.clear();
+    this.flexibleRopeTubesWantedVisible = true;
     if (this.underwaterPostProcess) {
       this.underwaterPostProcess.dispose();
       this.underwaterPostProcess = null;
@@ -1893,19 +1901,21 @@ export class App {
     const ropeTex = new Texture(textureUrl, this.scene, false, false);
     ropeTex.wrapU = Texture.WRAP_ADDRESSMODE;
     ropeTex.wrapV = Texture.WRAP_ADDRESSMODE;
-    const ropeMat = new PBRMaterial('ropeMat', this.scene);
-    ropeMat.albedoTexture = ropeTex;
-    ropeMat.roughness = 1;
-    ropeMat.metallic = 0;
+    // 使用 StandardMaterial 以降低 shader 复杂度，避免部分 WebGL 环境下 PBR program 失效导致 tube 不可见
+    const ropeMat = new StandardMaterial(`ropeMat_${ropeKey}`, this.scene);
+    ropeMat.diffuseTexture = ropeTex;
+    ropeMat.specularColor = Color3.Black();
+    ropeMat.backFaceCulling = false;
 
     const pathPoints = [posA.clone(), posB.clone()];
     const ropeTube = MeshBuilder.CreateTube(
-      'ropeTube',
+      `ropeTube_${ropeKey}`,
       {
         path: pathPoints,
         radius: ropeRadius,
         tessellation: 8,
         cap: Mesh.CAP_ALL,
+        updatable: true,
       },
       this.scene,
     );
@@ -2217,8 +2227,7 @@ export class App {
     }
 
     // tube：与柔性绳相同的管状纹理缩放（textureWidthPx / textureHeightPx / radius / 绳长）
-    // 重建 Tube
-    state.tube.dispose();
+    // 使用 updatable + instance 更新，避免频繁 dispose/recreate 在部分 WebGL 环境下触发 program 失效
     const path = [posA.clone(), posB.clone()];
     const ropeTube = MeshBuilder.CreateTube(
       state.tube.name,
@@ -2227,6 +2236,8 @@ export class App {
         radius: state.radius ?? this.ropeRadiusCurrent,
         tessellation: 8,
         cap: Mesh.CAP_ALL,
+        updatable: true,
+        instance: state.tube,
       },
       this.scene,
     );
@@ -2445,6 +2456,8 @@ export class App {
       );
       tube.material = ropeMat;
       tube.isPickable = false;
+      tube.setEnabled(this.flexibleRopeTubesWantedVisible);
+      tube.isVisible = this.flexibleRopeTubesWantedVisible;
 
       // 与 updateSingleFlexibleRope 中一致：按 textureWidthPx / textureHeightPx / ropeRadius / 绳长 保持表面 texel 不拉伸
       this.applyFlexibleRopeTubeTextureScale(
@@ -2772,6 +2785,8 @@ export class App {
     tube.material = state.material;
     tube.isPickable = false;
     (state as { tube: Mesh }).tube = tube;
+    tube.setEnabled(this.flexibleRopeTubesWantedVisible);
+    tube.isVisible = this.flexibleRopeTubesWantedVisible;
 
     this.applyFlexibleRopeTubeTextureScale(
       state.texture,
@@ -2872,6 +2887,38 @@ export class App {
   setFlexibleRopePointsVisible(visible: boolean): void {
     for (const state of this.flexibleRopesMap.values()) {
       state.pointMeshes.forEach((m) => m.setEnabled(visible));
+    }
+  }
+
+  /**
+   * 切换所有柔性绳子的管状 mesh（Tube）显隐；不销毁绳子数据。
+   * 用于接收阵 C010H：线阵绞车释放/回收时隐藏柔性绳，停止时显示。
+   * 会写入内部标志，避免后续 updateSingleFlexibleRope 更新几何时把 Tube 又改回可见。
+   */
+  setFlexibleRopeTubesVisible(visible: boolean): void {
+    this.flexibleRopeTubesWantedVisible = visible;
+    for (const state of this.flexibleRopesMap.values()) {
+      state.tube.setEnabled(visible);
+      state.tube.isVisible = visible;
+    }
+  }
+
+  /**
+   * 在指定已加载模型根节点子树中，将名称（name 或 id）等于 targetName 的节点 setEnabled。
+   */
+  setNodesNamedUnderModelVisible(modelRootName: string, targetName: string, visible: boolean): void {
+    const root = this.getModelRootNode(modelRootName);
+    if (!root || !targetName) return;
+    const stack: Node[] = [root];
+    while (stack.length) {
+      const n = stack.pop()!;
+      const key = (n as any).name || (n as any).id;
+      if (key === targetName) {
+        n.setEnabled(visible);
+      }
+      for (const c of n.getChildren()) {
+        stack.push(c);
+      }
     }
   }
 

@@ -152,6 +152,449 @@ function getRopeInitConfigById(id: string) {
   };
 }
 
+type VerticalArrayRuntimeState = {
+  status: 'stopped' | 'opening' | 'running' | 'closing';
+  threshold: number | null;
+  latestClcdRaw: number | null;
+  last5206Param: Record<string, unknown> | null;
+  hasClcdEverExceededThreshold: boolean;
+};
+
+const verticalArrayRuntimeState: VerticalArrayRuntimeState = {
+  status: 'stopped',
+  threshold: null,
+  latestClcdRaw: null,
+  last5206Param: null,
+  hasClcdEverExceededThreshold: false,
+};
+
+const VERTICAL_ARRAY_C009H_CMD = 'C009H';
+const VERTICAL_ARRAY_SENSOR_CMD = '5206H';
+const VERTICAL_ARRAY_MODEL_NAME = '20new';
+const VERTICAL_ARRAY_ANIMATION_NAME = 'Animation';
+const VERTICAL_ARRAY_ROPE_ID = 'rope_1';
+
+type TowedArrayRuntimeState = {
+  status: 'stopped' | 'opening' | 'running' | 'closing';
+  threshold: number | null;
+  latestTlsfcdRaw: number | null;
+  hasTlsfcdEverExceededThreshold: boolean;
+};
+
+const towedArrayRuntimeState: TowedArrayRuntimeState = {
+  status: 'stopped',
+  threshold: null,
+  latestTlsfcdRaw: null,
+  hasTlsfcdEverExceededThreshold: false,
+};
+
+const TOWED_ARRAY_C011H_CMD = 'C011H';
+const TOWED_ARRAY_MODEL_NAME = 'donghua02new';
+const TOWED_ARRAY_ANIMATION_NAME = 'donghua02_first';
+const TOWED_ARRAY_ROPE_ID = 'rope_3';
+
+/** 接收阵 C010H：托缆 donghua01new + 绳子 demo rope_2（01fromA → donghua01-004） */
+const RECEIVER_ARRAY_C010H_CMD = 'C010H';
+const RECEIVER_ARRAY_LINE_MODEL = 'donghua03new';
+const RECEIVER_ARRAY_TOW_MODEL = 'donghua01new';
+const RECEIVER_ARRAY_ANIM = 'Animation';
+const RECEIVER_ARRAY_LANSHENG_MESH = 'lansheng02';
+const RECEIVER_ARRAY_ROPE_ID = 'rope_2';
+
+/** 最近一次 C010H 的 firxzjcztRaw，供 5202H 创建/刷新柔性绳后按线阵状态同步 Tube 显隐 */
+let jszLastFirxzjcztRaw: string | null = null;
+
+type ReceiverArrayC010State = {
+  /** 托缆：idle → opening（正放中）→ running → closing（倒放中） */
+  towCableStatus: 'idle' | 'opening' | 'running' | 'closing';
+  /** C010HThreshold：首次开机时的 tlsfcdRaw */
+  threshold: number | null;
+  latestTlsfcdRaw: number | null;
+  hasTlsfcdEverExceededThreshold: boolean;
+  /** C010H_has_currently_playing */
+  hasCurrentlyPlaying: boolean;
+};
+
+const receiverArrayC010State: ReceiverArrayC010State = {
+  towCableStatus: 'idle',
+  threshold: null,
+  latestTlsfcdRaw: null,
+  hasTlsfcdEverExceededThreshold: false,
+  hasCurrentlyPlaying: false,
+};
+
+function parseFiniteNumber(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isVerticalArrayRunning() {
+  return verticalArrayRuntimeState.status === 'running';
+}
+
+function resetVerticalArrayRuntimeState() {
+  verticalArrayRuntimeState.status = 'stopped';
+  verticalArrayRuntimeState.threshold = null;
+  verticalArrayRuntimeState.latestClcdRaw = null;
+  verticalArrayRuntimeState.last5206Param = null;
+  verticalArrayRuntimeState.hasClcdEverExceededThreshold = false;
+}
+
+function resetTowedArrayRuntimeState() {
+  towedArrayRuntimeState.status = 'stopped';
+  towedArrayRuntimeState.threshold = null;
+  towedArrayRuntimeState.latestTlsfcdRaw = null;
+  towedArrayRuntimeState.hasTlsfcdEverExceededThreshold = false;
+}
+
+function resetReceiverArrayC010State() {
+  receiverArrayC010State.towCableStatus = 'idle';
+  receiverArrayC010State.threshold = null;
+  receiverArrayC010State.latestTlsfcdRaw = null;
+  receiverArrayC010State.hasTlsfcdEverExceededThreshold = false;
+  receiverArrayC010State.hasCurrentlyPlaying = false;
+}
+
+/** 5202H 推送后调用：若此前 C010H 已指定线阵状态，按该状态显示/隐藏柔性绳 Tube */
+function syncFlexibleRopeTubesFromLastJszFir(app: import('./index').App) {
+  const f = jszLastFirxzjcztRaw;
+  if (f === '1' || f === '2') {
+    app.setFlexibleRopeTubesVisible(false);
+  } else if (f === '0') {
+    app.setFlexibleRopeTubesVisible(true);
+  }
+}
+
+function clearSensorInfoBoardByCmd(app: import('./index').App, bindCmd: string) {
+  sensorInfoBoardItemsByCmd.delete(bindCmd);
+  lastSensorParamByBindCmd.delete(bindCmd);
+  alarmAbnormalBindKeysByBindCmd.delete(bindCmd);
+  flushMergedSensorInfoBoards(app);
+}
+
+function clearVerticalArrayRuntimeArtifacts(app: import('./index').App) {
+  app.removeRopeDemo(VERTICAL_ARRAY_ROPE_ID);
+  clearSensorInfoBoardByCmd(app, VERTICAL_ARRAY_SENSOR_CMD);
+}
+
+function syncVerticalArrayRope(app: import('./index').App, clcdRaw: number) {
+  if (!isVerticalArrayRunning()) return;
+  // 垂直阵进行中：不负责创建绳子，只在绳子已存在时更新绳长
+  if (!app.getRopeDemoIds().includes(VERTICAL_ARRAY_ROPE_ID)) {
+    console.log('[C009H] rope_1 not exists, skip update');
+    return;
+  }
+  if (verticalArrayRuntimeState.threshold === null) return;
+
+  const ropeInitCfg = getRopeInitConfigById(VERTICAL_ARRAY_ROPE_ID);
+  // 业务语义：threshold 为“开机时的出缆长度基准”，运行中绳长使用增量 clcdRaw - threshold。
+  // 为避免开机后一开始增量≈0 导致“看不见”，用配置 initialDistance 作为基准长度再叠加增量。
+  const dist = Math.max(
+    0.01,
+    ropeInitCfg.initialDistance + (clcdRaw - verticalArrayRuntimeState.threshold),
+  );
+  console.log('[C009H] update rope_1', {
+    clcdRaw,
+    threshold: verticalArrayRuntimeState.threshold,
+    initialDistance: ropeInitCfg.initialDistance,
+    dist,
+  });
+  app.updateRopeDemoByAngleDistance(
+    VERTICAL_ARRAY_ROPE_ID,
+    dist,
+    ropeInitCfg.initialYawDeg,
+    ropeInitCfg.initialPitchDeg,
+    ropeInitCfg.boxSelfRotationDeg,
+  );
+}
+
+function handleVerticalArrayC009H(app: import('./index').App, param: unknown) {
+  if (!param || typeof param !== 'object') return;
+  const clcdRaw = parseFiniteNumber((param as Record<string, unknown>).clcdRaw);
+  if (clcdRaw === null) return;
+  verticalArrayRuntimeState.latestClcdRaw = clcdRaw;
+  if (
+    verticalArrayRuntimeState.threshold !== null &&
+    clcdRaw > verticalArrayRuntimeState.threshold
+  ) {
+    verticalArrayRuntimeState.hasClcdEverExceededThreshold = true;
+  }
+
+  if (verticalArrayRuntimeState.status === 'stopped' && clcdRaw >= 0) {
+    verticalArrayRuntimeState.threshold = clcdRaw;
+    verticalArrayRuntimeState.hasClcdEverExceededThreshold = false;
+    verticalArrayRuntimeState.status = 'opening';
+    app.playAnimation(VERTICAL_ARRAY_ANIMATION_NAME, false, VERTICAL_ARRAY_MODEL_NAME, 'forward');
+    return;
+  }
+
+  if (
+    verticalArrayRuntimeState.status === 'running' &&
+    verticalArrayRuntimeState.threshold !== null &&
+    clcdRaw <= verticalArrayRuntimeState.threshold &&
+    verticalArrayRuntimeState.hasClcdEverExceededThreshold
+  ) {
+    verticalArrayRuntimeState.status = 'closing';
+    clearVerticalArrayRuntimeArtifacts(app);
+    app.playAnimationReverse(VERTICAL_ARRAY_ANIMATION_NAME, false, VERTICAL_ARRAY_MODEL_NAME);
+    return;
+  }
+
+  if (verticalArrayRuntimeState.status === 'running') {
+    syncVerticalArrayRope(app, clcdRaw);
+  }
+}
+
+function syncTowedArrayRope(app: import('./index').App, tlsfcdRaw: number) {
+  if (towedArrayRuntimeState.status !== 'running') return;
+  if (!app.getRopeDemoIds().includes(TOWED_ARRAY_ROPE_ID)) return;
+  if (towedArrayRuntimeState.threshold === null) return;
+
+  const ropeInitCfg = getRopeInitConfigById(TOWED_ARRAY_ROPE_ID);
+  const dist = Math.max(
+    0.01,
+    ropeInitCfg.initialDistance + (tlsfcdRaw - towedArrayRuntimeState.threshold),
+  );
+  app.updateRopeDemoByAngleDistance(
+    TOWED_ARRAY_ROPE_ID,
+    dist,
+    ropeInitCfg.initialYawDeg,
+    ropeInitCfg.initialPitchDeg,
+    ropeInitCfg.boxSelfRotationDeg,
+  );
+}
+
+function handleTowedArrayC011H(app: import('./index').App, param: unknown) {
+  if (!param || typeof param !== 'object') return;
+  const tlsfcdRaw = parseFiniteNumber((param as Record<string, unknown>).tlsfcdRaw);
+  if (tlsfcdRaw === null) return;
+  towedArrayRuntimeState.latestTlsfcdRaw = tlsfcdRaw;
+
+  if (towedArrayRuntimeState.threshold !== null && tlsfcdRaw > towedArrayRuntimeState.threshold) {
+    towedArrayRuntimeState.hasTlsfcdEverExceededThreshold = true;
+  }
+
+  // 托体阵开机：首次 >=0 且未开始播放
+  if (towedArrayRuntimeState.status === 'stopped' && tlsfcdRaw >= 0) {
+    towedArrayRuntimeState.threshold = tlsfcdRaw;
+    towedArrayRuntimeState.hasTlsfcdEverExceededThreshold = false;
+    towedArrayRuntimeState.status = 'opening';
+    app.playAnimation(TOWED_ARRAY_ANIMATION_NAME, false, TOWED_ARRAY_MODEL_NAME, 'forward');
+    return;
+  }
+
+  // 托体阵关机：回到阈值及以下（且确实曾经超过阈值）则先移除绳子再倒放
+  if (
+    towedArrayRuntimeState.status === 'running' &&
+    towedArrayRuntimeState.threshold !== null &&
+    tlsfcdRaw <= towedArrayRuntimeState.threshold &&
+    towedArrayRuntimeState.hasTlsfcdEverExceededThreshold
+  ) {
+    towedArrayRuntimeState.status = 'closing';
+    app.removeRopeDemo(TOWED_ARRAY_ROPE_ID);
+    app.playAnimationReverse(TOWED_ARRAY_ANIMATION_NAME, false, TOWED_ARRAY_MODEL_NAME);
+    return;
+  }
+
+  // 托体阵运行中：只更新绳长，不创建
+  if (towedArrayRuntimeState.status === 'running') {
+    syncTowedArrayRope(app, tlsfcdRaw);
+  }
+}
+
+function handleVerticalArrayAnimationEnd(
+  app: import('./index').App,
+  info: { modelName: string; animationName: string; direction: 'forward' | 'backward' },
+) {
+  if (
+    info.modelName !== VERTICAL_ARRAY_MODEL_NAME ||
+    info.animationName !== VERTICAL_ARRAY_ANIMATION_NAME
+  ) {
+    return;
+  }
+  if (info.direction === 'forward' && verticalArrayRuntimeState.status === 'opening') {
+    verticalArrayRuntimeState.status = 'running';
+    // 垂直阵开机动画执行完成后创建绳子 demo（一次性）
+    if (!app.getRopeDemoIds().includes(VERTICAL_ARRAY_ROPE_ID)) {
+      const created = app.createRopeDemoFromDemoConfig(VERTICAL_ARRAY_ROPE_ID);
+      console.log('[C009H] opening animation ended, create rope_1', {
+        createdOk: !!created,
+        created,
+        ropeIds: app.getRopeDemoIds(),
+      });
+    } else {
+      console.log('[C009H] opening animation ended, rope_1 already exists', {
+        ropeIds: app.getRopeDemoIds(),
+      });
+    }
+    // 创建后按最近 clcdRaw 更新一次绳长：使用增量 clcdRaw - threshold
+    if (verticalArrayRuntimeState.latestClcdRaw !== null) {
+      syncVerticalArrayRope(app, verticalArrayRuntimeState.latestClcdRaw);
+    }
+    if (verticalArrayRuntimeState.last5206Param) {
+      applySensorInfoBoardFromCmd(app, VERTICAL_ARRAY_SENSOR_CMD, verticalArrayRuntimeState.last5206Param);
+    }
+    return;
+  }
+  if (info.direction === 'backward' && verticalArrayRuntimeState.status === 'closing') {
+    verticalArrayRuntimeState.status = 'stopped';
+    verticalArrayRuntimeState.threshold = null;
+    verticalArrayRuntimeState.latestClcdRaw = null;
+    verticalArrayRuntimeState.last5206Param = null;
+    clearVerticalArrayRuntimeArtifacts(app);
+  }
+}
+
+function handleTowedArrayAnimationEnd(
+  app: import('./index').App,
+  info: { modelName: string; animationName: string; direction: 'forward' | 'backward' },
+) {
+  if (info.modelName !== TOWED_ARRAY_MODEL_NAME || info.animationName !== TOWED_ARRAY_ANIMATION_NAME) return;
+
+  if (info.direction === 'forward' && towedArrayRuntimeState.status === 'opening') {
+    towedArrayRuntimeState.status = 'running';
+    // 托体阵开机动画结束后创建绳子 demo：02fromA（B: donghua02-011）=> rope_3
+    if (!app.getRopeDemoIds().includes(TOWED_ARRAY_ROPE_ID)) {
+      app.createRopeDemoFromDemoConfig(TOWED_ARRAY_ROPE_ID);
+    }
+    if (towedArrayRuntimeState.latestTlsfcdRaw !== null) {
+      syncTowedArrayRope(app, towedArrayRuntimeState.latestTlsfcdRaw);
+    }
+    return;
+  }
+
+  if (info.direction === 'backward' && towedArrayRuntimeState.status === 'closing') {
+    resetTowedArrayRuntimeState();
+  }
+}
+
+function syncReceiverArrayTowRope(app: import('./index').App, tlsfcdRaw: number) {
+  if (!receiverArrayC010State.hasCurrentlyPlaying) return;
+  if (receiverArrayC010State.towCableStatus !== 'running') return;
+  if (!app.getRopeDemoIds().includes(RECEIVER_ARRAY_ROPE_ID)) return;
+  if (receiverArrayC010State.threshold === null) return;
+
+  const ropeInitCfg = getRopeInitConfigById(RECEIVER_ARRAY_ROPE_ID);
+  const dist = Math.max(
+    0.01,
+    ropeInitCfg.initialDistance + (tlsfcdRaw - receiverArrayC010State.threshold),
+  );
+  app.updateRopeDemoByAngleDistance(
+    RECEIVER_ARRAY_ROPE_ID,
+    dist,
+    ropeInitCfg.initialYawDeg,
+    ropeInitCfg.initialPitchDeg,
+    ropeInitCfg.boxSelfRotationDeg,
+  );
+}
+
+/** 七：1#线阵绞车状态 → donghua03new Animation + lansheng02 / 柔性绳 Tube 显隐 */
+function applyReceiverArrayLineWinchFirxzjczt(app: import('./index').App, firxzjcztRaw: string) {
+  const fir = String(firxzjcztRaw ?? '').trim();
+  if (fir === '1') {
+    app.playAnimation(RECEIVER_ARRAY_ANIM, false, RECEIVER_ARRAY_LINE_MODEL, 'forward');
+    app.setNodesNamedUnderModelVisible(RECEIVER_ARRAY_LINE_MODEL, RECEIVER_ARRAY_LANSHENG_MESH, true);
+    app.setFlexibleRopeTubesVisible(false);
+  } else if (fir === '2') {
+    app.playAnimationReverse(RECEIVER_ARRAY_ANIM, false, RECEIVER_ARRAY_LINE_MODEL);
+    app.setNodesNamedUnderModelVisible(RECEIVER_ARRAY_LINE_MODEL, RECEIVER_ARRAY_LANSHENG_MESH, true);
+    app.setFlexibleRopeTubesVisible(false);
+  } else if (fir === '0') {
+    app.stopAllAnimations(RECEIVER_ARRAY_LINE_MODEL);
+    app.setNodesNamedUnderModelVisible(RECEIVER_ARRAY_LINE_MODEL, RECEIVER_ARRAY_LANSHENG_MESH, false);
+    app.setFlexibleRopeTubesVisible(true);
+  }
+}
+
+function handleReceiverArrayC010H(app: import('./index').App, param: unknown) {
+  if (!param || typeof param !== 'object') return;
+  const p = param as Record<string, unknown>;
+  const fir = String(p.firxzjcztRaw ?? '').trim();
+  jszLastFirxzjcztRaw = fir.length ? fir : null;
+  const tlsfcdRaw = parseFiniteNumber(p.tlsfcdRaw);
+
+  applyReceiverArrayLineWinchFirxzjczt(app, fir);
+
+  if (tlsfcdRaw === null) return;
+  receiverArrayC010State.latestTlsfcdRaw = tlsfcdRaw;
+
+  if (
+    receiverArrayC010State.threshold !== null &&
+    tlsfcdRaw > receiverArrayC010State.threshold
+  ) {
+    receiverArrayC010State.hasTlsfcdEverExceededThreshold = true;
+  }
+
+  // 「柔性绳子显示」：需已存在柔性绳（5202H 推送后）且当前为停止线阵、显示 Tube
+  const flexRopeReady = app.getFlexibleRopeIds().length > 0;
+  const flexForTowLogic = fir === '0' && flexRopeReady;
+
+  // 十：托缆开机 — fir=0、柔性绳已创建、tlsfcd≥0、未在运行 → donghua01new 正放并记阈值
+  if (
+    flexForTowLogic &&
+    receiverArrayC010State.towCableStatus === 'idle' &&
+    !receiverArrayC010State.hasCurrentlyPlaying &&
+    tlsfcdRaw >= 0
+  ) {
+    receiverArrayC010State.threshold = tlsfcdRaw;
+    receiverArrayC010State.hasTlsfcdEverExceededThreshold = false;
+    receiverArrayC010State.towCableStatus = 'opening';
+    app.playAnimation(RECEIVER_ARRAY_ANIM, false, RECEIVER_ARRAY_TOW_MODEL, 'forward');
+    return;
+  }
+
+  // 八：关机 — fir=0、柔性绳存在、tlsfcd≤阈值、曾超过阈值、正在运行
+  if (
+    flexForTowLogic &&
+    receiverArrayC010State.hasCurrentlyPlaying &&
+    receiverArrayC010State.towCableStatus === 'running' &&
+    receiverArrayC010State.threshold !== null &&
+    tlsfcdRaw <= receiverArrayC010State.threshold &&
+    receiverArrayC010State.hasTlsfcdEverExceededThreshold
+  ) {
+    receiverArrayC010State.towCableStatus = 'closing';
+    app.removeRopeDemo(RECEIVER_ARRAY_ROPE_ID);
+    app.playAnimationReverse(RECEIVER_ARRAY_ANIM, false, RECEIVER_ARRAY_TOW_MODEL);
+    return;
+  }
+
+  // 九：运行中按 tlsfcd 更新 rope_2 绳长
+  if (
+    receiverArrayC010State.hasCurrentlyPlaying &&
+    receiverArrayC010State.towCableStatus === 'running' &&
+    receiverArrayC010State.threshold !== null &&
+    tlsfcdRaw > receiverArrayC010State.threshold
+  ) {
+    syncReceiverArrayTowRope(app, tlsfcdRaw);
+  }
+}
+
+function handleReceiverArrayC010AnimationEnd(
+  app: import('./index').App,
+  info: { modelName: string; animationName: string; direction: 'forward' | 'backward' },
+) {
+  if (info.modelName !== RECEIVER_ARRAY_TOW_MODEL || info.animationName !== RECEIVER_ARRAY_ANIM) return;
+
+  if (info.direction === 'forward' && receiverArrayC010State.towCableStatus === 'opening') {
+    receiverArrayC010State.towCableStatus = 'running';
+    receiverArrayC010State.hasCurrentlyPlaying = true;
+    if (!app.getRopeDemoIds().includes(RECEIVER_ARRAY_ROPE_ID)) {
+      app.createRopeDemoFromDemoConfig(RECEIVER_ARRAY_ROPE_ID);
+    }
+    if (receiverArrayC010State.latestTlsfcdRaw !== null) {
+      syncReceiverArrayTowRope(app, receiverArrayC010State.latestTlsfcdRaw);
+    }
+    return;
+  }
+
+  if (info.direction === 'backward' && receiverArrayC010State.towCableStatus === 'closing') {
+    receiverArrayC010State.towCableStatus = 'idle';
+    receiverArrayC010State.hasCurrentlyPlaying = false;
+    receiverArrayC010State.threshold = null;
+    receiverArrayC010State.hasTlsfcdEverExceededThreshold = false;
+  }
+}
+
 function initRopeDemo(app: import('./index').App) {
   const bindings = ropeDemoModelBindings;
   bindings.forEach((cfg) => {
@@ -353,6 +796,10 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
   const { App } = await import('./index');
   const app = App.Instance;
   const onLoading = opts.onLoading ?? (() => {});
+  resetVerticalArrayRuntimeState();
+  resetTowedArrayRuntimeState();
+  resetReceiverArrayC010State();
+  jszLastFirxzjcztRaw = null;
 
   let cameraDebugTick: ReturnType<typeof setInterval> | null = null;
 
@@ -365,6 +812,9 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
 
   app.onAnimationEnd((info) => {
     console.log('动画播放结束', info);
+    handleVerticalArrayAnimationEnd(app, info);
+    handleTowedArrayAnimationEnd(app, info);
+    handleReceiverArrayC010AnimationEnd(app, info);
   });
 
   const url = modelUrlFromProjectId(opts.projectId);
@@ -434,6 +884,13 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
       clearInterval(cameraDebugTick);
       cameraDebugTick = null;
     }
+    clearVerticalArrayRuntimeArtifacts(app);
+    resetVerticalArrayRuntimeState();
+    app.removeRopeDemo(TOWED_ARRAY_ROPE_ID);
+    resetTowedArrayRuntimeState();
+    app.removeRopeDemo(RECEIVER_ARRAY_ROPE_ID);
+    resetReceiverArrayC010State();
+    jszLastFirxzjcztRaw = null;
     app.onDispose();
   };
 
@@ -516,11 +973,42 @@ export function setupAppDemoChildBridge(): () => void {
       const { App } = await import('./index');
       const app = App.Instance;
 
+      // C003H - CZZ 垂直阵启闭口状态信息
+      // { cmd:"C003H", param:{ qbkztRaw:"0|1|2|3" } }
+      // qbkztRaw 为 "0"/"1" 倒放；为 "2"/"3" 正放
+      if (String((data as any).cmd ?? '') === 'C003H') {
+        const raw = String((data as any)?.param?.qbkztRaw ?? '').trim();
+        const modelName = 'gaiban';
+        const animationName = 'Animation';
+        if (raw === '0' || raw === '1') {
+          app.playAnimationReverse(animationName, false, modelName);
+        } else if (raw === '2' || raw === '3') {
+          app.playAnimation(animationName, false, modelName, 'forward');
+        }
+        return;
+      }
+
+      if (String((data as any).cmd ?? '') === VERTICAL_ARRAY_C009H_CMD) {
+        handleVerticalArrayC009H(app, (data as any).param);
+        return;
+      }
+
+      if (String((data as any).cmd ?? '') === TOWED_ARRAY_C011H_CMD) {
+        handleTowedArrayC011H(app, (data as any).param);
+        return;
+      }
+
+      if (String((data as any).cmd ?? '') === RECEIVER_ARRAY_C010H_CMD) {
+        handleReceiverArrayC010H(app, (data as any).param);
+        return;
+      }
+
       // 接收阵传感器（全量 34 点）：柔性绳子数据源
       // { cmd:"5202H", param:{ cgqArray:[{ fgsszRaw, fysszRaw, hxsszRaw, sdsszRaw }]×34 } }
       if ((data as any).cmd === '5202H') {
         applyReceiveArraySensor5202Payload(app, (data as any).param);
         applyFlexibleRopeCameraDistanceFilter(app);
+        syncFlexibleRopeTubesFromLastJszFir(app);
         return;
       }
 
@@ -545,6 +1033,14 @@ export function setupAppDemoChildBridge(): () => void {
       {
         const cmd = String((data as any).cmd ?? '');
         if (cmd) {
+          if (cmd === VERTICAL_ARRAY_SENSOR_CMD) {
+            if (!(data as any).param || typeof (data as any).param !== 'object') return;
+            verticalArrayRuntimeState.last5206Param = (data as any).param as Record<string, unknown>;
+            if (!isVerticalArrayRunning()) {
+              clearSensorInfoBoardByCmd(app, VERTICAL_ARRAY_SENSOR_CMD);
+              return;
+            }
+          }
           type Entry = (typeof infoBoardBindConfig)[keyof typeof infoBoardBindConfig];
           const hasBind = (Object.values(infoBoardBindConfig) as Entry[]).some(
             (x) => x.boardBindCmd === cmd,

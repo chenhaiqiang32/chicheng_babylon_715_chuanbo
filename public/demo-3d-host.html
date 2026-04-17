@@ -140,6 +140,40 @@
         <button type="button" id="btn-models">getModelNames</button>
         <button type="button" id="btn-env">环境强度 +0.05</button>
         <button type="button" id="btn-cam">getArcRotateCameraDebugState</button>
+        <p style="margin-top: 14px"><strong>CZZ 启闭口状态 C003H（gaiban / Animation）</strong></p>
+        <div class="hint">
+          格式：<code>{ cmd:"C003H", param:{ qbkztRaw:"0|1|2|3" } }</code>。<code>0/1</code> 倒放，<code>2/3</code> 正放。
+        </div>
+        <div style="margin: 6px 0 10px 0">
+          <select id="c003-qbkztRaw" style="width: 100%; padding: 6px; border-radius: 6px">
+            <option value="0">0：已关闭（倒放）</option>
+            <option value="1">1：正在关闭（倒放）</option>
+            <option value="2">2：已开启（正放）</option>
+            <option value="3">3：正在开启（正放）</option>
+          </select>
+          <button type="button" id="btn-c003" style="width: 100%; margin-top: 6px">发送 cmd: C003H</button>
+        </div>
+        <p style="margin-top: 14px"><strong>CZZ 垂直阵运行联动 C009H</strong></p>
+        <div class="hint">
+          格式：<code>{ cmd:"C009H", param:{ clcdRaw, ... } }</code>。首次收到会触发
+          <code>20new / Animation</code> 正放并记录阈值；运行中按 <code>clcdRaw</code> 更新
+          <code>rope_1</code>；回到阈值及以下时倒放并隐藏 <code>5206H</code> 牌子。
+        </div>
+        <textarea id="c009-editor" spellcheck="false" style="min-height: 220px"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-c009" style="width: 100%">发送 cmd: C009H</button>
+        </div>
+        <p style="margin-top: 14px"><strong>TTZ 托体阵运行联动 C011H</strong></p>
+        <div class="hint">
+          格式：<code>{ cmd:"C011H", param:{ tlsfcdRaw, ... } }</code>。首次收到会触发
+          <code>donghua02new / donghua02_first</code> 正放并记录阈值；开机动画结束后创建绳子 demo
+          <code>rope_3</code>（<code>02fromA</code> → <code>donghua02-011</code>）；运行中按
+          <code>tlsfcdRaw</code> 更新绳长；回到阈值及以下时移除绳子并倒放动画。
+        </div>
+        <textarea id="c011-editor" spellcheck="false" style="min-height: 190px"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-c011" style="width: 100%">发送 cmd: C011H</button>
+        </div>
         <p><strong>子页上报（source: cc-3d）</strong></p>
         <div class="log" id="log"></div>
 
@@ -152,6 +186,20 @@
         <div style="margin-top: 6px">
           <button type="button" id="btn-jszSend" style="width: 100%">发送 cmd: 5202H</button>
           <button type="button" id="btn-jszReset" style="width: 100%; margin-top: 6px">重置为示例数据</button>
+        </div>
+
+        <p style="margin-top: 14px"><strong>接收阵 JSZ 收放设备 C010H</strong></p>
+        <div class="hint">
+          请先 <code>switchCamera → jsz</code> 并发送 <code>5202H</code> 生成柔性绳。托缆逻辑需
+          <code>firxzjcztRaw:"0"</code> 且已存在柔性绳。<code>firxzjcztRaw</code>：
+          <code>1</code> 释放 / <code>2</code> 回收（显示 <code>donghua03new</code> 的
+          <code>lansheng02</code>，隐藏柔性绳 Tube）；<code>0</code> 停止并隐藏
+          <code>lansheng02</code>、显示柔性绳。托缆开机：<code>donghua01new / Animation</code> 正放结束后创建
+          <code>rope_2</code>（<code>01fromA</code>→<code>donghua01-004</code>）。
+        </div>
+        <textarea id="c010-editor" spellcheck="false" style="min-height: 260px"></textarea>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-c010" style="width: 100%">发送 cmd: C010H</button>
         </div>
 
         <p style="margin-top: 14px"><strong>传感器信息牌（5206H / 5208H）</strong></p>
@@ -316,6 +364,90 @@
             .catch(function (err) {
               logLine('[错误] ' + err.message);
             });
+        };
+
+        document.getElementById('btn-c003').onclick = function () {
+          var v = String(document.getElementById('c003-qbkztRaw').value || '0');
+          bridge.sendCmd('C003H', { qbkztRaw: v });
+          logLine('[cmd] C003H: qbkztRaw=' + v);
+        };
+
+        var c009Editor = document.getElementById('c009-editor');
+        c009Editor.value = JSON.stringify(
+          {
+            gkRaw: '1',
+            jzljcztRaw: '0',
+            jzlqdzlRaw: '10.5',
+            jzljcscztRaw: '1',
+            jzlxtsfsdRaw: '2.5',
+            clcdRaw: '100.5',
+            zztljczlRaw: '50.5',
+            zztljcztRaw: '0',
+            zztljcscztRaw: '1',
+          },
+          null,
+          2,
+        );
+        document.getElementById('btn-c009').onclick = function () {
+          try {
+            var param = JSON.parse(c009Editor.value || '{}');
+            bridge.sendCmd('C009H', param);
+            logLine('[cmd] C009H: clcdRaw=' + String(param.clcdRaw ?? ''));
+          } catch (e) {
+            logLine('[错误] C009H JSON：' + (e && e.message ? e.message : String(e)));
+          }
+        };
+
+        var c011Editor = document.getElementById('c011-editor');
+        c011Editor.value = JSON.stringify(
+          {
+            gkRaw: '1',
+            tlzlRaw: '100.5',
+            tlsfcdRaw: '200.5',
+            tlsdRaw: '2.5',
+            ajztRaw: '0',
+            ajwzRaw: '1',
+          },
+          null,
+          2,
+        );
+        document.getElementById('btn-c011').onclick = function () {
+          try {
+            var param = JSON.parse(c011Editor.value || '{}');
+            bridge.sendCmd('C011H', param);
+            logLine('[cmd] C011H: tlsfcdRaw=' + String(param.tlsfcdRaw ?? ''));
+          } catch (e) {
+            logLine('[错误] C011H JSON：' + (e && e.message ? e.message : String(e)));
+          }
+        };
+
+        var c010Editor = document.getElementById('c010-editor');
+        c010Editor.value = JSON.stringify(
+          {
+            cmdCode: 'C010H',
+            cmdDec: 'JSZ收放设备状态信息',
+            gkRaw: '1',
+            firxzzlRaw: '10.5',
+            secxzzlRaw: '10.5',
+            firxzsfcdRaw: '50.5',
+            secxzsfcdRaw: '50.5',
+            tlzlRaw: '100.5',
+            tlsfcdRaw: '200.5',
+            firxzjcztRaw: '0',
+            secxzjcztRaw: '1',
+            tljcztRaw: '1',
+          },
+          null,
+          2,
+        );
+        document.getElementById('btn-c010').onclick = function () {
+          try {
+            var param = JSON.parse(c010Editor.value || '{}');
+            bridge.sendCmd('C010H', param);
+            logLine('[cmd] C010H: firxzjcztRaw=' + String(param.firxzjcztRaw ?? '') + ' tlsfcdRaw=' + String(param.tlsfcdRaw ?? ''));
+          } catch (e) {
+            logLine('[错误] C010H JSON：' + (e && e.message ? e.message : String(e)));
+          }
         };
 
         document.getElementById('btn-switchCamera').onclick = function () {
