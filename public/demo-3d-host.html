@@ -324,10 +324,17 @@
         });
 
         bridge.onMessage(function (d) {
-          if (!d || d.source !== CC_3D) return;
+          if (!d) return;
+          // 兼容两种形态：
+          // 1) 子页桥接消息：{ source:'cc-3d', type:'ready'|'loading'|... }
+          // 2) 业务 cmd 消息：{ cmd:'model_loaded', param:'1', source?:'cc-3d' }
+          if (d.source !== CC_3D && d.cmd !== 'model_loaded') return;
           var s = typeof d === 'object' ? JSON.stringify(d) : String(d);
           if (s.length > 600) s = s.slice(0, 600) + '…';
           logLine(s);
+          if (d && d.cmd === 'model_loaded') {
+            logLine('[model_loaded] param=' + String(d.param ?? ''));
+          }
           if (d && d.cmd === 'switchDevice_3d') {
             console.log('switchDevice_3d', d);
             logLine('[switchDevice_3d] type=' + d.param.type + ' data=' + JSON.stringify(d.param.data));

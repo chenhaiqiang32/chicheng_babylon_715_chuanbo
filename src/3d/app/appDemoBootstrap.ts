@@ -829,6 +829,12 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
     postToParent({ source: CC_3D_SOURCE, type: 'loading', value: v });
   };
 
+  const postModelLoaded = () => {
+    // 业务侧约定：当场景内“所有模型资源”均已加载完成后通知一次
+    // 兼容 demo-3d-host：同时带 source（便于既有过滤）+ cmd/param（便于业务侧按 cmd 订阅）
+    postToParent({ source: CC_3D_SOURCE, cmd: 'model_loaded', param: '1' });
+  };
+
   const perfResolved = resolveRendererPerformanceDemo({
     ...rendererPerformanceDemoConfig,
     ...(opts.rendererPerformance ?? {}),
@@ -864,6 +870,7 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
     app.setEnvironmentRotationEnabled(hdrEnvironmentRotationDefaults.enabled);
     app.setEnvironmentRotationSpeedRadPerSec(hdrEnvironmentRotationDefaults.speedRadPerSec);
     postLoading(1);
+    postModelLoaded();
 
     // 柔性绳子由业务侧（demo host）通过 cmd: 5202H 推送 cgqArray 后创建/更新。
     // 这里不再默认创建，避免“本地配置”与“业务推送”两套数据源同时生效。
@@ -876,6 +883,8 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
     await app.setScene((progress) => {
       postLoading(progress * 0.6 + 0.4);
     });
+    postLoading(1);
+    postModelLoaded();
   }
 
   const payload = buildReadyPayload(app, loadedAsModel, ropeIdsAfterInit(app, loadedAsModel));

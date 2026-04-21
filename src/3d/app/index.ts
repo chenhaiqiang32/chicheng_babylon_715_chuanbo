@@ -587,6 +587,14 @@ export class App {
   private compassArcAlphaCompensationRad = 0;
   /** 上一次 directionControl 指令的角度参数（0~360），用于与本次作差做「叠加」旋转，避免覆盖鼠标转过的 alpha */
   private directionControlLastParamDeg: number | null = null;
+  /** directionControl 相机 alpha 过渡动画：每帧观察者（用于支持指令打断） */
+  private directionControlCamAlphaTween:
+    | {
+        scene: Scene;
+        observer: ReturnType<Scene['onBeforeRenderObservable']['add']>;
+        camId: number;
+      }
+    | null = null;
 
   static get Instance(): App {
     if (!this.instance) {
@@ -3306,11 +3314,65 @@ export class App {
     this.directionControlLastParamDeg = normalized;
 
     const deltaRad = (deltaDeg * Math.PI) / 180;
-    const oldAlpha = cam.alpha;
-    const targetAlpha = oldAlpha + deltaRad;
+    const startAlpha = cam.alpha;
+    const targetAlpha = startAlpha + deltaRad;
 
-    this.compassArcAlphaCompensationRad += targetAlpha - oldAlpha;
-    cam.alpha = targetAlpha;
+    // 打断旧的 directionControl 过渡（只移除本功能注册的 observer，不影响其他动画/逻辑）
+    if (this.directionControlCamAlphaTween) {
+      try {
+        this.directionControlCamAlphaTween.scene.onBeforeRenderObservable.remove(
+          this.directionControlCamAlphaTween.observer,
+        );
+      } catch {
+        // ignore
+      }
+      this.directionControlCamAlphaTween = null;
+    }
+
+    // 默认过渡时长（秒）：业务侧连续推方向时更丝滑
+    const durationSec = 0.45;
+    if (!(durationSec > 0)) {
+      this.compassArcAlphaCompensationRad += targetAlpha - startAlpha;
+      cam.alpha = targetAlpha;
+      return true;
+    }
+
+    const engine = scene.getEngine();
+    const durationMs = Math.max(1, Math.round(durationSec * 1000));
+    let elapsedMs = 0;
+
+    const camId = cam.uniqueId;
+    const observer = scene.onBeforeRenderObservable.add(() => {
+      // 相机/场景切换时安全退出
+      const active = scene.activeCamera;
+      if (!(active instanceof ArcRotateCamera) || active.uniqueId !== camId) {
+        scene.onBeforeRenderObservable.remove(observer);
+        if (this.directionControlCamAlphaTween?.observer === observer) {
+          this.directionControlCamAlphaTween = null;
+        }
+        return;
+      }
+
+      elapsedMs += engine.getDeltaTime();
+      const t = Math.min(1, elapsedMs / durationMs);
+      // cubic ease-in-out
+      const eased =
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const prevAlpha = active.alpha;
+      const nextAlpha = startAlpha + (targetAlpha - startAlpha) * eased;
+      active.alpha = nextAlpha;
+      this.compassArcAlphaCompensationRad += nextAlpha - prevAlpha;
+
+      if (t >= 1) {
+        scene.onBeforeRenderObservable.remove(observer);
+        if (this.directionControlCamAlphaTween?.observer === observer) {
+          this.directionControlCamAlphaTween = null;
+        }
+      }
+    });
+
+    this.directionControlCamAlphaTween = { scene, observer, camId };
     return true;
   }
 
