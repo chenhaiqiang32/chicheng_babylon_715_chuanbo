@@ -1,4 +1,4 @@
-import { Scene, Node, AbstractMesh, Nullable, Vector3 } from '@babylonjs/core';
+import { Scene, Node, AbstractMesh, Nullable, Vector3, Texture } from '@babylonjs/core';
 import {
   AdvancedDynamicTexture,
   Rectangle,
@@ -150,7 +150,19 @@ export class InfoBoardHelper {
     this.scene = scene;
     this.getNodeById = getNodeById;
     this.style = { ...DEFAULT_STYLE, ...styleOptions };
-    this.ui = AdvancedDynamicTexture.CreateFullscreenUI('infoBoardsUI', true, this.scene);
+    // 第 5 参 adaptiveScaling：随 Engine hardwareScalingLevel 自动补偿，避免降分辨率后牌子被缩放/错位
+    this.ui = AdvancedDynamicTexture.CreateFullscreenUI(
+      'infoBoardsUI',
+      true,
+      this.scene,
+      Texture.BILINEAR_SAMPLINGMODE,
+      true,
+    );
+    // 关键：信息牌保持清晰，不随“场景分辨率后处理”一起被像素化
+    // Babylon Layer 默认会在 post-process 之前绘制（从而被 post-process 影响），这里强制改为之后绘制。
+    if ((this.ui as any).layer) {
+      (this.ui as any).layer.applyPostProcess = false;
+    }
     this.onItemClick = options?.onItemClick;
     this.onSelectionChange = options?.onSelectionChange;
     // 点击非信息牌区域时，清除选中效果（信息牌点击会设置 suppressNextDeselect）

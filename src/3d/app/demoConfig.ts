@@ -252,7 +252,7 @@ export const ropeDemoModelBindings: Array<{
       // rope_3：中等长度、向左前方、略向下
       initialDistance: 0,
       initialYawDeg: -91,
-      initialPitchDeg: 34,
+      initialPitchDeg: -46,
       ropeRadius: 0.16,
     },
   },
@@ -493,7 +493,7 @@ export const infoBoardBindConfig = {
     boardBindCmd: "5206H", // 绑定的指令cmd名称
     sensorList: [ // 传感器数组
       {
-        childModelName: "001-1", // 关联的子模型名称
+        childModelName: "1#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -516,7 +516,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "002-1", // 关联的子模型名称
+        childModelName: "20#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -539,7 +539,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "003-1", // 关联的子模型名称
+        childModelName: "2#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -562,7 +562,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "004-1", // 关联的子模型名称
+        childModelName: "5#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -585,7 +585,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "005-1", // 关联的子模型名称
+        childModelName: "10#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -608,7 +608,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "006-1", // 关联的子模型名称
+        childModelName: "15#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -631,7 +631,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "007-1", // 关联的子模型名称
+        childModelName: "18#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -654,7 +654,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "008-1", // 关联的子模型名称
+        childModelName: "16#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -833,6 +833,237 @@ export const infoBoardAlarmBindConfig = {
    }
   ]
 } as const;
+
+/**
+ * 渲染性能 / 低显存友好配置（demo 与 Vue 页共用）。
+ *
+ * - `qualityPreset` 为 `low` / `medium` 时会合并一组默认值（仍可被下方显式字段覆盖）。
+ * - `hardwareScalingLevel`：Babylon 内部渲染缩放，**大于 1 降低分辨率**（减轻显存与片元压力），常用 `1`（全分辨率）、`1.5`、`2`。
+ * - `limitDeviceRatio`：与高 DPI（如 Retina）下的 `devicePixelRatio` 相关，见 Engine 构造参数；小于 1 可进一步减轻负担（视引擎版本行为为准）。
+ * - `showFpsOverlay`：是否在画布角落叠加 FPS。
+ * - `fpsHudRealtime` / `fpsHudPollMs`：Vue 页「性能」页签与叠加层的帧率刷新方式（rAF 实时 / 定时）。
+ * - `gpuLightIntensityScale`：场景灯光强度乘数，降低可减轻 GPU 光照相关负载。
+ * - `gpuTextureQuality`：纹理与各向异性过滤档位，降低可减轻采样开销。
+ * - `gpuEnvironmentEnabled` / `gpuEnvironmentIntensityScale`：环境光/环境反射（IBL）开关与强度缩放，可明显降低 PBR 光照开销。
+ */
+export type RendererQualityPreset = 'default' | 'medium' | 'low';
+
+/** 场景材质纹理采样档位：降低可减轻各向异性过滤与三线性采样开销 */
+export type GpuTextureQuality = 'high' | 'medium' | 'low';
+
+export type RendererPerformanceDemoConfig = {
+  qualityPreset: RendererQualityPreset;
+  /** 内部渲染缩放，值越大分辨率越低（越省显存） */
+  hardwareScalingLevel: number;
+  antialias: boolean;
+  adaptToDeviceRatio: boolean;
+  limitDeviceRatio: number;
+  showFpsOverlay: boolean;
+  /**
+   * 帧率调试：为 `true` 时用 `requestAnimationFrame` 每帧采样（与屏幕刷新同步，便于实时调参）；
+   * 为 `false` 时按 `fpsHudPollMs` 定时读取引擎统计值（略省主线程占用）。
+   */
+  fpsHudRealtime: boolean;
+  /** 当 `fpsHudRealtime === false` 时的采样间隔（毫秒） */
+  fpsHudPollMs: number;
+  /**
+   * 场景灯光强度全局乘数（约 0.2～1），降低可减轻光照相关负载（观感上整体变暗）。
+   * 运行时按比值乘到当前场景各 `Light.intensity`，切换场景会重新以该目标值套用。
+   */
+  gpuLightIntensityScale: number;
+  /** 纹理与各向异性过滤档位，见 `GpuTextureQuality` */
+  gpuTextureQuality: GpuTextureQuality;
+  /** 是否启用环境贴图（IBL 环境光/反射）。关闭可明显减轻 PBR 负载，但模型反射会消失 */
+  gpuEnvironmentEnabled: boolean;
+  /** 环境强度缩放（0~1），在启用 IBL 时生效 */
+  gpuEnvironmentIntensityScale: number;
+};
+
+/** 解析后的性能参数（已展开 preset），供引擎初始化使用 */
+export type RendererPerformanceResolved = Omit<RendererPerformanceDemoConfig, 'qualityPreset'>;
+
+const RENDERER_PERF_DEFAULTS: RendererPerformanceResolved = {
+  hardwareScalingLevel: 1,
+  antialias: true,
+  adaptToDeviceRatio: true,
+  limitDeviceRatio: 1,
+  showFpsOverlay: false,
+  fpsHudRealtime: true,
+  fpsHudPollMs: 200,
+  gpuLightIntensityScale: 1,
+  gpuTextureQuality: 'high',
+  gpuEnvironmentEnabled: true,
+  gpuEnvironmentIntensityScale: 1,
+};
+
+const QUALITY_PRESETS: Record<RendererQualityPreset, Partial<RendererPerformanceResolved>> = {
+  default: {},
+  /** 略降分辨率，保留抗锯齿；略降灯光与纹理档位 */
+  medium: {
+    hardwareScalingLevel: 1.5,
+    antialias: true,
+    limitDeviceRatio: 1,
+    gpuLightIntensityScale: 0.85,
+    gpuTextureQuality: 'medium',
+    gpuEnvironmentEnabled: true,
+    gpuEnvironmentIntensityScale: 0.85,
+  },
+  /** 低显存 / 集显：显著降低内部分辨率，关闭 MSAA；进一步降灯光与纹理清晰度 */
+  low: {
+    hardwareScalingLevel: 2,
+    antialias: false,
+    limitDeviceRatio: 0.75,
+    gpuLightIntensityScale: 0.65,
+    gpuTextureQuality: 'low',
+    gpuEnvironmentEnabled: false,
+    gpuEnvironmentIntensityScale: 0.65,
+  },
+};
+
+/**
+ * 画质预设对应的推荐 `hardwareScalingLevel`（与 `QUALITY_PRESETS` 一致，供 Vue 侧栏切换预设时立即套用）。
+ */
+export function getHardwareScalingLevelForQualityPreset(
+  q: RendererQualityPreset,
+): number {
+  const preset = QUALITY_PRESETS[q] ?? {};
+  if (typeof preset.hardwareScalingLevel === 'number') return preset.hardwareScalingLevel;
+  return RENDERER_PERF_DEFAULTS.hardwareScalingLevel;
+}
+
+/** 画质预设对应的推荐灯光强度乘数（与 `QUALITY_PRESETS` 一致） */
+export function getGpuLightIntensityScaleForQualityPreset(
+  q: RendererQualityPreset,
+): number {
+  const preset = QUALITY_PRESETS[q] ?? {};
+  if (typeof preset.gpuLightIntensityScale === 'number') return preset.gpuLightIntensityScale;
+  return RENDERER_PERF_DEFAULTS.gpuLightIntensityScale;
+}
+
+/** 画质预设对应的推荐纹理质量档位（与 `QUALITY_PRESETS` 一致） */
+export function getGpuTextureQualityForQualityPreset(q: RendererQualityPreset): GpuTextureQuality {
+  const preset = QUALITY_PRESETS[q] ?? {};
+  if (preset.gpuTextureQuality) return preset.gpuTextureQuality;
+  return RENDERER_PERF_DEFAULTS.gpuTextureQuality;
+}
+
+export function getGpuEnvironmentEnabledForQualityPreset(q: RendererQualityPreset): boolean {
+  const preset = QUALITY_PRESETS[q] ?? {};
+  if (typeof preset.gpuEnvironmentEnabled === 'boolean') return preset.gpuEnvironmentEnabled;
+  return RENDERER_PERF_DEFAULTS.gpuEnvironmentEnabled;
+}
+
+export function getGpuEnvironmentIntensityScaleForQualityPreset(q: RendererQualityPreset): number {
+  const preset = QUALITY_PRESETS[q] ?? {};
+  if (typeof preset.gpuEnvironmentIntensityScale === 'number') return preset.gpuEnvironmentIntensityScale;
+  return RENDERER_PERF_DEFAULTS.gpuEnvironmentIntensityScale;
+}
+
+/**
+ * 合并 demo 配置与画质预设。显式写在 `rendererPerformanceDemoConfig` 里的字段会覆盖 preset 的同名字段。
+ */
+export function resolveRendererPerformanceDemo(
+  cfg: RendererPerformanceDemoConfig,
+): RendererPerformanceResolved {
+  const preset = QUALITY_PRESETS[cfg.qualityPreset] ?? {};
+  const { qualityPreset: _q, ...explicit } = cfg;
+  return { ...RENDERER_PERF_DEFAULTS, ...preset, ...explicit };
+}
+
+/**
+ * 低显存 / 弱显卡：优先改 `qualityPreset` 为 `'low'`（降分辨率 + 关 MSAA + 限制 DPI），
+ * 仍卡再单独把 `hardwareScalingLevel` 调到 `2`～`2.5`。
+ * Vue 全功能页可用侧栏「性能」微调缩放并看 FPS；iframe `#/3d-viewer` 读同一配置。
+ */
+export const rendererPerformanceDemoConfig: RendererPerformanceDemoConfig = {
+  qualityPreset: 'default',
+  hardwareScalingLevel: 1,
+  antialias: true,
+  adaptToDeviceRatio: true,
+  limitDeviceRatio: 1,
+  showFpsOverlay: true,
+  fpsHudRealtime: true,
+  fpsHudPollMs: 200,
+  gpuLightIntensityScale: 1,
+  gpuTextureQuality: 'high',
+  gpuEnvironmentEnabled: true,
+  gpuEnvironmentIntensityScale: 1,
+};
+
+function toNumber(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v === 'string' && v.trim().length) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function toBool(v: unknown): boolean | null {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase();
+    if (s === '1' || s === 'true' || s === 'yes' || s === 'on') return true;
+    if (s === '0' || s === 'false' || s === 'no' || s === 'off') return false;
+  }
+  return null;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+/**
+ * 从浏览器 URL query 解析性能覆盖参数（用于 `#/app` 与 `#/3d-viewer` 直接通过地址栏传参调性能）。
+ *
+ * 支持长参数名与短别名：
+ * - hardwareScalingLevel | hsl
+ * - gpuLightIntensityScale | gls
+ * - gpuTextureQuality | gtq  (high/medium/low)
+ * - gpuEnvironmentEnabled | ibl (1/0/true/false)
+ * - gpuEnvironmentIntensityScale | ibls
+ * - showFpsOverlay | fps
+ * - fpsHudRealtime | fpsr
+ * - fpsHudPollMs | fpsms
+ * - qualityPreset | q (default/medium/low)
+ */
+export function parseRendererPerformanceFromQuery(
+  query: Record<string, unknown>,
+): Partial<RendererPerformanceDemoConfig> {
+  const get = (k: string) => query[k];
+  const out: Partial<RendererPerformanceDemoConfig> = {};
+
+  const qp = (get('qualityPreset') ?? get('q')) as unknown;
+  if (qp === 'default' || qp === 'medium' || qp === 'low') out.qualityPreset = qp;
+
+  const hsl = toNumber(get('hardwareScalingLevel') ?? get('hsl'));
+  if (hsl != null) out.hardwareScalingLevel = clamp(hsl, 0.25, 6);
+
+  const gls = toNumber(get('gpuLightIntensityScale') ?? get('gls'));
+  if (gls != null) out.gpuLightIntensityScale = clamp(gls, 0.2, 1);
+
+  const gtq = String(get('gpuTextureQuality') ?? get('gtq') ?? '').trim().toLowerCase();
+  if (gtq === 'high' || gtq === 'medium' || gtq === 'low') out.gpuTextureQuality = gtq;
+
+  const ibl = toBool(get('gpuEnvironmentEnabled') ?? get('ibl'));
+  if (ibl != null) out.gpuEnvironmentEnabled = ibl;
+
+  const ibls = toNumber(get('gpuEnvironmentIntensityScale') ?? get('ibls'));
+  if (ibls != null) out.gpuEnvironmentIntensityScale = clamp(ibls, 0, 1);
+
+  const fps = toBool(get('showFpsOverlay') ?? get('fps'));
+  if (fps != null) out.showFpsOverlay = fps;
+
+  const fpsr = toBool(get('fpsHudRealtime') ?? get('fpsr'));
+  if (fpsr != null) out.fpsHudRealtime = fpsr;
+
+  const fpsms = toNumber(get('fpsHudPollMs') ?? get('fpsms'));
+  if (fpsms != null) out.fpsHudPollMs = Math.max(16, Math.round(fpsms));
+
+  return out;
+}
 
 /** 场景饱和度后处理默认配置（用于 UI 初始值 + 3D 初始化默认值） */
 export const sceneSaturationDefaults = {

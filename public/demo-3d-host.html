@@ -107,6 +107,11 @@
     </h1>
     <div class="main">
       <div class="side">
+        <p class="hint">
+          弱显卡卡顿：在子项目 <code>src/3d/app/demoConfig.ts</code> 中调整
+          <code>rendererPerformanceDemoConfig</code>（如 <code>qualityPreset: 'low'</code> 或提高
+          <code>hardwareScalingLevel</code>），保存后刷新；Vue 演示页侧栏「性能」可看 FPS。
+        </p>
         <p class="hint">模拟业务侧数据（可改脚本内 <code>mock</code>）</p>
         <pre id="mock"></pre>
         <p><strong>业务指令（cmd）</strong></p>
@@ -261,7 +266,7 @@
         if (mock.projectId) q.set('projectId', mock.projectId);
         var qs = q.toString();
         var hash = '#/3d-viewer' + (qs ? '?' + qs : '');
-        document.getElementById('viewer').src = 'https://localhost:51741/#/3d-viewer';
+        document.getElementById('viewer').src = 'https://localhost:51741/#/3d-viewer?hsl=2&ibl=1&gtq=low&gls=1';
 
         var iframe = document.getElementById('viewer');
         var logEl = document.getElementById('log');

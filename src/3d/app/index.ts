@@ -21,6 +21,7 @@ import {
   MeshBuilder,
   Vector3,
   Texture,
+  BaseTexture,
   Color3,
   PBRMaterial,
   CubeTexture,
@@ -66,6 +67,10 @@ import {
   ropeDemoModelBindings,
   sceneSaturationDefaults,
   seaDemoDefaults,
+  resolveRendererPerformanceDemo,
+  rendererPerformanceDemoConfig,
+  type GpuTextureQuality,
+  type RendererPerformanceResolved,
 } from './demoConfig';
 import {
   createTimedShaderMaterial,
@@ -78,6 +83,7 @@ import { Shadow } from '../Shadow';
 import { SkyMaterial, WaterMaterial } from '@babylonjs/materials';
 import gsap from 'gsap';
 import '@babylonjs/inspector';
+import { AdvancedDynamicTexture, Control, Image } from '@babylonjs/gui';
 
 export type { InfoBoardItem, InfoBoardStyleOptions } from './InfoBoardHelper';
 export { MODEL_URLS } from './modelUrls.generated';
@@ -545,17 +551,35 @@ export class App {
   private underwaterAutoObserver: ReturnType<Scene['onBeforeRenderObservable']['add']> | null =
     null;
 
-  /** 右上角北向（指南针）叠加 3D 小挂件 */
+  /**
+   * 右下角指南针：使用全屏 GUI（与信息牌同层逻辑），避免场景降分辨率后处理影响显示。
+   */
   private compassWidget:
     | {
-        root: TransformNode;
-        plane: Mesh;
-        material: StandardMaterial;
-        texture: Texture;
+        texture: AdvancedDynamicTexture;
+        image: Image;
         observer: ReturnType<Scene['onBeforeRenderObservable']['add']>;
+        sceneId: number;
       }
     | null = null;
   private compassWidgetEnabled = true;
+  /**
+   * 与 demoConfig「渲染缩放」数值一致，但仅作用于 3D 场景后处理（引擎 framebuffer 保持全分辨率，GUI 不缩放）。
+   */
+  private sceneResolutionScale = 1;
+  private scenePixelatePostProcess: PostProcess | null = null;
+  private scenePixelatePostProcessSceneId: number | null = null;
+  /** 灯光强度目标乘数（与 demoConfig `gpuLightIntensityScale` 一致） */
+  private gpuLightIntensityScale = 1;
+  /** 已对当前场景灯光乘过的乘数，用于再次调节时按比值更新，避免漂移 */
+  private gpuLightIntensityApplied = 1;
+  private gpuProfileSceneId: number | null = null;
+  private gpuTextureQuality: GpuTextureQuality = 'high';
+  private gpuEnvironmentEnabled = true;
+  private gpuEnvironmentIntensityScale = 1;
+  private gpuEnvironmentIntensityApplied = 1;
+  private gpuEnvironmentTextureBackup: BaseTexture | null = null;
+  private gpuEnvironmentIntensityBackupValue: number | null = null;
   /**
    * directionControl 修改 ArcRotateCamera.alpha 时累加的补偿（弧度），使指北针平面 rotation.z 不随该指令变化；
    * 鼠标拖动仍改变 alpha，指北针仍随 `-alpha + compensation` 正常联动。
@@ -658,28 +682,193 @@ export class App {
     this.setSeaParams(this.seaParamsDefaults);
   }
 
-  async init(canvas: HTMLCanvasElement, gpu: boolean) {
+  async init(
+    canvas: HTMLCanvasElement,
+    gpu: boolean,
+    performance?: RendererPerformanceResolved | null,
+  ) {
     this.canvas = canvas;
+    const perf =
+      performance ?? resolveRendererPerformanceDemo(rendererPerformanceDemoConfig);
     RegisterSceneLoaderPlugin(new FBXLoader());
+    const engineOpts = {
+      adaptToDeviceRatio: perf.adaptToDeviceRatio,
+      limitDeviceRatio: perf.limitDeviceRatio,
+    };
     if (gpu) {
-      this.engine = new Engine(canvas, true, {
-        antialias: true,
-        adaptToDeviceRatio: true,
-        limitDeviceRatio: 1,
-      });
+      this.engine = new Engine(canvas, perf.antialias, engineOpts);
       if (this.engine instanceof WebGPUEngine) {
         await this.engine.initAsync();
       }
     } else {
-      this.engine = new Engine(canvas, true, {
-        adaptToDeviceRatio: true,
-      });
+      this.engine = new Engine(canvas, perf.antialias, engineOpts);
     }
-    // this.engine.setHardwareScalingLevel(2);
+    // 全屏 GUI / 信息牌使用全分辨率 framebuffer；「渲染缩放」只通过场景后处理降低 3D 观感分辨率
+    this.sceneResolutionScale = perf.hardwareScalingLevel;
+    this.gpuLightIntensityScale = this.clampGpuLightScale(perf.gpuLightIntensityScale);
+    this.gpuTextureQuality = perf.gpuTextureQuality ?? 'high';
+    this.gpuEnvironmentEnabled = perf.gpuEnvironmentEnabled ?? true;
+    this.gpuEnvironmentIntensityScale = this.clampGpuEnvScale(perf.gpuEnvironmentIntensityScale);
+    this.engine.setHardwareScalingLevel(1);
     this.engine.runRenderLoop(() => {
       this.scene?.render();
     });
     window.addEventListener('resize', this.resize);
+  }
+
+  /** 当前引擎统计帧率（约每秒更新） */
+  getRenderFps(): number {
+    return this.engine?.getFps() ?? 0;
+  }
+
+  /** 上一帧耗时（毫秒），与 `getRenderFps` 同用于性能 HUD */
+  getRenderDeltaTimeMs(): number {
+    return this.engine?.getDeltaTime() ?? 0;
+  }
+
+  /** 当前「场景分辨率」缩放系数（与配置 hardwareScalingLevel 同语义，非引擎 framebuffer 缩放） */
+  getRendererHardwareScalingLevel(): number {
+    return this.sceneResolutionScale;
+  }
+
+  /**
+   * 运行时调整场景渲染缩放（低显存机器可再调大以换流畅度）。
+   * 仅影响 3D 场景后处理；全屏 GUI/信息牌/指南针保持清晰。抗锯齿需重新创建引擎才能切换。
+   */
+  applyRendererPerformance(perf: Partial<RendererPerformanceResolved>): void {
+    if (!this.engine) return;
+    if (
+      typeof perf.hardwareScalingLevel === 'number' &&
+      perf.hardwareScalingLevel > 0
+    ) {
+      this.sceneResolutionScale = perf.hardwareScalingLevel;
+      this.ensureSceneResolutionPostProcess();
+    }
+    let gpuChanged = false;
+    if (typeof perf.gpuLightIntensityScale === 'number') {
+      this.gpuLightIntensityScale = this.clampGpuLightScale(perf.gpuLightIntensityScale);
+      gpuChanged = true;
+    }
+    if (perf.gpuTextureQuality != null) {
+      this.gpuTextureQuality = perf.gpuTextureQuality;
+      gpuChanged = true;
+    }
+    if (typeof perf.gpuEnvironmentEnabled === 'boolean') {
+      this.gpuEnvironmentEnabled = perf.gpuEnvironmentEnabled;
+      gpuChanged = true;
+    }
+    if (typeof perf.gpuEnvironmentIntensityScale === 'number') {
+      this.gpuEnvironmentIntensityScale = this.clampGpuEnvScale(perf.gpuEnvironmentIntensityScale);
+      gpuChanged = true;
+    }
+    if (gpuChanged) {
+      this.applyGpuPerformanceToScene();
+    }
+  }
+
+  private clampGpuLightScale(v: number): number {
+    if (!Number.isFinite(v)) return 1;
+    return Math.min(1, Math.max(0.2, v));
+  }
+
+  private clampGpuEnvScale(v: number): number {
+    if (!Number.isFinite(v)) return 1;
+    return Math.min(1, Math.max(0, v));
+  }
+
+  /**
+   * 按当前 `gpuLightIntensityScale` / `gpuTextureQuality` 应用到场景灯光与材质纹理（跳过 GUI/RTT）。
+   * 新场景会重置灯光比例基准，再套目标乘数。
+   */
+  private applyGpuPerformanceToScene(): void {
+    const scene = this.scene;
+    if (!scene) return;
+
+    if (this.gpuProfileSceneId !== scene.uniqueId) {
+      this.gpuLightIntensityApplied = 1;
+      this.gpuEnvironmentIntensityApplied = 1;
+      this.gpuEnvironmentTextureBackup = null;
+      this.gpuProfileSceneId = scene.uniqueId;
+    }
+
+    // 环境光/反射（IBL）
+    if (!this.gpuEnvironmentEnabled) {
+      if (scene.environmentTexture) {
+        this.gpuEnvironmentTextureBackup = scene.environmentTexture;
+        scene.environmentTexture = null as any;
+      }
+      if (this.gpuEnvironmentIntensityBackupValue == null) {
+        this.gpuEnvironmentIntensityBackupValue = scene.environmentIntensity ?? 1;
+      }
+      scene.environmentIntensity = 0;
+      this.gpuEnvironmentIntensityApplied = 1;
+    } else {
+      if (!scene.environmentTexture && this.gpuEnvironmentTextureBackup) {
+        scene.environmentTexture = this.gpuEnvironmentTextureBackup as any;
+      }
+      if ((scene.environmentIntensity ?? 0) <= 0 && this.gpuEnvironmentIntensityBackupValue != null) {
+        scene.environmentIntensity = this.gpuEnvironmentIntensityBackupValue;
+      }
+      this.gpuEnvironmentIntensityBackupValue = null;
+
+      const targetEnv = this.clampGpuEnvScale(this.gpuEnvironmentIntensityScale);
+      const envRatio = targetEnv / (this.gpuEnvironmentIntensityApplied || 1);
+      if (Math.abs(envRatio - 1) > 1e-6) {
+        scene.environmentIntensity = (scene.environmentIntensity ?? 1) * envRatio;
+        this.gpuEnvironmentIntensityApplied = targetEnv || 1;
+      }
+    }
+
+    const targetLight = this.clampGpuLightScale(this.gpuLightIntensityScale);
+    const lightRatio = targetLight / this.gpuLightIntensityApplied;
+    if (Math.abs(lightRatio - 1) > 1e-6) {
+      for (const light of scene.lights) {
+        light.intensity *= lightRatio;
+      }
+      this.gpuLightIntensityApplied = targetLight;
+    }
+
+    let aniso: number;
+    let sampling: number;
+    switch (this.gpuTextureQuality) {
+      case 'high':
+        aniso = 16;
+        sampling = Texture.TRILINEAR_SAMPLINGMODE;
+        break;
+      case 'medium':
+        aniso = 4;
+        sampling = Texture.BILINEAR_SAMPLINGMODE;
+        break;
+      case 'low':
+      default:
+        aniso = 1;
+        sampling = Texture.BILINEAR_SAMPLINGMODE;
+        break;
+    }
+
+    const skipGuiLikeName = (name: string) =>
+      /infoBoard|cc_compass|AdvancedDynamicTexture|GUI/i.test(name);
+
+    const applyTier = (tex: BaseTexture) => {
+      if (!tex || tex.isRenderTarget) return;
+      const n = tex.name ?? '';
+      if (skipGuiLikeName(n)) return;
+      tex.anisotropicFilteringLevel = aniso;
+      const genMip = !(tex as { noMipmap?: boolean }).noMipmap;
+      const withSampling = tex as BaseTexture & {
+        updateSamplingMode?: (mode: number, generateMipMaps?: boolean) => void;
+      };
+      if (typeof withSampling.updateSamplingMode === 'function') {
+        withSampling.updateSamplingMode(sampling, genMip);
+      }
+    };
+
+    for (const tex of scene.textures) {
+      applyTier(tex);
+    }
+    if (scene.environmentTexture) {
+      applyTier(scene.environmentTexture);
+    }
   }
 
   resize = () => {
@@ -762,11 +951,13 @@ export class App {
     }
     if (this.compassWidget && this.scene) {
       this.scene.onBeforeRenderObservable.remove(this.compassWidget.observer);
-      this.compassWidget.plane.dispose();
-      this.compassWidget.material.dispose();
       this.compassWidget.texture.dispose();
-      this.compassWidget.root.dispose();
       this.compassWidget = null;
+    }
+    if (this.scenePixelatePostProcess) {
+      this.scenePixelatePostProcess.dispose();
+      this.scenePixelatePostProcess = null;
+      this.scenePixelatePostProcessSceneId = null;
     }
     this.engine.dispose();
     if (this.skyObserver) {
@@ -776,18 +967,15 @@ export class App {
   }
 
   /**
-   * 启用/禁用右上角北向挂件（默认启用）。
-   * - 挂件为一个带透明贴图的平面，按屏幕像素定位到右上角，并根据相机 yaw 旋转。
+   * 启用/禁用右下角北向挂件（默认启用）。
+   * - 使用全屏 GUI 图片（与场景降分辨率后处理解耦，缩放渲染时尺寸不变）。
    */
   setCompassWidgetEnabled(enabled: boolean) {
     this.compassWidgetEnabled = !!enabled;
     if (!enabled) {
       if (this.compassWidget && this.scene) {
         this.scene.onBeforeRenderObservable.remove(this.compassWidget.observer);
-        this.compassWidget.plane.dispose();
-        this.compassWidget.material.dispose();
         this.compassWidget.texture.dispose();
-        this.compassWidget.root.dispose();
         this.compassWidget = null;
       }
       return;
@@ -795,78 +983,120 @@ export class App {
     this.ensureCompassWidget();
   }
 
+  /**
+   * 场景分辨率模拟：相机后处理像素化（不改变引擎 framebuffer，全屏 GUI/信息牌不受影响）。
+   */
+  private ensureSceneResolutionPostProcess(): void {
+    const scene = this.scene;
+    const camera = scene?.activeCamera;
+    const engine = this.engine;
+    if (!scene || !camera || !engine) return;
+
+    if (
+      this.scenePixelatePostProcess &&
+      this.scenePixelatePostProcessSceneId !== scene.uniqueId
+    ) {
+      this.scenePixelatePostProcess.dispose();
+      this.scenePixelatePostProcess = null;
+      this.scenePixelatePostProcessSceneId = null;
+    }
+
+    if (!Effect.ShadersStore['scenePixelateFragmentShader']) {
+      Effect.ShadersStore['scenePixelateFragmentShader'] = `
+        precision highp float;
+        varying vec2 vUV;
+        uniform sampler2D textureSampler;
+        uniform float resolutionScale;
+        uniform float texWidth;
+        uniform float texHeight;
+        void main(void) {
+          vec2 res = vec2(texWidth, texHeight);
+          if (resolutionScale <= 1.001) {
+            gl_FragColor = texture2D(textureSampler, vUV);
+            return;
+          }
+          vec2 grid = res / resolutionScale;
+          vec2 uv = floor(vUV * grid) / grid + 0.5 / grid;
+          gl_FragColor = texture2D(textureSampler, uv);
+        }
+      `;
+    }
+
+    if (!this.scenePixelatePostProcess) {
+      const pp = new PostProcess(
+        'ScenePixelate',
+        'scenePixelate',
+        ['resolutionScale', 'texWidth', 'texHeight'],
+        null,
+        1.0,
+        camera,
+        Texture.BILINEAR_SAMPLINGMODE,
+        engine,
+        false,
+      );
+      pp.onApply = (effect) => {
+        effect.setFloat('resolutionScale', this.sceneResolutionScale);
+        effect.setFloat('texWidth', engine.getRenderWidth());
+        effect.setFloat('texHeight', engine.getRenderHeight());
+      };
+      this.scenePixelatePostProcess = pp;
+      this.scenePixelatePostProcessSceneId = scene.uniqueId;
+    } else {
+      this.scenePixelatePostProcess.onApply = (effect) => {
+        effect.setFloat('resolutionScale', this.sceneResolutionScale);
+        effect.setFloat('texWidth', engine.getRenderWidth());
+        effect.setFloat('texHeight', engine.getRenderHeight());
+      };
+    }
+  }
+
   private ensureCompassWidget() {
     if (!this.compassWidgetEnabled) return;
     const scene = this.scene;
     if (!scene) return;
-    if (this.compassWidget) return;
+    if (this.compassWidget) {
+      if (this.compassWidget.sceneId === scene.uniqueId) return;
+      scene.onBeforeRenderObservable.remove(this.compassWidget.observer);
+      this.compassWidget.texture.dispose();
+      this.compassWidget = null;
+    }
     const cam = scene.activeCamera;
     if (!cam) return;
 
-    const root = new TransformNode('cc_compass_root', scene);
-    root.parent = cam;
-
-    const plane = MeshBuilder.CreatePlane(
-      'cc_compass_plane',
-      { size: 1, sideOrientation: Mesh.DOUBLESIDE },
+    const adt = AdvancedDynamicTexture.CreateFullscreenUI(
+      'cc_compass_gui',
+      true,
       scene,
+      Texture.BILINEAR_SAMPLINGMODE,
+      true,
     );
-    plane.parent = root;
-    plane.isPickable = false;
-    plane.renderingGroupId = 3;
-    plane.alwaysSelectAsActiveMesh = true;
-
-    const material = new StandardMaterial('cc_compass_mat', scene);
-    material.disableLighting = true;
-    material.emissiveColor = Color3.White();
-    material.backFaceCulling = false;
-    material.useAlphaFromDiffuseTexture = true;
-    material.transparencyMode = Material.MATERIAL_ALPHABLEND;
-    material.disableDepthWrite = true;
-
-    const texture = new Texture('/northSource.png', scene, true, false, Texture.TRILINEAR_SAMPLINGMODE);
-    texture.hasAlpha = true;
-    material.diffuseTexture = texture;
-    plane.material = material;
-
-    const sizePx = 110; // 指南针直径（像素）
-    const marginPx = 14; // 距离右上角边距（像素）
-    const depth = 2; // 距离相机的“前方深度”（世界单位），越大越不容易被裁剪
+    // 保持指南针清晰：Layer 默认会参与相机后处理，这里强制在后处理之后绘制
+    if ((adt as any).layer) {
+      (adt as any).layer.applyPostProcess = false;
+    }
+    const img = new Image('cc_compass_img');
+    img.source = '/northSource.png';
+    img.width = '110px';
+    img.height = '110px';
+    img.stretch = Image.STRETCH_UNIFORM;
+    img.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    img.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    img.paddingRightInPixels = 14;
+    img.paddingBottomInPixels = 14;
+    img.isPointerBlocker = false;
+    img.zIndex = 20;
+    adt.addControl(img);
 
     const observer = scene.onBeforeRenderObservable.add(() => {
       const camera = scene.activeCamera;
       if (!camera) return;
-
-      const w = this.engine.getRenderWidth(true);
-      const h = this.engine.getRenderHeight(true);
-      if (w <= 0 || h <= 0) return;
-
-      const aspect = w / h;
-      const fov = (camera as any).fov as number | undefined;
-      const fovRad = typeof fov === 'number' && Number.isFinite(fov) ? fov : 0.8;
-      const halfH = Math.tan(fovRad * 0.5) * depth;
-      const halfW = halfH * aspect;
-
-      const worldPerPx = (halfH * 2) / h;
-      const sizeWorld = sizePx * worldPerPx;
-      const marginWorld = marginPx * worldPerPx;
-
-      plane.scaling.set(sizeWorld, sizeWorld, 1);
-      root.position.set(
-        halfW - marginWorld - sizeWorld * 0.5,
-        halfH - marginWorld - sizeWorld * 0.5,
-        depth,
-      );
-
-      // 根据相机 yaw 旋转（ArcRotateCamera.alpha 绕 Y 轴；这里投影到屏幕做 2D 旋转）
-      // directionControl 改 alpha 时已累加 compassArcAlphaCompensationRad，使该指令下挂件朝向不转，鼠标拖动仍随 alpha 变化
       const alpha = (camera as any).alpha as number | undefined;
       if (typeof alpha === 'number' && Number.isFinite(alpha)) {
-        plane.rotation.z = -alpha + this.compassArcAlphaCompensationRad;
+        img.rotation = -alpha + this.compassArcAlphaCompensationRad;
       }
     });
 
-    this.compassWidget = { root, plane, material, texture, observer };
+    this.compassWidget = { texture: adt, image: img, observer, sceneId: scene.uniqueId };
   }
 
   setAssetsLibrary(assets: AppAssets) {
@@ -960,6 +1190,8 @@ export class App {
     console.log('test')
     const sceneJustCreated = !this.scene;
     const scene = this.scene ?? new Scene(this.engine);
+    // 场景背景色（清屏色）
+    scene.clearColor = Color4.FromColor3(Color3.FromHexString('#08243F'), 1);
     if (!this.scene) {
       this.compassArcAlphaCompensationRad = 0;
       this.directionControlLastParamDeg = null;
@@ -1065,6 +1297,7 @@ export class App {
       // this.setGround();
     }
     progressCb?.(1);
+    this.applyGpuPerformanceToScene();
     return this.scene;
   }
 
@@ -1754,6 +1987,8 @@ export class App {
 
         const mat = new PBRMaterial(`ropeBox_${ropeKey}_${faceName}_mat`, this.scene);
         mat.albedoTexture = tex;
+        // box 以贴图为主：使用 unlit 避免环境/HDR 影响，同时不把颜色“顶白”
+        mat.unlit = true;
         mat.roughness = 1;
         mat.metallic = 0;
         mat.backFaceCulling = false;
@@ -1765,8 +2000,12 @@ export class App {
         const uDependsOnLength = faceName === 'right' || faceName === 'left';
         const vDependsOnLength = faceName === 'top' || faceName === 'bottom';
 
-        const worldURef = uDependsOnLength ? safeBoxDepthRef : safeBoxWidth;
-        const worldVRef = vDependsOnLength ? safeBoxDepthRef : safeBoxHeight;
+        // 重要：若 boxDepthRef 在创建时非常短（动画结束瞬间常见，或 demoConfig.initialDistance=0），
+        // 则会把 pixelsPerWorld 算得极大，后续拉长绳子时 u/vScale 会出现“纹理重复次数爆炸”。
+        // 这里对“长度参与密度计算”的参考长度做下限钳制，避免被极短初始长度污染。
+        const lengthRefForDensity = Math.max(1, safeBoxDepthRef);
+        const worldURef = uDependsOnLength ? lengthRefForDensity : safeBoxWidth;
+        const worldVRef = vDependsOnLength ? lengthRefForDensity : safeBoxHeight;
 
         // 选择“等密度”的像素密度常量：保证 u/v 方向的 texel 在世界空间里呈等比（不拉伸观感）
         const pixelsPerWorld =
@@ -1901,8 +2140,11 @@ export class App {
     const ropeTex = new Texture(textureUrl, this.scene, false, false);
     ropeTex.wrapU = Texture.WRAP_ADDRESSMODE;
     ropeTex.wrapV = Texture.WRAP_ADDRESSMODE;
-    // 使用 StandardMaterial 以降低 shader 复杂度，避免部分 WebGL 环境下 PBR program 失效导致 tube 不可见
+    // 使用 StandardMaterial（unlit）以降低 shader 复杂度，并避免光照/HDR 环境导致“看似无纹理”的效果
     const ropeMat = new StandardMaterial(`ropeMat_${ropeKey}`, this.scene);
+    ropeMat.disableLighting = true;
+    ropeMat.diffuseColor = Color3.White();
+    ropeMat.emissiveColor = Color3.White();
     ropeMat.diffuseTexture = ropeTex;
     ropeMat.specularColor = Color3.Black();
     ropeMat.backFaceCulling = false;
@@ -2205,10 +2447,19 @@ export class App {
         const worldU = face.uDependsOnLength ? length : state.boxWidth;
         const worldV = face.vDependsOnLength ? length : state.boxHeight;
 
-        // 按“当前面世界宽高 + 配置纹理像素尺寸”计算 u/v 平铺次数
-        // 这样随绳子伸缩变化时，纹理只会重复，不会出现非等比拉伸观感。
-        const uScale = (face.pixelsPerWorld * worldU) / Math.max(1, face.textureWidthPx);
-        const vScale = (face.pixelsPerWorld * worldV) / Math.max(1, face.textureHeightPx);
+        // 按“当前面世界宽高 + 配置纹理像素尺寸”实时计算 u/v 平铺次数。
+        // 不能复用 create 时缓存的 pixelsPerWorld：动画结束后创建时参考长度/父链缩放可能不同，
+        // 会导致后续改长度出现 u/vScale 偏差（尤其 box 的 length 参与密度计算时）。
+        const safeWorldU = Math.max(1e-6, worldU);
+        const safeWorldV = Math.max(1e-6, worldV);
+        const texW = Math.max(1, face.textureWidthPx);
+        const texH = Math.max(1, face.textureHeightPx);
+
+        const pixelsPerWorldCurrent =
+          Math.sqrt((texW / safeWorldU) * (texH / safeWorldV)) || 1;
+
+        const uScale = (pixelsPerWorldCurrent * safeWorldU) / texW;
+        const vScale = (pixelsPerWorldCurrent * safeWorldV) / texH;
 
         face.texture.uScale = uScale;
         face.texture.vScale = vScale;
@@ -3327,7 +3578,8 @@ export class App {
     this.scene = scene;
     this.scene.fogEnabled = false;
     scene.activeCamera.maxZ = 10000;
-    //scene.clearColor = new Color4(1, 1, 1, 1);
+    // 场景背景色（清屏色）
+    scene.clearColor = Color4.FromColor3(Color3.FromHexString('#08243F'), 1);
     if (scene.activeCamera instanceof ArcRotateCamera) {
       // 保持与默认相机一致的交互体验
       scene.activeCamera.wheelPrecision = 10;
@@ -3367,6 +3619,7 @@ export class App {
     //   }
     // });
     this.setGround();
+    this.applyGpuPerformanceToScene();
     return scene;
   }
 
@@ -3410,11 +3663,13 @@ export class App {
 
     const ip = this.saturationPipeline.imageProcessing;
     this.saturationPipeline.imageProcessingEnabled = this.saturationEnabled;
-    if (!ip) return;
-    ip.colorCurvesEnabled = this.saturationEnabled;
-    if (ip.colorCurves) {
-      ip.colorCurves.globalSaturation = this.saturationValue;
+    if (ip) {
+      ip.colorCurvesEnabled = this.saturationEnabled;
+      if (ip.colorCurves) {
+        ip.colorCurves.globalSaturation = this.saturationValue;
+      }
     }
+    this.ensureSceneResolutionPostProcess();
   }
 
   /**
@@ -3472,6 +3727,7 @@ export class App {
         this.scene.environmentTexture = hdr;
         this.scene.environmentIntensity = this.scene.environmentIntensity ?? 1;
         this.ensureEnvironmentRotationObserver();
+        this.applyGpuPerformanceToScene();
         onProgress?.(1);
         resolve(hdr);
       });

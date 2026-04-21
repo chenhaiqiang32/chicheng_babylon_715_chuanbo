@@ -1,6 +1,7 @@
 <template>
     <div class="app-container">
         <canvas id="canvas" ref="canvas"></canvas>
+        <div v-show="showFpsOverlay" class="fps-hud" aria-hidden="true">{{ fpsHudText }}</div>
     </div>
     <div class="btn">
         <div class="panel-tabs">
@@ -51,6 +52,14 @@
                 @click="activePanel = 'rope'"
             >
                 绳子
+            </button>
+            <button
+                class="tab-btn"
+                :class="{ active: activePanel === 'perf' }"
+                type="button"
+                @click="activePanel = 'perf'"
+            >
+                性能
             </button>
         </div>
 
@@ -453,6 +462,106 @@
                     </div>
                 </template>
             </section>
+
+            <section v-show="activePanel === 'perf'" class="panel">
+                <div class="anim-label">渲染性能（弱显卡 / 低显存）</div>
+                <div class="perf-fps-live">
+                    <div class="anim-label" style="margin-top: 2px;">实时帧率（打开本页签即采样，与画布角叠加层数据一致）</div>
+                    <div class="perf-fps-value">{{ fpsHudText }}</div>
+                    <div class="anim-hint">
+                        采样方式可在下方「FPS 采样」中修改，保存后即生效（与
+                        <code>rendererPerformanceDemoConfig</code> 字段一致）。
+                    </div>
+                </div>
+                <div class="anim-label" style="margin-top: 6px;">FPS 采样（改完立即生效）</div>
+                <div class="anim-row">
+                    <label class="anim-checkbox">
+                        <input type="checkbox" v-model="fpsHudRealtimeCfg" />
+                        <span>每帧 rAF 采样（更实时）</span>
+                    </label>
+                </div>
+                <div class="anim-label">定时采样间隔 ms（关闭 rAF 时生效）</div>
+                <input
+                    type="range"
+                    class="anim-slider"
+                    min="50"
+                    max="1000"
+                    step="50"
+                    v-model.number="fpsHudPollMsCfg"
+                    :disabled="fpsHudRealtimeCfg"
+                />
+                <div class="anim-row">
+                    <span class="anim-util">{{ fpsHudPollMsCfg }} ms</span>
+                </div>
+                <div class="anim-hint">
+                    默认值来自 <code>demoConfig.ts</code> 的
+                    <code>rendererPerformanceDemoConfig</code>。下方选项<strong>修改后立即生效</strong>（无需再点按钮）。
+                </div>
+                <div class="anim-label" style="margin-top: 8px;">画质预设</div>
+                <select v-model="perfQualityPreset" class="anim-select" @change="onPerfQualityPresetChange">
+                    <option value="default">default（画质优先）</option>
+                    <option value="medium">medium（均衡）</option>
+                    <option value="low">low（流畅优先）</option>
+                </select>
+                <div class="anim-label">渲染缩放 hardwareScalingLevel（越大越省显存，画面越糊）</div>
+                <input
+                    type="range"
+                    class="anim-slider"
+                    min="1"
+                    max="3"
+                    step="0.25"
+                    v-model.number="perfHardwareScaling"
+                    @input="applyRendererPerfImmediate"
+                />
+                <div class="anim-row">
+                    <span class="anim-util">当前 {{ perfHardwareScaling.toFixed(2) }}</span>
+                </div>
+                <div class="anim-label" style="margin-top: 8px;">灯光强度 gpuLightIntensityScale（降低可减轻 GPU 负载，整体变暗）</div>
+                <input
+                    type="range"
+                    class="anim-slider"
+                    min="0.2"
+                    max="1"
+                    step="0.05"
+                    v-model.number="perfGpuLightScale"
+                    @input="applyRendererPerfImmediate"
+                />
+                <div class="anim-row">
+                    <span class="anim-util">当前 {{ perfGpuLightScale.toFixed(2) }}</span>
+                </div>
+                <div class="anim-label" style="margin-top: 6px;">材质纹理清晰度 gpuTextureQuality</div>
+                <select v-model="perfGpuTextureQuality" class="anim-select" @change="applyRendererPerfImmediate">
+                    <option value="high">high（三线性 + 高各向异性）</option>
+                    <option value="medium">medium（双线性）</option>
+                    <option value="low">low（低各向异性，更省带宽）</option>
+                </select>
+                <div class="anim-label" style="margin-top: 8px;">环境光/反射（IBL，影响 PBR 反射与环境光）</div>
+                <label class="anim-checkbox">
+                    <input type="checkbox" v-model="perfGpuEnvironmentEnabled" @change="applyRendererPerfImmediate" />
+                    <span>启用环境光/反射（关闭更省 GPU，但反射会消失）</span>
+                </label>
+                <div class="anim-label" style="margin-top: 6px;">环境强度缩放 gpuEnvironmentIntensityScale</div>
+                <input
+                    type="range"
+                    class="anim-slider"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    v-model.number="perfGpuEnvironmentIntensityScale"
+                    :disabled="!perfGpuEnvironmentEnabled"
+                    @input="applyRendererPerfImmediate"
+                />
+                <div class="anim-row">
+                    <span class="anim-util">当前 {{ perfGpuEnvironmentIntensityScale.toFixed(2) }}</span>
+                </div>
+                <label class="anim-checkbox" style="margin-top: 8px;">
+                    <input type="checkbox" v-model="showFpsOverlay" />
+                    <span>在画布角落显示 FPS 叠加层</span>
+                </label>
+                <div class="anim-hint" style="margin-top: 10px;">
+                    抗锯齿 <code>antialias</code> 与 <code>limitDeviceRatio</code> 仅在引擎创建时生效，请改 <code>demoConfig</code> 后刷新页面。
+                </div>
+            </section>
         </div>
     </div>
     <Loading :progress="loading" v-if="loading > 0 && loading < 1"> </Loading>
@@ -473,16 +582,28 @@ import {
     flexibleRopeDemoConfig,
     flexibleRopeCreateExample,
     getFlexibleRopeDefaultPointDepths,
+    rendererPerformanceDemoConfig,
+    resolveRendererPerformanceDemo,
+    parseRendererPerformanceFromQuery,
+    getHardwareScalingLevelForQualityPreset,
+    getGpuLightIntensityScaleForQualityPreset,
+    getGpuTextureQualityForQualityPreset,
+    getGpuEnvironmentEnabledForQualityPreset,
+    getGpuEnvironmentIntensityScaleForQualityPreset,
+    type GpuTextureQuality,
+    type RendererQualityPreset,
 } from '@/3d/app/demoConfig';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { AppAssets } from '@/3d/assets/PublishLibrary';
 import Loading from '@/component/common/Loading.vue'
 import '../../ai'
 
 
 const props = defineProps<{ projectId: string }>()
+const route = useRoute();
 
-type PanelKey = 'camera' | 'model' | 'env' | 'sea' | 'post' | 'rope';
+type PanelKey = 'camera' | 'model' | 'env' | 'sea' | 'post' | 'rope' | 'perf';
 const ACTIVE_PANEL_STORAGE_KEY = 'cc-editor:activePanel';
 const activePanel = ref<PanelKey>('camera');
 
@@ -493,7 +614,8 @@ function isPanelKey(v: unknown): v is PanelKey {
         v === 'env' ||
         v === 'sea' ||
         v === 'post' ||
-        v === 'rope'
+        v === 'rope' ||
+        v === 'perf'
     );
 }
 
@@ -535,7 +657,91 @@ const clipTo = ref(60);
 const animationProgress = ref(0);
 let progressTick: ReturnType<typeof setInterval> | null = null;
 let cameraDebugTick: ReturnType<typeof setInterval> | null = null;
+let fpsRafId: number | null = null;
+let fpsPollId: ReturnType<typeof setInterval> | null = null;
 let removeInfoBoardMessageListener: (() => void) | undefined;
+
+const rendererPerfResolvedInitial = resolveRendererPerformanceDemo({
+    ...rendererPerformanceDemoConfig,
+    ...parseRendererPerformanceFromQuery(route.query as any),
+});
+const perfQualityPreset = ref<RendererQualityPreset>(rendererPerformanceDemoConfig.qualityPreset);
+const perfHardwareScaling = ref(rendererPerfResolvedInitial.hardwareScalingLevel);
+const perfGpuLightScale = ref(rendererPerfResolvedInitial.gpuLightIntensityScale);
+const perfGpuTextureQuality = ref<GpuTextureQuality>(rendererPerfResolvedInitial.gpuTextureQuality);
+const perfGpuEnvironmentEnabled = ref<boolean>(rendererPerfResolvedInitial.gpuEnvironmentEnabled);
+const perfGpuEnvironmentIntensityScale = ref<number>(rendererPerfResolvedInitial.gpuEnvironmentIntensityScale);
+const showFpsOverlay = ref(rendererPerfResolvedInitial.showFpsOverlay);
+const fpsHudText = ref('FPS —');
+
+/** 与 demoConfig 同步；修改后可立即重绑采样方式（无需刷新） */
+const fpsHudRealtimeCfg = ref(rendererPerfResolvedInitial.fpsHudRealtime);
+const fpsHudPollMsCfg = ref(rendererPerfResolvedInitial.fpsHudPollMs);
+
+function shouldSampleFpsDebug() {
+    return showFpsOverlay.value || activePanel.value === 'perf';
+}
+
+function updateFpsHudText() {
+    fpsHudText.value = `${App.Instance.getRenderFps().toFixed(0)} FPS · ${App.Instance.getRenderDeltaTimeMs().toFixed(2)} ms · 缩放 ${App.Instance.getRendererHardwareScalingLevel().toFixed(2)}`;
+}
+
+function fpsRafStep() {
+    updateFpsHudText();
+    if (shouldSampleFpsDebug()) {
+        fpsRafId = requestAnimationFrame(fpsRafStep);
+    } else {
+        fpsRafId = null;
+    }
+}
+
+function syncFpsDebugSampler() {
+    if (fpsRafId != null) {
+        cancelAnimationFrame(fpsRafId);
+        fpsRafId = null;
+    }
+    if (fpsPollId != null) {
+        clearInterval(fpsPollId);
+        fpsPollId = null;
+    }
+    if (!shouldSampleFpsDebug()) return;
+    if (fpsHudRealtimeCfg.value) {
+        fpsRafId = requestAnimationFrame(fpsRafStep);
+    } else {
+        updateFpsHudText();
+        const ms = Math.max(16, fpsHudPollMsCfg.value);
+        fpsPollId = setInterval(updateFpsHudText, ms);
+    }
+}
+
+watch([activePanel, showFpsOverlay], () => {
+    syncFpsDebugSampler();
+});
+
+watch([fpsHudRealtimeCfg, fpsHudPollMsCfg], () => {
+    syncFpsDebugSampler();
+});
+
+function applyRendererPerfImmediate() {
+    const v = perfHardwareScaling.value;
+    if (typeof v !== 'number' || v < 0.25) return;
+    App.Instance.applyRendererPerformance({
+        hardwareScalingLevel: v,
+        gpuLightIntensityScale: perfGpuLightScale.value,
+        gpuTextureQuality: perfGpuTextureQuality.value,
+        gpuEnvironmentEnabled: perfGpuEnvironmentEnabled.value,
+        gpuEnvironmentIntensityScale: perfGpuEnvironmentIntensityScale.value,
+    });
+}
+
+function onPerfQualityPresetChange() {
+    perfHardwareScaling.value = getHardwareScalingLevelForQualityPreset(perfQualityPreset.value);
+    perfGpuLightScale.value = getGpuLightIntensityScaleForQualityPreset(perfQualityPreset.value);
+    perfGpuTextureQuality.value = getGpuTextureQualityForQualityPreset(perfQualityPreset.value);
+    perfGpuEnvironmentEnabled.value = getGpuEnvironmentEnabledForQualityPreset(perfQualityPreset.value);
+    perfGpuEnvironmentIntensityScale.value = getGpuEnvironmentIntensityScaleForQualityPreset(perfQualityPreset.value);
+    applyRendererPerfImmediate();
+}
 
 // HDR 环境配置（仅用于模型反射）
 const hdrUrl = ref(hdrDemoConfig.defaultUrl);
@@ -835,7 +1041,11 @@ const isModelUrl = (url: string) => /\.(glb|gltf|fbx)$/i.test(url);
 
 async function initAppAndCameraDebug() {
     if (canvas.value) {
-        await App.Instance.init(canvas.value, true);
+        await App.Instance.init(
+            canvas.value,
+            true,
+            resolveRendererPerformanceDemo(rendererPerformanceDemoConfig),
+        );
     }
     // 同步辅助线开关默认值（init 后才可靠）
     cameraHelperOn.value = App.Instance.isCameraHelperEnabled;
@@ -844,6 +1054,7 @@ async function initAppAndCameraDebug() {
     if (!cameraDebugTick) {
         cameraDebugTick = setInterval(updateCameraDebugText, 120);
     }
+    syncFpsDebugSampler();
 }
 
 function registerAnimationCallbacks() {
@@ -1271,6 +1482,14 @@ onMounted(() => {
 
 onUnmounted(() => {
     stopProgressTick();
+    if (fpsRafId != null) {
+        cancelAnimationFrame(fpsRafId);
+        fpsRafId = null;
+    }
+    if (fpsPollId != null) {
+        clearInterval(fpsPollId);
+        fpsPollId = null;
+    }
     if (cameraDebugTick) {
         clearInterval(cameraDebugTick);
         cameraDebugTick = null;
@@ -1282,6 +1501,7 @@ onUnmounted(() => {
 </script>
 <style scoped lang="scss">
 .app-container {
+    position: relative;
     width: 100%;
     height: 100%;
 
@@ -1289,6 +1509,20 @@ onUnmounted(() => {
         display: block;
         width: 100%;
         height: 100%;
+    }
+
+    .fps-hud {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        z-index: 9;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        color: rgba(255, 255, 255, 0.92);
+        background: rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+        white-space: nowrap;
     }
 }
 
@@ -1404,6 +1638,33 @@ onUnmounted(() => {
         font-size: 12px;
         padding: 2px 0;
         width: 100%;
+    }
+
+    .anim-hint {
+        font-size: 11px;
+        line-height: 1.45;
+        color: rgba(255, 255, 255, 0.72);
+
+        code {
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.35);
+        }
+    }
+
+    .perf-fps-live {
+        padding: 8px 0 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 4px;
+    }
+
+    .perf-fps-value {
+        font: 14px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        color: #9be28a;
+        letter-spacing: 0.02em;
+        margin-top: 4px;
+        word-break: break-all;
     }
     .camera-presets {
         display: flex;

@@ -14,6 +14,7 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { bootstrapAppDemo, setupAppDemoChildBridge } from '@/3d/app';
+import { parseRendererPerformanceFromQuery } from '@/3d/app/demoConfig';
 
 const route = useRoute();
 const canvasEl = ref<HTMLCanvasElement | null>(null);
@@ -28,10 +29,12 @@ onMounted(async () => {
     removeBridge = setupAppDemoChildBridge();
 
     const projectId = (route.query.projectId as string) || '';
+    const rendererPerformance = parseRendererPerformanceFromQuery(route.query as any);
     const { destroy } = await bootstrapAppDemo({
         canvas,
         projectId,
         onLoading: () => {},
+        rendererPerformance,
     });
     destroyBootstrap = destroy;
 });

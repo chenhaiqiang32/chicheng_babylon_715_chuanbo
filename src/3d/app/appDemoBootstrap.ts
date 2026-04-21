@@ -14,6 +14,9 @@ import {
   infoBoardBindConfig,
   ropeDemoConfig,
   ropeDemoModelBindings,
+  rendererPerformanceDemoConfig,
+  resolveRendererPerformanceDemo,
+  type RendererPerformanceResolved,
 } from './demoConfig';
 import type { InfoBoardItem } from './InfoBoardHelper';
 import type {
@@ -455,7 +458,21 @@ function handleTowedArrayAnimationEnd(
     towedArrayRuntimeState.status = 'running';
     // 托体阵开机动画结束后创建绳子 demo：02fromA（B: donghua02-011）=> rope_3
     if (!app.getRopeDemoIds().includes(TOWED_ARRAY_ROPE_ID)) {
-      app.createRopeDemoFromDemoConfig(TOWED_ARRAY_ROPE_ID);
+      // 注意：动画刚结束时，A/B 的实际间距通常很短。
+      // 若用这个短距离作为 box 纹理的“像素密度基准”，后续拉长绳子会出现贴图重复次数暴涨的观感。
+      // 因此若已拿到 tlsfcdRaw，则用“目标绳长 dist”作为创建时 initialDistance/refLength。
+      let initialDistanceOverride: number | undefined;
+      if (towedArrayRuntimeState.latestTlsfcdRaw !== null && towedArrayRuntimeState.threshold !== null) {
+        const ropeInitCfg = getRopeInitConfigById(TOWED_ARRAY_ROPE_ID);
+        initialDistanceOverride = Math.max(
+          0.01,
+          ropeInitCfg.initialDistance + (towedArrayRuntimeState.latestTlsfcdRaw - towedArrayRuntimeState.threshold),
+        );
+      }
+      app.createRopeDemoFromDemoConfig(
+        TOWED_ARRAY_ROPE_ID,
+        typeof initialDistanceOverride === 'number' ? { initialDistance: initialDistanceOverride } : undefined,
+      );
     }
     if (towedArrayRuntimeState.latestTlsfcdRaw !== null) {
       syncTowedArrayRope(app, towedArrayRuntimeState.latestTlsfcdRaw);
@@ -763,6 +780,10 @@ export interface AppDemoBootstrapOptions {
   /** 与路由 query 一致：工程资源 URL 或模型路径 */
   projectId: string;
   onLoading?: (v: number) => void;
+  /**
+   * 可选：覆盖 `demoConfig.rendererPerformanceDemoConfig`（iframe 宿主可为弱显卡降分辨率）。
+   */
+  rendererPerformance?: Partial<RendererPerformanceResolved>;
 }
 
 export interface AppDemoReadyPayload {
@@ -808,7 +829,11 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
     postToParent({ source: CC_3D_SOURCE, type: 'loading', value: v });
   };
 
-  await app.init(opts.canvas, true);
+  const perfResolved = resolveRendererPerformanceDemo({
+    ...rendererPerformanceDemoConfig,
+    ...(opts.rendererPerformance ?? {}),
+  });
+  await app.init(opts.canvas, true, perfResolved);
 
   app.onAnimationEnd((info) => {
     console.log('动画播放结束', info);
