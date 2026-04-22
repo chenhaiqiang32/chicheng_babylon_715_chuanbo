@@ -278,7 +278,7 @@
         if (mock.projectId) q.set('projectId', mock.projectId);
         var qs = q.toString();
         var hash = '#/3d-viewer' + (qs ? '?' + qs : '');
-        document.getElementById('viewer').src = 'https://localhost:51741/#/3d-viewer?hsl=2&ibl=1&gtq=low&gls=1';
+        document.getElementById('viewer').src = 'https://localhost:51742/#/3d-viewer?hsl=2&ibl=1&gtq=low&gls=1';
 
         var iframe = document.getElementById('viewer');
         var logEl = document.getElementById('log');
@@ -457,6 +457,7 @@
             secxzsfcdRaw: '50.5',
             tlzlRaw: '100.5',
             tlsfcdRaw: '200.5',
+            zkqsdRaw: '12.0',
             firxzjcztRaw: '0',
             secxzjcztRaw: '1',
             tljcztRaw: '1',
@@ -468,7 +469,14 @@
           try {
             var param = JSON.parse(c010Editor.value || '{}');
             bridge.sendCmd('C010H', param);
-            logLine('[cmd] C010H: firxzjcztRaw=' + String(param.firxzjcztRaw ?? '') + ' tlsfcdRaw=' + String(param.tlsfcdRaw ?? ''));
+            logLine(
+              '[cmd] C010H: firxzjcztRaw=' +
+                String(param.firxzjcztRaw ?? '') +
+                ' tlsfcdRaw=' +
+                String(param.tlsfcdRaw ?? '') +
+                ' zkqsdRaw=' +
+                String(param.zkqsdRaw ?? ''),
+            );
           } catch (e) {
             logLine('[错误] C010H JSON：' + (e && e.message ? e.message : String(e)));
           }

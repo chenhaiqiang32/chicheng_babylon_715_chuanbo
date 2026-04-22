@@ -216,6 +216,8 @@ type ReceiverArrayC010State = {
   /** C010HThreshold：首次开机时的 tlsfcdRaw */
   threshold: number | null;
   latestTlsfcdRaw: number | null;
+  /** C010H: 深度（距离原点(0,0,0)垂直向下的距离） */
+  latestZkqsdRaw: number | null;
   hasTlsfcdEverExceededThreshold: boolean;
   /** C010H_has_currently_playing */
   hasCurrentlyPlaying: boolean;
@@ -225,6 +227,7 @@ const receiverArrayC010State: ReceiverArrayC010State = {
   towCableStatus: 'idle',
   threshold: null,
   latestTlsfcdRaw: null,
+  latestZkqsdRaw: null,
   hasTlsfcdEverExceededThreshold: false,
   hasCurrentlyPlaying: false,
 };
@@ -232,6 +235,13 @@ const receiverArrayC010State: ReceiverArrayC010State = {
 function parseFiniteNumber(value: unknown): number | null {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function computePitchDegByDistanceAndZkqsd(distance: number, zkqsdRaw: number): number {
+  const dist = Math.max(0.01, distance);
+  const depthDown = Math.max(0, zkqsdRaw);
+  const ratio = Math.max(-1, Math.min(1, -depthDown / dist));
+  return (Math.asin(ratio) * 180) / Math.PI;
 }
 
 function isVerticalArrayRunning() {
@@ -257,6 +267,7 @@ function resetReceiverArrayC010State() {
   receiverArrayC010State.towCableStatus = 'idle';
   receiverArrayC010State.threshold = null;
   receiverArrayC010State.latestTlsfcdRaw = null;
+  receiverArrayC010State.latestZkqsdRaw = null;
   receiverArrayC010State.hasTlsfcdEverExceededThreshold = false;
   receiverArrayC010State.hasCurrentlyPlaying = false;
 }
@@ -327,7 +338,8 @@ function handleVerticalArrayC009H(app: import('./index').App, param: unknown) {
   }
 
   if (verticalArrayRuntimeState.status === 'stopped' && clcdRaw >= 0) {
-    verticalArrayRuntimeState.threshold = clcdRaw;
+    // 需求：开机阈值固定写死为 0
+    verticalArrayRuntimeState.threshold = 0;
     verticalArrayRuntimeState.hasClcdEverExceededThreshold = false;
     verticalArrayRuntimeState.status = 'opening';
     app.playAnimation(VERTICAL_ARRAY_ANIMATION_NAME, false, VERTICAL_ARRAY_MODEL_NAME, 'forward');
@@ -382,7 +394,8 @@ function handleTowedArrayC011H(app: import('./index').App, param: unknown) {
 
   // 托体阵开机：首次 >=0 且未开始播放
   if (towedArrayRuntimeState.status === 'stopped' && tlsfcdRaw >= 0) {
-    towedArrayRuntimeState.threshold = tlsfcdRaw;
+    // 需求：开机阈值固定写死为 0
+    towedArrayRuntimeState.threshold = 0;
     towedArrayRuntimeState.hasTlsfcdEverExceededThreshold = false;
     towedArrayRuntimeState.status = 'opening';
     app.playAnimation(TOWED_ARRAY_ANIMATION_NAME, false, TOWED_ARRAY_MODEL_NAME, 'forward');
@@ -499,11 +512,15 @@ function syncReceiverArrayTowRope(app: import('./index').App, tlsfcdRaw: number)
     0.01,
     ropeInitCfg.initialDistance + (tlsfcdRaw - receiverArrayC010State.threshold),
   );
+  const pitchDeg =
+    receiverArrayC010State.latestZkqsdRaw === null
+      ? ropeInitCfg.initialPitchDeg
+      : computePitchDegByDistanceAndZkqsd(dist, receiverArrayC010State.latestZkqsdRaw);
   app.updateRopeDemoByAngleDistance(
     RECEIVER_ARRAY_ROPE_ID,
     dist,
     ropeInitCfg.initialYawDeg,
-    ropeInitCfg.initialPitchDeg,
+    pitchDeg,
     ropeInitCfg.boxSelfRotationDeg,
   );
 }
@@ -532,6 +549,8 @@ function handleReceiverArrayC010H(app: import('./index').App, param: unknown) {
   const fir = String(p.firxzjcztRaw ?? '').trim();
   jszLastFirxzjcztRaw = fir.length ? fir : null;
   const tlsfcdRaw = parseFiniteNumber(p.tlsfcdRaw);
+  const zkqsdRaw = parseFiniteNumber((p as any).zkqsdRaw);
+  if (zkqsdRaw !== null) receiverArrayC010State.latestZkqsdRaw = zkqsdRaw;
 
   applyReceiverArrayLineWinchFirxzjczt(app, fir);
 
@@ -556,7 +575,8 @@ function handleReceiverArrayC010H(app: import('./index').App, param: unknown) {
     !receiverArrayC010State.hasCurrentlyPlaying &&
     tlsfcdRaw >= 0
   ) {
-    receiverArrayC010State.threshold = tlsfcdRaw;
+    // 需求：开机阈值固定写死为 0
+    receiverArrayC010State.threshold = 0;
     receiverArrayC010State.hasTlsfcdEverExceededThreshold = false;
     receiverArrayC010State.towCableStatus = 'opening';
     app.playAnimation(RECEIVER_ARRAY_ANIM, false, RECEIVER_ARRAY_TOW_MODEL, 'forward');

@@ -224,7 +224,8 @@ export const ropeDemoModelBindings: Array<{
       // rope_2：更长、向右前方、略向上
       initialDistance: 0.5,
       initialYawDeg: -89,
-      initialPitchDeg: -28,
+      // rope_2：俯仰角由 C010H(tlsfcdRaw + zkqsdRaw) 动态计算；这里给占位值
+      initialPitchDeg: 0,
       ropeRadius:0.01,
     },
   },

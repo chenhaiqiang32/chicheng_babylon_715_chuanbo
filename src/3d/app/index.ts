@@ -396,6 +396,8 @@ export class App {
   private infoBoardHelper: InfoBoardHelper | null = null;
   /** 柔性绳（5202H）信息牌缓存：用于与传感器信息牌合并显示 */
   private flexibleRopeInfoBoardItems: InfoBoardItem[] = [];
+  /** 柔性绳（5202H）信息牌开关：用于与 Tube 显隐同步（C010H） */
+  private flexibleRopeInfoBoardsWantedVisible = true;
   /** 传感器（5206H/5208H 等）信息牌缓存：用于与柔性绳信息牌合并显示 */
   private sensorInfoBoardItems: InfoBoardItem[] = [];
   /** 合并后的信息牌缓存：避免每次推送重建临时 Map/数组造成 GC 抖动 */
@@ -515,7 +517,10 @@ export class App {
       pointYawDegs: number[];
       /** 每个控制点的俯仰偏移 pitch（度） */
       pointPitchDegs: number[];
-      /** 每个控制点的偏移深度系数（用于缩放该点偏移幅度，默认 1） */
+      /**
+       * 每个控制点的“深度”（世界单位）：相对于世界原点 (0,0,0) 的垂直向下距离。
+       * 约定：控制点目标高度为 y = -depth（depth<0 时按 0 处理）。
+       */
       pointDepths: number[];
       /** 接收阵推送的翻滚值 fgsszRaw（仅展示） */
       pointFgsszRaw: number[];
@@ -957,6 +962,7 @@ export class App {
     }
     this.flexibleRopesMap.clear();
     this.flexibleRopeTubesWantedVisible = true;
+    this.flexibleRopeInfoBoardsWantedVisible = true;
     if (this.underwaterPostProcess) {
       this.underwaterPostProcess.dispose();
       this.underwaterPostProcess = null;
@@ -2908,7 +2914,7 @@ export class App {
    * 获取指定绳子的每个控制点偏移（yaw/pitch/depth），顺序与创建时 length[].id 一致。
    * - yaw：水平旋转角（度，范围建议 0~360）
    * - pitch：垂直方向角（度，水平向上为正，范围建议 -90~90）
-   * - depth：控制点相对绳子起点的下潜深度（世界单位，沿 Y 轴向下的距离）
+   * - depth：控制点相对世界原点 (0,0,0) 的垂直向下距离（世界单位）；点的目标高度为 y = -depth
    */
   getFlexibleRopePointYawPitchDepth(ropeId: string): {
     yawsDeg: number[];
@@ -3005,8 +3011,8 @@ export class App {
       const yawDeg = ((Number(yawDegRaw) % 360) + 360) % 360;
       // pitch: -90~90（超出则夹断）
       const pitchDeg = Math.max(-90, Math.min(90, Number(pitchDegRaw)));
-      // depth: 起点向下的 Y 距离（世界单位）
-      const depth = Number.isFinite(Number(depthRaw)) ? Number(depthRaw) : 0;
+      // depth: 相对世界原点 (0,0,0) 的向下距离（世界单位），控制点目标高度 y = -depth
+      const depth = Number.isFinite(Number(depthRaw)) ? Math.max(0, Number(depthRaw)) : 0;
       const yawRad = (yawDeg * Math.PI) / 180;
       const pitchRad = (pitchDeg * Math.PI) / 180;
 
@@ -3019,8 +3025,8 @@ export class App {
       );
       // 在 basePos 上叠加一个固定幅度的方向偏移（控制“弯曲程度”）
       const pos = basePos.add(offsetDirWorld.scale(amplitude));
-      // depth：强制把控制点压到 “起点 start.y - depth” 的高度
-      pos.y = start.y - depth;
+      // depth：强制把控制点压到 “世界原点向下 depth” 的高度（y = -depth）
+      pos.y = -depth;
       midPositions.push(pos);
       pointMeshes[i].position.copyFrom(pos);
     }
@@ -3235,6 +3241,7 @@ export class App {
    */
   setFlexibleRopeTubesVisible(visible: boolean): void {
     this.flexibleRopeTubesWantedVisible = visible;
+    this.setFlexibleRopeInfoBoardsVisible(visible);
     for (const state of this.flexibleRopesMap.values()) {
       state.tube.setEnabled(visible);
       state.tube.isVisible = visible;
@@ -4166,6 +4173,12 @@ export class App {
     this.flushMergedInfoBoards();
   }
 
+  /** 切换柔性绳（5202H）信息牌显示/隐藏（不销毁缓存），用于与 Tube 显隐同步 */
+  setFlexibleRopeInfoBoardsVisible(visible: boolean): void {
+    this.flexibleRopeInfoBoardsWantedVisible = !!visible;
+    this.flushMergedInfoBoards();
+  }
+
   /** 将传感器信息牌写入缓存并与柔性绳牌子合并刷新 */
   setSensorInfoBoards(items: InfoBoardItem[]): void {
     this.sensorInfoBoardItems = Array.isArray(items) ? items : [];
@@ -4176,8 +4189,10 @@ export class App {
   private flushMergedInfoBoards(): void {
     const map = this.mergedInfoBoardMap;
     map.clear();
-    for (const it of this.flexibleRopeInfoBoardItems) {
-      if (it?.id) map.set(String(it.id), it);
+    if (this.flexibleRopeInfoBoardsWantedVisible) {
+      for (const it of this.flexibleRopeInfoBoardItems) {
+        if (it?.id) map.set(String(it.id), it);
+      }
     }
     for (const it of this.sensorInfoBoardItems) {
       if (it?.id) map.set(String(it.id), it);
@@ -4185,7 +4200,12 @@ export class App {
     const merged = this.mergedInfoBoardItems;
     merged.length = 0;
     for (const it of map.values()) merged.push(it);
-    if (merged.length) this.setInfoBoards(merged);
+    if (merged.length) {
+      this.setInfoBoards(merged);
+    } else {
+      // 当两路都为空时，必须 clear，否则旧牌子会残留在 GUI 上导致“显隐不同步”
+      this.clearInfoBoards();
+    }
   }
 
   /**
