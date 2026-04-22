@@ -124,7 +124,10 @@ function applyReceiveArraySensor5202Payload(app: import('./index').App, param: u
     });
   }
 
-  if (createItems.length) app.createFlexibleRopes(createItems);
+  // 仅首次或绳子尚未创建时 create；反复 5202H 若仍 create 会先 dispose 再建点，mesh uniqueId 变化导致信息牌只能全量重建。
+  const existing = new Set(app.getFlexibleRopeIds());
+  const toCreate = createItems.filter((it) => it?.id && !existing.has(String(it.id)));
+  if (toCreate.length) app.createFlexibleRopes(toCreate);
   for (const u of updates) app.updateFlexibleRopePoints(u);
 }
 
@@ -709,12 +712,109 @@ function buildSensorInfoItemsForBindCmd(
   return items;
 }
 
-function flushMergedSensorInfoBoards(app: import('./index').App) {
-  const merged: InfoBoardItem[] = [];
-  for (const list of sensorInfoBoardItemsByCmd.values()) {
-    merged.push(...list);
+/**
+ * 高频推送优化：信息牌首次创建后不再重新生成对象，仅原地更新 attribute/attributeAlarm。
+ * - 仅当 mesh 挂接 id 发生变化（模型重载 / 节点不存在）时回退为重建。
+ */
+function upsertSensorInfoItemsForBindCmdInPlace(
+  app: import('./index').App,
+  bindCmd: string,
+  param: Record<string, unknown>,
+): InfoBoardItem[] | null {
+  type Entry = (typeof infoBoardBindConfig)[keyof typeof infoBoardBindConfig];
+  let cfg: Entry | undefined;
+  for (const v of Object.values(infoBoardBindConfig) as Entry[]) {
+    if (v.boardBindCmd === bindCmd) {
+      cfg = v;
+      break;
+    }
   }
-  app.setSensorBindInfoBoardTargetIds(merged.map((x) => x.id));
+  if (!cfg) return null;
+
+  const abnormalSet = alarmAbnormalBindKeysByBindCmd.get(bindCmd) ?? new Set<string>();
+  const cached = sensorInfoBoardItemsByCmd.get(bindCmd);
+
+  // 首次：创建结构（后续只更新值）
+  if (!cached) {
+    const created = buildSensorInfoItemsForBindCmd(app, bindCmd, param);
+    if (created === null) return null;
+    sensorInfoBoardItemsByCmd.set(bindCmd, created);
+    return created;
+  }
+
+  // 原地更新（如 mesh id 不一致则回退重建一次）
+  let outIdx = 0;
+  for (const sensor of cfg.sensorList) {
+    const node = app.getNodeUnderModelByName(cfg.modelName, sensor.childModelName);
+    const mesh = node ? app.getAbstractMeshUnderNode(node) : null;
+    if (!mesh) continue;
+
+    const existing = cached[outIdx];
+    const wantedId = String(mesh.uniqueId);
+    if (!existing || existing.id !== wantedId) {
+      const rebuilt = buildSensorInfoItemsForBindCmd(app, bindCmd, param);
+      if (rebuilt === null) return null;
+      sensorInfoBoardItemsByCmd.set(bindCmd, rebuilt);
+      return rebuilt;
+    }
+
+    existing.title = sensor.boardTitle;
+    const sensorKey =
+      sensor.boardAttribute[0]?.boardBindCmdKey?.split('.')?.[0] ?? sensor.childModelName;
+    if (existing.clickReport) {
+      existing.clickReport.type = bindCmd;
+      existing.clickReport.data = sensorKey;
+    } else {
+      existing.clickReport = { type: bindCmd, data: sensorKey };
+    }
+
+    // attribute / alarm：固定行数，原地更新 value 与颜色标志
+    for (let j = 0; j < sensor.boardAttribute.length; j++) {
+      const ba = sensor.boardAttribute[j]!;
+      const raw = getParamValueByPath(param, ba.boardBindCmdKey);
+      const v = raw === '' ? '--' : raw;
+      const row = existing.attribute?.[j] as Record<string, unknown> | undefined;
+      if (row) {
+        row[ba.boardBindCmdName] = v;
+      } else {
+        // fallback：结构不一致时补齐
+        existing.attribute = existing.attribute ?? [];
+        existing.attribute[j] = { [ba.boardBindCmdName]: v };
+      }
+      if (Array.isArray(existing.attributeAlarm)) {
+        existing.attributeAlarm[j] = abnormalSet.has(ba.boardBindCmdKey);
+      } else {
+        existing.attributeAlarm = existing.attributeAlarm ?? [];
+        existing.attributeAlarm[j] = abnormalSet.has(ba.boardBindCmdKey);
+      }
+    }
+
+    outIdx++;
+  }
+
+  // 若本次可挂接点数量变化，回退重建以对齐数量
+  if (outIdx !== cached.length) {
+    const rebuilt = buildSensorInfoItemsForBindCmd(app, bindCmd, param);
+    if (rebuilt === null) return null;
+    sensorInfoBoardItemsByCmd.set(bindCmd, rebuilt);
+    return rebuilt;
+  }
+
+  return cached;
+}
+
+function flushMergedSensorInfoBoards(app: import('./index').App) {
+  // 复用数组，避免高频推送下大量临时对象
+  const merged: InfoBoardItem[] = (flushMergedSensorInfoBoards as any)._merged ?? [];
+  (flushMergedSensorInfoBoards as any)._merged = merged;
+  merged.length = 0;
+  for (const list of sensorInfoBoardItemsByCmd.values()) merged.push(...list);
+
+  const ids: string[] = (flushMergedSensorInfoBoards as any)._ids ?? [];
+  (flushMergedSensorInfoBoards as any)._ids = ids;
+  ids.length = 0;
+  for (let i = 0; i < merged.length; i++) ids.push(merged[i]!.id);
+  app.setSensorBindInfoBoardTargetIds(ids);
   // 与仅刷新单路时一致：无任何可挂接牌子时不调用 setInfoBoards，以免误 clear 其它业务牌子
   if (!merged.length) {
     app.syncInfoBoardCameraFilterVisibleIds();
@@ -739,9 +839,8 @@ function applySensorInfoBoardFromCmd(app: import('./index').App, cmd: string, pa
   if (!hasCfg) return;
 
   lastSensorParamByBindCmd.set(cmd, p);
-  const items = buildSensorInfoItemsForBindCmd(app, cmd, p);
+  const items = upsertSensorInfoItemsForBindCmdInPlace(app, cmd, p);
   if (items === null) return;
-  sensorInfoBoardItemsByCmd.set(cmd, items);
   flushMergedSensorInfoBoards(app);
 }
 
@@ -769,9 +868,8 @@ function applySensorAlarmFromCmd(app: import('./index').App, alarmCmd: string, p
 
   const last = lastSensorParamByBindCmd.get(entry.cmdBindCmd);
   if (!last) return;
-  const items = buildSensorInfoItemsForBindCmd(app, entry.cmdBindCmd, last);
+  const items = upsertSensorInfoItemsForBindCmdInPlace(app, entry.cmdBindCmd, last);
   if (items === null) return;
-  sensorInfoBoardItemsByCmd.set(entry.cmdBindCmd, items);
   flushMergedSensorInfoBoards(app);
 }
 
@@ -811,6 +909,8 @@ export interface AppDemoReadyPayload {
  */
 export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
   destroy: () => void;
+  /** 仅供同页（如 viewer3d.vue）做 FPS/HUD 等轻量读取；业务侧仍应通过 postMessage/cmd 驱动 */
+  app: import('./index').App;
   /** 与 postMessage `ready` 的 payload 一致，供同页初始化 UI 使用 */
   readyPayload: AppDemoReadyPayload;
 }> {
@@ -858,6 +958,13 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
       });
     }
     loadedAsModel = true;
+
+    // 业务默认：初始化加载 donghua03new 时先隐藏部件 lansheng02（后续由 C010H 驱动显隐）
+    app.setNodesNamedUnderModelVisible(
+      RECEIVER_ARRAY_LINE_MODEL,
+      RECEIVER_ARRAY_LANSHENG_MESH,
+      false,
+    );
 
     await app.loadHdrEnvironment({
       url: hdrUrlFromDemo(),
@@ -928,7 +1035,7 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
     app.onDispose();
   };
 
-  return { destroy, readyPayload: payload };
+  return { destroy, app, readyPayload: payload };
 }
 
 function hdrUrlFromDemo() {

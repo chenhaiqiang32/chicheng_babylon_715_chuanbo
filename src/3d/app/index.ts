@@ -114,6 +114,11 @@ export interface CameraViewPreset {
    * 当同时提供 target 和 modelName 时，以显式传入的 target 为准。
    */
   modelName?: string;
+  /**
+   * 当提供 modelName 时，可进一步指定其下的部件节点名（避免多模型/同名节点冲突）。
+   * - 会在该模型根节点子树下查找 name/id 等于该值的节点，并用其包围盒中心作为 target。
+   */
+  modelPartName?: string;
   offset?: { x: number; y: number; z: number } | Vector3;
 }
 
@@ -393,6 +398,9 @@ export class App {
   private flexibleRopeInfoBoardItems: InfoBoardItem[] = [];
   /** 传感器（5206H/5208H 等）信息牌缓存：用于与柔性绳信息牌合并显示 */
   private sensorInfoBoardItems: InfoBoardItem[] = [];
+  /** 合并后的信息牌缓存：避免每次推送重建临时 Map/数组造成 GC 抖动 */
+  private mergedInfoBoardMap: Map<string, InfoBoardItem> = new Map();
+  private mergedInfoBoardItems: InfoBoardItem[] = [];
   /** 5206H/5208H 等传感器信息牌挂接目标 id（与 InfoBoardItem.id 一致），供相机距离过滤与柔性绳合并显隐 */
   private sensorBindInfoBoardTargetIds: string[] = [];
   /**
@@ -1199,7 +1207,7 @@ export class App {
     const sceneJustCreated = !this.scene;
     const scene = this.scene ?? new Scene(this.engine);
     // 场景背景色（清屏色）
-    scene.clearColor = Color4.FromColor3(Color3.FromHexString('#08243F'), 1);
+    scene.clearColor = Color4.FromColor3(Color3.FromHexString('#00050a'), 1);
     if (!this.scene) {
       this.compassArcAlphaCompensationRad = 0;
       this.directionControlLastParamDeg = null;
@@ -3058,28 +3066,99 @@ export class App {
 
   /** 汇总所有柔性绳子的控制点信息牌并调用 setInfoBoards */
   private refreshAllFlexibleRopeInfoBoards(): void {
+    // 与 5202H 约定一致：点顺序为 Map 中 rope_1(17) + rope_2(17)，全局下标 0..33；稳定后只按下标原地改数据，不新建 InfoBoardItem。
+    const JSZ_ROPE_ORDER = ['rope_1', 'rope_2'] as const;
+    const statesOrdered = JSZ_ROPE_ORDER.map((id) => this.flexibleRopesMap.get(id)).filter(
+      (s): s is NonNullable<typeof s> => s != null,
+    );
+    if (!statesOrdered.length) {
+      this.flexibleRopeInfoBoardItems = [];
+      this.flushMergedInfoBoards();
+      return;
+    }
+
+    const cached = this.flexibleRopeInfoBoardItems;
+    let expectedCount = 0;
+    for (const s of statesOrdered) expectedCount += s.pointMeshes.length;
+
+    const al = this.receiveArray5203Alarm;
+    const byIndex = cached.length === expectedCount && expectedCount > 0;
+
+    if (byIndex) {
+      let globalIdx = 0;
+      for (const state of statesOrdered) {
+        for (let i = 0; i < state.pointMeshes.length; i++) {
+          const mesh = state.pointMeshes[i];
+          const yaw = state.pointYawDegs[i] ?? 0;
+          const pitch = state.pointPitchDegs[i] ?? 0;
+          const depth = (state as any).pointDepths?.[i] ?? 0;
+          const fg = (state as { pointFgsszRaw?: number[] }).pointFgsszRaw?.[i] ?? 0;
+          const aFg = al?.fg[globalIdx] === true;
+          const aHx = al?.hx[globalIdx] === true;
+          const aFy = al?.fy[globalIdx] === true;
+          const dst = cached[globalIdx]!;
+
+          if (String(dst.id) !== String(mesh.id)) {
+            dst.id = String(mesh.id);
+          }
+          dst.title = `传感器 ${state.pointIds[i] ?? i + 1}`;
+          const att = dst.attribute as Record<string, unknown>[];
+          if (att?.length >= 4) {
+            att[0]['翻滚值'] = String(Number.isFinite(fg) ? fg : 0);
+            att[1]['水平偏移'] = `${yaw.toFixed(1)}°`;
+            att[2]['俯仰偏移'] = `${pitch.toFixed(1)}°`;
+            att[3]['深度'] = `${Number(depth).toFixed(2)}`;
+          } else {
+            dst.attribute = [
+              { '翻滚值': String(Number.isFinite(fg) ? fg : 0) },
+              { '水平偏移': `${yaw.toFixed(1)}°` },
+              { '俯仰偏移': `${pitch.toFixed(1)}°` },
+              { '深度': `${Number(depth).toFixed(2)}` },
+            ];
+          }
+          const alarms = dst.attributeAlarm;
+          if (Array.isArray(alarms) && alarms.length >= 4) {
+            alarms[0] = aFg;
+            alarms[1] = aHx;
+            alarms[2] = aFy;
+            alarms[3] = false;
+          } else {
+            dst.attributeAlarm = [aFg, aHx, aFy, false];
+          }
+          if (dst.clickReport) {
+            dst.clickReport.type = '5202H';
+            dst.clickReport.data = globalIdx;
+          } else {
+            dst.clickReport = { type: '5202H', data: globalIdx };
+          }
+          globalIdx++;
+        }
+      }
+      this.setFlexibleRopeInfoBoards(cached);
+      return;
+    }
+
+    // 首次或点数与缓存不一致：整表重建
     const items: InfoBoardItem[] = [];
     let globalIdx = 0;
-    const al = this.receiveArray5203Alarm;
-    for (const state of this.flexibleRopesMap.values()) {
+    for (const state of statesOrdered) {
       for (let i = 0; i < state.pointMeshes.length; i++) {
         const mesh = state.pointMeshes[i];
         const yaw = state.pointYawDegs[i] ?? 0;
         const pitch = state.pointPitchDegs[i] ?? 0;
         const depth = (state as any).pointDepths?.[i] ?? 0;
-        const fg =
-          (state as { pointFgsszRaw?: number[] }).pointFgsszRaw?.[i] ?? 0;
+        const fg = (state as { pointFgsszRaw?: number[] }).pointFgsszRaw?.[i] ?? 0;
         const aFg = al?.fg[globalIdx] === true;
         const aHx = al?.hx[globalIdx] === true;
         const aFy = al?.fy[globalIdx] === true;
         items.push({
-          id: mesh.id,
-          title: `洋流点 ${state.pointIds[i] ?? i + 1}`,
+          id: String(mesh.id),
+          title: `传感器 ${state.pointIds[i] ?? i + 1}`,
           attribute: [
-            { '翻滚值 fgsszRaw': String(Number.isFinite(fg) ? fg : 0) },
-            { '水平偏移 yaw': `${yaw.toFixed(1)}°` },
-            { '俯仰偏移 pitch': `${pitch.toFixed(1)}°` },
-            { '深度 depth': `${Number(depth).toFixed(2)}` },
+            { '翻滚值': String(Number.isFinite(fg) ? fg : 0) },
+            { '水平偏移': `${yaw.toFixed(1)}°` },
+            { '俯仰偏移': `${pitch.toFixed(1)}°` },
+            { '深度': `${Number(depth).toFixed(2)}` },
           ],
           attributeAlarm: [aFg, aHx, aFy, false],
           clickReport: { type: '5202H', data: globalIdx },
@@ -3087,7 +3166,7 @@ export class App {
         globalIdx++;
       }
     }
-    if (items.length) this.setFlexibleRopeInfoBoards(items);
+    this.setFlexibleRopeInfoBoards(items);
   }
 
   /**
@@ -3641,7 +3720,7 @@ export class App {
     this.scene.fogEnabled = false;
     scene.activeCamera.maxZ = 10000;
     // 场景背景色（清屏色）
-    scene.clearColor = Color4.FromColor3(Color3.FromHexString('#08243F'), 1);
+    scene.clearColor = Color4.FromColor3(Color3.FromHexString('#00050a'), 1);
     if (scene.activeCamera instanceof ArcRotateCamera) {
       // 保持与默认相机一致的交互体验
       scene.activeCamera.wheelPrecision = 10;
@@ -4095,14 +4174,17 @@ export class App {
 
   /** 内部：合并两路信息牌并 setInfoBoards（id 去重：后写入者覆盖前者） */
   private flushMergedInfoBoards(): void {
-    const map = new Map<string, InfoBoardItem>();
+    const map = this.mergedInfoBoardMap;
+    map.clear();
     for (const it of this.flexibleRopeInfoBoardItems) {
       if (it?.id) map.set(String(it.id), it);
     }
     for (const it of this.sensorInfoBoardItems) {
       if (it?.id) map.set(String(it.id), it);
     }
-    const merged = Array.from(map.values());
+    const merged = this.mergedInfoBoardItems;
+    merged.length = 0;
+    for (const it of map.values()) merged.push(it);
     if (merged.length) this.setInfoBoards(merged);
   }
 
@@ -4871,9 +4953,13 @@ export class App {
     if (preset.target) {
       target = toVec3(preset.target);
     } else if (preset.modelName) {
-      const root = this.getNodeByModelAndName(preset.modelName) as any;
-      if (root?.getHierarchyBoundingVectors) {
-        const { min, max } = root.getHierarchyBoundingVectors();
+      const node =
+        preset.modelPartName && preset.modelPartName.trim().length
+          ? (this.getNodeUnderModelByName(preset.modelName, preset.modelPartName) as any) ??
+            (this.getNodeByModelAndName(preset.modelName) as any)
+          : (this.getNodeByModelAndName(preset.modelName) as any);
+      if (node?.getHierarchyBoundingVectors) {
+        const { min, max } = node.getHierarchyBoundingVectors();
         target = min.add(max).scale(0.5);
       }
     }

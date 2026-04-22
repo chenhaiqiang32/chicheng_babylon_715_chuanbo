@@ -57,17 +57,44 @@ export const cameraPresetsConfig: Record<
   ttz: {
     label: '托体阵',
     preset: {
-      target: {x: -1.6979212016149199, y: -9.494988660788001, z: -5.307022957324194},
-      // 相机在目标左侧稍微抬高
-      position: {x: -5.8082561100814925, y: 5.114003734876908, z: -42.27591496299824},
+      target: {x: -11.674704370780752, y: -7.04441194738163, z: -17.215962182100814},
+      // 相机在目标正上方
+      position: {x: 10.793017840888066, y: 4.672317515647392, z: -39.526294176341366},
     },
   },
   jsz: {
     label: '接收阵',
     preset: {
-      target: {x: -11.674704370780752, y: -7.04441194738163, z: -17.215962182100814},
-      // 相机在目标正上方
-      position: {x: 10.793017840888066, y: 4.672317515647392, z: -39.526294176341366},
+      target: {x: -1.6979212016149199, y: -9.494988660788001, z: -5.307022957324194},
+      // 相机在目标左侧稍微抬高
+      position: {x: -5.8082561100814925, y: 5.114003734876908, z: -42.27591496299824},
+    },
+  },
+  czzSensor: {
+    label: '垂直阵传感器',
+    preset: {
+      modelName: '20new',
+      modelPartName: '1#',
+      // 以 Soldier 包围盒中心点为 target，向前方 + 稍微抬高的偏移作为 position
+      offset: { x: 0, y: 0, z: 0 },
+    },
+  },
+  ttzSensor: {
+    label: '托体阵传感器',
+    preset: {
+      modelName: 'donghua02new',
+      modelPartName: 'donghua02-011',
+      // 以 Soldier 包围盒中心点为 target，向前方 + 稍微抬高的偏移作为 position
+      offset: { x: 0, y: 0, z: 0 },
+    },
+  },
+  jszSensor: {
+    label: '接收阵传感器',
+    preset: {
+      modelName: 'donghua01new',
+      modelPartName: 'donghua01-004',
+      // 以 Soldier 包围盒中心点为 target，向前方 + 稍微抬高的偏移作为 position
+      offset: { x: 0, y: 0, z: 0 },
     },
   },
   // close: {

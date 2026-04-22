@@ -7,11 +7,14 @@
   见 src/3d/app/appDemoBootstrap.ts
 -->
 <template>
-    <canvas ref="canvasEl" class="viewer-canvas"></canvas>
+    <div class="viewer-wrap">
+        <canvas ref="canvasEl" class="viewer-canvas"></canvas>
+        <div class="fps" v-if="fpsVisible">{{ fpsText }}</div>
+    </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { bootstrapAppDemo, setupAppDemoChildBridge } from '@/3d/app';
 import { parseRendererPerformanceFromQuery } from '@/3d/app/demoConfig';
@@ -21,6 +24,10 @@ const canvasEl = ref<HTMLCanvasElement | null>(null);
 
 let destroyBootstrap: (() => void) | undefined;
 let removeBridge: (() => void) | undefined;
+let fpsRaf: number | null = null;
+const fps = ref(0);
+const fpsVisible = ref(true);
+const fpsText = computed(() => `FPS: ${Math.round(fps.value)}`);
 
 onMounted(async () => {
     const canvas = canvasEl.value;
@@ -30,26 +37,56 @@ onMounted(async () => {
 
     const projectId = (route.query.projectId as string) || '';
     const rendererPerformance = parseRendererPerformanceFromQuery(route.query as any);
-    const { destroy } = await bootstrapAppDemo({
+    const { destroy, app } = await bootstrapAppDemo({
         canvas,
         projectId,
         onLoading: () => {},
         rendererPerformance,
     });
     destroyBootstrap = destroy;
+
+    // 帧率显示：用于 demo-3d-host 高频推送（0.5s）时观察卡顿/抖动
+    const tick = () => {
+        fps.value = app.getRenderFps();
+        fpsRaf = requestAnimationFrame(tick);
+    };
+    fpsRaf = requestAnimationFrame(tick);
 });
 
 onUnmounted(() => {
     removeBridge?.();
     destroyBootstrap?.();
+    if (fpsRaf != null) {
+        cancelAnimationFrame(fpsRaf);
+        fpsRaf = null;
+    }
 });
 </script>
 
 <style scoped>
+.viewer-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
 .viewer-canvas {
     display: block;
     width: 100%;
     height: 100%;
     border: 0;
+}
+.fps {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+    user-select: none;
+    pointer-events: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
 </style>

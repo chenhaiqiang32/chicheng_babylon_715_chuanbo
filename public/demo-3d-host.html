@@ -121,6 +121,9 @@
             <option value="czz">czz：垂直阵</option>
             <option value="ttz">ttz：托体阵</option>
             <option value="jsz">jsz：接收阵</option>
+            <option value="czzSensor">czzSensor：垂直阵传感器</option>
+            <option value="ttzSensor">ttzSensor：托体阵传感器</option>
+            <option value="jszSensor">jszSensor：接收阵传感器</option>
           </select>
           <button type="button" id="btn-switchCamera" style="width: 100%; margin-top: 6px">
             cmd: switchCamera
@@ -220,6 +223,15 @@
         <textarea id="sensorBoard5208" spellcheck="false" style="min-height: 100px; margin-top: 10px"></textarea>
         <div style="margin-top: 6px">
           <button type="button" id="btn-5208" style="width: 100%">发送 cmd: 5208H（托体阵）</button>
+        </div>
+
+        <p style="margin-top: 14px"><strong>性能压测（0.5s 推送）</strong></p>
+        <div class="hint">
+          按 500ms 推送一次 <code>5206H</code> + <code>5202H</code> + <code>5208H</code>。建议先切到对应相机并发送一次以生成牌子。
+        </div>
+        <div style="margin-top: 6px">
+          <button type="button" id="btn-stressStart" style="width: 100%">开始压测：每 0.5s 推送</button>
+          <button type="button" id="btn-stressStop" style="width: 100%; margin-top: 6px">停止压测</button>
         </div>
 
         <p style="margin-top: 14px"><strong>传感器信息牌告警（5207H / 5203H）</strong></p>
@@ -566,6 +578,79 @@
             logLine('[cmd] 5208H 已发送');
           } catch (e) {
             logLine('[错误] 5208H JSON：' + (e && e.message ? e.message : String(e)));
+          }
+        };
+
+        // ---- stress: 0.5s 推送 5206H / 5202H / 5208H ----
+        var stressTimer = null;
+        var stressTick = 0;
+        function mutateSensor(v) {
+          // 让数值轻微变化，便于观察牌子是否刷新
+          var n = Number(v);
+          if (!isFinite(n)) n = 0;
+          return String((n + (Math.random() - 0.5) * 0.6).toFixed(2));
+        }
+        function buildStress5206() {
+          var base = JSON.parse(el5206.value || '{}');
+          // 遍历 known objects（不强依赖字段完整）
+          Object.keys(base || {}).forEach(function (k) {
+            if (!base[k] || typeof base[k] !== 'object') return;
+            ['fgsszRaw', 'fysszRaw', 'hxsszRaw'].forEach(function (f) {
+              if (base[k] && base[k][f] != null) base[k][f] = mutateSensor(base[k][f]);
+            });
+          });
+          base.localDateTime = new Date().toISOString();
+          return base;
+        }
+        function buildStress5208() {
+          var base = JSON.parse(el5208.value || '{}');
+          if (base.ttzcgqObject) {
+            base.ttzcgqObject.fgsszRaw = mutateSensor(base.ttzcgqObject.fgsszRaw);
+            base.ttzcgqObject.fysszRaw = mutateSensor(base.ttzcgqObject.fysszRaw);
+            base.ttzcgqObject.hxsszRaw = mutateSensor(base.ttzcgqObject.hxsszRaw);
+          }
+          base.localDateTime = new Date().toISOString();
+          return base;
+        }
+        function buildStress5202() {
+          var base = JSON.parse(jszEditor.value || '{}');
+          if (!base.cgqArray || !Array.isArray(base.cgqArray) || base.cgqArray.length !== 34) {
+            base = buildDefault5202Param();
+          }
+          for (var i = 0; i < base.cgqArray.length; i++) {
+            var row = base.cgqArray[i] || {};
+            // 让 yaw/pitch/depth 稳定变化
+            row.hxsszRaw = String((Number(row.hxsszRaw || 0) + 0.4) % 360);
+            row.fysszRaw = String((Number(row.fysszRaw || 0) + 0.15).toFixed(2));
+            row.sdsszRaw = String((Number(row.sdsszRaw || 0) + (i % 3 === 0 ? 0.02 : -0.01)).toFixed(2));
+            row.fgsszRaw = String((Number(row.fgsszRaw || 0) + (Math.random() - 0.5) * 0.3).toFixed(2));
+            base.cgqArray[i] = row;
+          }
+          base.localDateTime = new Date().toISOString();
+          return base;
+        }
+
+        document.getElementById('btn-stressStart').onclick = function () {
+          if (stressTimer) return;
+          stressTick = 0;
+          stressTimer = setInterval(function () {
+            try {
+              bridge.sendCmd('5206H', buildStress5206());
+              bridge.sendCmd('5202H', buildStress5202());
+              bridge.sendCmd('5208H', buildStress5208());
+              stressTick++;
+              if (stressTick % 10 === 0) logLine('[stress] 已推送 ×' + stressTick);
+            } catch (e) {
+              logLine('[stress 错误] ' + (e && e.message ? e.message : String(e)));
+            }
+          }, 500);
+          logLine('[stress] 已开始：500ms 推送 5206H/5202H/5208H');
+        };
+        document.getElementById('btn-stressStop').onclick = function () {
+          if (stressTimer) {
+            clearInterval(stressTimer);
+            stressTimer = null;
+            logLine('[stress] 已停止');
           }
         };
 
