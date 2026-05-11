@@ -527,7 +527,7 @@ export const infoBoardBindConfig = {
           y: 0,
           z: 0,
         },
-        boardTitle: "上抗偏单元",
+        boardTitle: "1#上抗偏单元",
         boardAttribute: [
           {
             boardBindCmdKey: "skpdyObject.fgsszRaw", // 绑定的指令cmd的key结构
@@ -550,7 +550,7 @@ export const infoBoardBindConfig = {
           y: 0,
           z: 0,
         },
-        boardTitle: "下抗偏单元",
+        boardTitle: "20#下抗偏单元",
         boardAttribute: [
           {
             boardBindCmdKey: "xkpdyObject.fgsszRaw", // 绑定的指令cmd的key结构
@@ -567,7 +567,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "2#", // 关联的子模型名称
+        childModelName: "liantou001_primitive0", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -590,53 +590,7 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "5#", // 关联的子模型名称
-        offset: { // 产生的信息牌子相对于子模型位置的偏移
-          x: 0,
-          y: 0,
-          z: 0,
-        },
-        boardTitle: "1#发射单元",
-        boardAttribute: [
-          {
-            boardBindCmdKey: "onefsdyObject.fgsszRaw", // 绑定的指令cmd的key结构
-            boardBindCmdName:"翻滚值"
-          },
-          {
-            boardBindCmdKey: "onefsdyObject.fysszRaw", // 绑定的指令cmd的key结构
-            boardBindCmdName:"俯仰值"
-          },
-          {
-            boardBindCmdKey: "onefsdyObject.hxsszRaw", // 绑定的指令cmd的key结构
-            boardBindCmdName:"航向值"
-          }
-        ],
-      },
-      {
-        childModelName: "10#", // 关联的子模型名称
-        offset: { // 产生的信息牌子相对于子模型位置的偏移
-          x: 0,
-          y: 0,
-          z: 0,
-        },
-        boardTitle: "2#发射单元",
-        boardAttribute: [
-          {
-            boardBindCmdKey: "twofsdyObject.fgsszRaw", // 绑定的指令cmd的key结构
-            boardBindCmdName:"翻滚值"
-          },
-          {
-            boardBindCmdKey: "twofsdyObject.fysszRaw", // 绑定的指令cmd的key结构
-            boardBindCmdName:"俯仰值"
-          },
-          {
-            boardBindCmdKey: "twofsdyObject.hxsszRaw", // 绑定的指令cmd的key结构
-            boardBindCmdName:"航向值"
-          }
-        ],
-      },
-      {
-        childModelName: "15#", // 关联的子模型名称
+        childModelName: "3#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
@@ -659,24 +613,70 @@ export const infoBoardBindConfig = {
         ],
       },
       {
-        childModelName: "18#", // 关联的子模型名称
+        childModelName: "8#", // 关联的子模型名称
         offset: { // 产生的信息牌子相对于子模型位置的偏移
           x: 0,
           y: 0,
           z: 0,
         },
-        boardTitle: "4#发射单元",
+        boardTitle: "8#发射单元",
         boardAttribute: [
           {
-            boardBindCmdKey: "fourfsdyObject.fgsszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdKey: "eightfsdyObject.fgsszRaw", // 绑定的指令cmd的key结构
             boardBindCmdName:"翻滚值"
           },
           {
-            boardBindCmdKey: "fourfsdyObject.fysszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdKey: "eightfsdyObject.fysszRaw", // 绑定的指令cmd的key结构
             boardBindCmdName:"俯仰值"
           },
           {
-            boardBindCmdKey: "fourfsdyObject.hxsszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdKey: "eightfsdyObject.hxsszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdName:"航向值"
+          }
+        ],
+      },
+      {
+        childModelName: "13#", // 关联的子模型名称
+        offset: { // 产生的信息牌子相对于子模型位置的偏移
+          x: 0,
+          y: 0,
+          z: 0,
+        },
+        boardTitle: "13#发射单元",
+        boardAttribute: [
+          {
+            boardBindCmdKey: "thirteenfsdyObject.fgsszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdName:"翻滚值"
+          },
+          {
+            boardBindCmdKey: "thirteenfsdyObject.fysszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdName:"俯仰值"
+          },
+          {
+            boardBindCmdKey: "thirteenfsdyObject.hxsszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdName:"航向值"
+          }
+        ],
+      },
+      {
+        childModelName: "14#", // 关联的子模型名称
+        offset: { // 产生的信息牌子相对于子模型位置的偏移
+          x: 0,
+          y: 0,
+          z: 0,
+        },
+        boardTitle: "14#中转接单元",
+        boardAttribute: [
+          {
+            boardBindCmdKey: "fourteenfsdyObject.fgsszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdName:"翻滚值"
+          },
+          {
+            boardBindCmdKey: "fourteenfsdyObject.fysszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdName:"俯仰值"
+          },
+          {
+            boardBindCmdKey: "fourteenfsdyObject.hxsszRaw", // 绑定的指令cmd的key结构
             boardBindCmdName:"航向值"
           }
         ],
@@ -688,18 +688,18 @@ export const infoBoardBindConfig = {
           y: 0,
           z: 0,
         },
-        boardTitle: "5#发射单元",
+        boardTitle: "16#发射单元",
         boardAttribute: [
           {
-            boardBindCmdKey: "fivefsdyObject.fgsszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdKey: "sixteenfsdyObject.fgsszRaw", // 绑定的指令cmd的key结构
             boardBindCmdName:"翻滚值"
           },
           {
-            boardBindCmdKey: "fivefsdyObject.fysszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdKey: "sixteenfsdyObject.fysszRaw", // 绑定的指令cmd的key结构
             boardBindCmdName:"俯仰值"
           },
           {
-            boardBindCmdKey: "fivefsdyObject.hxsszRaw", // 绑定的指令cmd的key结构
+            boardBindCmdKey: "sixteenfsdyObject.hxsszRaw", // 绑定的指令cmd的key结构
             boardBindCmdName:"航向值"
           }
         ],

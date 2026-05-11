@@ -379,6 +379,10 @@ export class App {
   }) => void;
   /** 当前激活的模型名称（主要用于 UI） */
   private currentModelName: string | null = null;
+  /**
+   * demo：C012H 在 20new / 20new_lite 间切换后，cameraPresets 中写死的 modelName「20new」解析为当前实际场景名。
+   */
+  private verticalArraySceneModelAlias: '20new' | '20new_lite' | null = null;
   private skyMaterial?: SkyMaterial;
   private sunLight?: DirectionalLight;
   private skyObserver?: any;
@@ -1330,6 +1334,95 @@ export class App {
     const filename = parts[parts.length - 1] || clean;
     const withoutExt = filename.replace(/\.[^/.]+$/, '');
     return withoutExt || filename;
+  }
+
+  /**
+   * demo：与 C012H 同步，供垂直阵相机预设（czzSensor 等）在「20new」与「20new_lite」间切换后仍指向正确根模型。
+   */
+  setVerticalArraySceneModelAlias(name: '20new' | '20new_lite' | null): void {
+    this.verticalArraySceneModelAlias = name;
+  }
+
+  private resolveVerticalArrayCameraModelName(modelName: string): string {
+    if (modelName === '20new' && this.verticalArraySceneModelAlias) {
+      return this.verticalArraySceneModelAlias;
+    }
+    return modelName;
+  }
+
+  /**
+   * 卸载指定名称的已加载 GLB/FBX 模型。若绳子等仍绑定该模型内节点，请先 {@link removeRopeDemo}。
+   */
+  disposeLoadedModel(modelName: string): boolean {
+    if (!this.scene || !modelName) return false;
+    const root = this.modelRootMap.get(modelName);
+    if (!root) return false;
+
+    this.stopAllAnimations(modelName);
+
+    const groups = this.modelAnimationsMap.get(modelName);
+    groups?.forEach((g) => {
+      try {
+        g.dispose();
+      } catch {
+        g.stop();
+      }
+    });
+    this.modelAnimationsMap.delete(modelName);
+    this.currentPlayingGroupByModel.delete(modelName);
+
+    const toDeleteUids = new Set<number>();
+    const collectUids = (n: Node) => {
+      const uid = (n as any)?.uniqueId;
+      if (typeof uid === 'number') toDeleteUids.add(uid);
+      for (const c of n.getChildren()) collectUids(c);
+    };
+    collectUids(root);
+    for (const uid of toDeleteUids) {
+      this.nodeInitialTransformById.delete(uid);
+    }
+
+    root.dispose(false, true);
+
+    this.modelRootMap.delete(modelName);
+    this.rebuildModelNodesByNameIndex();
+
+    if (this.currentModelName === modelName) {
+      const keys = [...this.modelAnimationsMap.keys()];
+      this.currentModelName = keys.length ? keys[keys.length - 1]! : null;
+    }
+    this.modelAnimationGroups = this.currentModelName
+      ? this.modelAnimationsMap.get(this.currentModelName) ?? []
+      : [];
+
+    return true;
+  }
+
+  private rebuildModelNodesByNameIndex(): void {
+    this.modelNodesByNameMap.clear();
+    for (const [loadedName, meshRoot] of this.modelRootMap.entries()) {
+      const allNodes: Node[] = [];
+      const visited = new Set<number>();
+      const walk = (n: Node) => {
+        const uid = (n as any)?.uniqueId;
+        if (typeof uid === 'number') {
+          if (visited.has(uid)) return;
+          visited.add(uid);
+        }
+        allNodes.push(n);
+        for (const c of n.getChildren()) walk(c);
+      };
+      walk(meshRoot);
+      for (const node of allNodes) {
+        const key = (node as any).name || (node as any).id;
+        if (!key) continue;
+        this.modelNodesByNameMap.set(key, node);
+        if (node instanceof TransformNode) {
+          this.ensureNodeInitialTransform(node);
+        }
+      }
+      this.modelNodesByNameMap.set(loadedName, meshRoot);
+    }
   }
 
   /** 获取指定模型（或当前模型）的动画名称列表 */
@@ -4973,11 +5066,12 @@ export class App {
     if (preset.target) {
       target = toVec3(preset.target);
     } else if (preset.modelName) {
+      const resolvedModelName = this.resolveVerticalArrayCameraModelName(preset.modelName);
       const node =
         preset.modelPartName && preset.modelPartName.trim().length
-          ? (this.getNodeUnderModelByName(preset.modelName, preset.modelPartName) as any) ??
-            (this.getNodeByModelAndName(preset.modelName) as any)
-          : (this.getNodeByModelAndName(preset.modelName) as any);
+          ? (this.getNodeUnderModelByName(resolvedModelName, preset.modelPartName) as any) ??
+            (this.getNodeByModelAndName(resolvedModelName) as any)
+          : (this.getNodeByModelAndName(resolvedModelName) as any);
       if (node?.getHierarchyBoundingVectors) {
         const { min, max } = node.getHierarchyBoundingVectors();
         target = min.add(max).scale(0.5);

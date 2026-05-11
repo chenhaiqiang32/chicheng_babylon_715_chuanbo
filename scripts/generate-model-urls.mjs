@@ -32,7 +32,18 @@ function main() {
     .map((name) => `'./test/${name}'`);
 
   const inner = urls.length ? urls.join(',\n  ') + ',' : '';
-  const content = `/** Auto-generated from public/test. Do not edit. */\nexport const MODEL_URLS: string[] = [\n  ${inner}\n];\n`;
+  const content =
+    `/** Auto-generated from public/test. Do not edit. */\n` +
+    `export const MODEL_URLS: string[] = [\n  ${inner}\n];\n\n` +
+    `/** C012H 垂直阵：param.fsmsRaw，与上表 20new / 20new_lite 路径一致 */\n` +
+    `export type VerticalArrayFsmsRaw = '0' | '1';\n` +
+    `export const VERTICAL_ARRAY_C012_VARIANT: Record<\n` +
+    `  VerticalArrayFsmsRaw,\n` +
+    `  { url: string; sceneName: '20new' | '20new_lite' }\n` +
+    `> = {\n` +
+    `  '0': { url: './test/20new.glb', sceneName: '20new' },\n` +
+    `  '1': { url: './test/20new_lite.glb', sceneName: '20new_lite' },\n` +
+    `};\n`;
 
   fs.writeFileSync(outFile, content, 'utf8');
   console.log('generate-model-urls: 已生成 MODEL_URLS，共', urls.length, '个模型');

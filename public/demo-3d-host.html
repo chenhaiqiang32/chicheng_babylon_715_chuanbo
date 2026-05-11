@@ -163,13 +163,28 @@
         </div>
         <p style="margin-top: 14px"><strong>CZZ 垂直阵运行联动 C009H</strong></p>
         <div class="hint">
-          格式：<code>{ cmd:"C009H", param:{ clcdRaw, ... } }</code>。首次收到会触发
-          <code>20new / Animation</code> 正放并记录阈值；运行中按 <code>clcdRaw</code> 更新
+          格式：<code>{ cmd:"C009H", param:{ clcdRaw, ... } }</code>。首次收到会触发当前垂直阵 GLB（默认
+          <code>20new</code>，经 <code>C012H</code> 可为 <code>20new_lite</code>）的
+          <code>Animation</code> 正放并记录阈值；运行中按 <code>clcdRaw</code> 更新
           <code>rope_1</code>；回到阈值及以下时倒放并隐藏 <code>5206H</code> 牌子。
         </div>
         <textarea id="c009-editor" spellcheck="false" style="min-height: 220px"></textarea>
         <div style="margin-top: 6px">
           <button type="button" id="btn-c009" style="width: 100%">发送 cmd: C009H</button>
+        </div>
+        <p style="margin-top: 14px"><strong>CZZ 垂直阵模型切换 C012H</strong></p>
+        <div class="hint">
+          格式：<code>{ cmd:"C012H", param:{ fsmsRaw:"0"|"1" } }</code>。
+          <code>0</code>：仅保留 <code>./test/20new.glb</code>；
+          <code>1</code>：仅保留 <code>./test/20new_lite.glb</code>。切换后
+          <code>C009H</code> / <code>5206H</code> 自动作用到当前加载的垂直阵模型。
+        </div>
+        <div style="margin: 6px 0 10px 0">
+          <select id="c012-fsmsRaw" style="width: 100%; padding: 6px; border-radius: 6px">
+            <option value="0">0：20new.glb（完整）</option>
+            <option value="1">1：20new_lite.glb（轻量）</option>
+          </select>
+          <button type="button" id="btn-c012" style="width: 100%; margin-top: 6px">发送 cmd: C012H</button>
         </div>
         <p style="margin-top: 14px"><strong>TTZ 托体阵运行联动 C011H</strong></p>
         <div class="hint">
@@ -212,8 +227,9 @@
 
         <p style="margin-top: 14px"><strong>传感器信息牌（5206H / 5208H）</strong></p>
         <div class="hint">
-          与 <code>demoConfig.infoBoardBindConfig</code> 绑定：垂直阵 <code>5206H</code>（模型
-          <code>20new</code>）、托体阵 <code>5208H</code>（<code>test01</code>）。发送前请先
+          与 <code>demoConfig.infoBoardBindConfig</code> 绑定：垂直阵 <code>5206H</code>（配置里写
+          <code>20new</code>，实际挂点随 <code>C012H</code> 在 <code>20new</code> /
+          <code>20new_lite</code> 间切换）。托体阵 <code>5208H</code>（<code>test01</code>）。发送前请先
           <code>switchCamera</code> 到对应视角并确保已加载对应 GLB。
         </div>
         <textarea id="sensorBoard5206" spellcheck="false" style="min-height: 140px"></textarea>
@@ -267,6 +283,7 @@
         var mock = {
           projectId: '',
           businessId: 'demo-business-001',
+          c012H: { cmd: 'C012H', param: { fsmsRaw: '0' } },
         };
 
         document.getElementById('mock').textContent = JSON.stringify(mock, null, 2);
@@ -420,6 +437,12 @@
           } catch (e) {
             logLine('[错误] C009H JSON：' + (e && e.message ? e.message : String(e)));
           }
+        };
+
+        document.getElementById('btn-c012').onclick = function () {
+          var fsmsRaw = String(document.getElementById('c012-fsmsRaw').value || '0');
+          bridge.sendCmd('C012H', { fsmsRaw: fsmsRaw });
+          logLine('[cmd] C012H: fsmsRaw=' + fsmsRaw);
         };
 
         var c011Editor = document.getElementById('c011-editor');

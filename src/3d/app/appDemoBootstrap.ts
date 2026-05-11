@@ -2,7 +2,11 @@
  * Demo 场景：三维页独立初始化（由 viewer iframe 调用），与业务页通过 postMessage 通信。
  */
 import { AppAssets } from '../assets/PublishLibrary';
-import { MODEL_URLS } from './modelUrls.generated';
+import {
+  MODEL_URLS,
+  VERTICAL_ARRAY_C012_VARIANT,
+  type VerticalArrayFsmsRaw,
+} from './modelUrls.generated';
 import {
   cameraPresetsConfig,
   defaultCameraViewLimitConfig,
@@ -158,6 +162,23 @@ function getRopeInitConfigById(id: string) {
   };
 }
 
+/** 当前场景中的垂直阵 GLB（C012H 切换 full / lite）；C009H / 5206H 均挂到此名称 */
+let verticalArraySceneModelName: '20new' | '20new_lite' = '20new';
+
+function basenameFromDemoModelUrl(url: string): string {
+  const clean = url.split(/[?#]/)[0];
+  const parts = clean.split(/[\\/]/);
+  const filename = parts[parts.length - 1] || clean;
+  return filename.replace(/\.[^/.]+$/, '');
+}
+
+/** 启动时只加载当前垂直阵变体，另一份 GLB 由 C012H 再加载 */
+function skipBootstrapLoadUrlForInactiveVerticalVariant(url: string): boolean {
+  const base = basenameFromDemoModelUrl(url);
+  if (base !== '20new' && base !== '20new_lite') return false;
+  return base !== verticalArraySceneModelName;
+}
+
 type VerticalArrayRuntimeState = {
   status: 'stopped' | 'opening' | 'running' | 'closing';
   threshold: number | null;
@@ -176,7 +197,6 @@ const verticalArrayRuntimeState: VerticalArrayRuntimeState = {
 
 const VERTICAL_ARRAY_C009H_CMD = 'C009H';
 const VERTICAL_ARRAY_SENSOR_CMD = '5206H';
-const VERTICAL_ARRAY_MODEL_NAME = '20new';
 const VERTICAL_ARRAY_ANIMATION_NAME = 'Animation';
 const VERTICAL_ARRAY_ROPE_ID = 'rope_1';
 
@@ -254,6 +274,34 @@ function resetVerticalArrayRuntimeState() {
   verticalArrayRuntimeState.latestClcdRaw = null;
   verticalArrayRuntimeState.last5206Param = null;
   verticalArrayRuntimeState.hasClcdEverExceededThreshold = false;
+}
+
+async function handleVerticalArrayC012H(app: import('./index').App, param: unknown) {
+  const fsms = String((param as Record<string, unknown>)?.fsmsRaw ?? '0').trim();
+  const key: VerticalArrayFsmsRaw = fsms === '1' ? '1' : '0';
+  const { url, sceneName } = VERTICAL_ARRAY_C012_VARIANT[key];
+  if (sceneName === verticalArraySceneModelName) return;
+
+  clearVerticalArrayRuntimeArtifacts(app);
+  resetVerticalArrayRuntimeState();
+
+  const unloadName: '20new' | '20new_lite' = sceneName === '20new' ? '20new_lite' : '20new';
+  if (app.getModelNames().includes(unloadName)) {
+    app.disposeLoadedModel(unloadName);
+  }
+
+  verticalArraySceneModelName = sceneName;
+  app.setVerticalArraySceneModelAlias(sceneName);
+
+  clearSensorInfoBoardByCmd(app, VERTICAL_ARRAY_SENSOR_CMD);
+
+  if (!app.getModelNames().includes(sceneName)) {
+    postToParent({ source: CC_3D_SOURCE, type: 'loading', value: 0.05 });
+    await app.loadModelAndScene(url, (p) => {
+      postToParent({ source: CC_3D_SOURCE, type: 'loading', value: 0.05 + p * 0.75 });
+    });
+    postToParent({ source: CC_3D_SOURCE, type: 'loading', value: 1 });
+  }
 }
 
 function resetTowedArrayRuntimeState() {
@@ -342,7 +390,7 @@ function handleVerticalArrayC009H(app: import('./index').App, param: unknown) {
     verticalArrayRuntimeState.threshold = 0;
     verticalArrayRuntimeState.hasClcdEverExceededThreshold = false;
     verticalArrayRuntimeState.status = 'opening';
-    app.playAnimation(VERTICAL_ARRAY_ANIMATION_NAME, false, VERTICAL_ARRAY_MODEL_NAME, 'forward');
+    app.playAnimation(VERTICAL_ARRAY_ANIMATION_NAME, false, verticalArraySceneModelName, 'forward');
     return;
   }
 
@@ -354,7 +402,7 @@ function handleVerticalArrayC009H(app: import('./index').App, param: unknown) {
   ) {
     verticalArrayRuntimeState.status = 'closing';
     clearVerticalArrayRuntimeArtifacts(app);
-    app.playAnimationReverse(VERTICAL_ARRAY_ANIMATION_NAME, false, VERTICAL_ARRAY_MODEL_NAME);
+    app.playAnimationReverse(VERTICAL_ARRAY_ANIMATION_NAME, false, verticalArraySceneModelName);
     return;
   }
 
@@ -426,7 +474,7 @@ function handleVerticalArrayAnimationEnd(
   info: { modelName: string; animationName: string; direction: 'forward' | 'backward' },
 ) {
   if (
-    info.modelName !== VERTICAL_ARRAY_MODEL_NAME ||
+    info.modelName !== verticalArraySceneModelName ||
     info.animationName !== VERTICAL_ARRAY_ANIMATION_NAME
   ) {
     return;
@@ -707,11 +755,14 @@ function buildSensorInfoItemsForBindCmd(
   }
   if (!cfg) return null;
 
+  const sceneModelName =
+    bindCmd === VERTICAL_ARRAY_SENSOR_CMD ? verticalArraySceneModelName : cfg.modelName;
+
   const abnormalSet = alarmAbnormalBindKeysByBindCmd.get(bindCmd) ?? new Set<string>();
   const items: InfoBoardItem[] = [];
 
   for (const sensor of cfg.sensorList) {
-    const node = app.getNodeUnderModelByName(cfg.modelName, sensor.childModelName);
+    const node = app.getNodeUnderModelByName(sceneModelName, sensor.childModelName);
     const mesh = node ? app.getAbstractMeshUnderNode(node) : null;
     if (!mesh) continue;
     const attribute = sensor.boardAttribute.map((ba) => {
@@ -751,6 +802,9 @@ function upsertSensorInfoItemsForBindCmdInPlace(
   }
   if (!cfg) return null;
 
+  const sceneModelName =
+    bindCmd === VERTICAL_ARRAY_SENSOR_CMD ? verticalArraySceneModelName : cfg.modelName;
+
   const abnormalSet = alarmAbnormalBindKeysByBindCmd.get(bindCmd) ?? new Set<string>();
   const cached = sensorInfoBoardItemsByCmd.get(bindCmd);
 
@@ -765,7 +819,7 @@ function upsertSensorInfoItemsForBindCmdInPlace(
   // 原地更新（如 mesh id 不一致则回退重建一次）
   let outIdx = 0;
   for (const sensor of cfg.sensorList) {
-    const node = app.getNodeUnderModelByName(cfg.modelName, sensor.childModelName);
+    const node = app.getNodeUnderModelByName(sceneModelName, sensor.childModelName);
     const mesh = node ? app.getAbstractMeshUnderNode(node) : null;
     if (!mesh) continue;
 
@@ -937,6 +991,7 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
   const { App } = await import('./index');
   const app = App.Instance;
   const onLoading = opts.onLoading ?? (() => {});
+  verticalArraySceneModelName = '20new';
   resetVerticalArrayRuntimeState();
   resetTowedArrayRuntimeState();
   resetReceiverArrayC010State();
@@ -973,11 +1028,13 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
 
   if (isModelUrl(url)) {
     for (const mUrl of MODEL_URLS) {
+      if (skipBootstrapLoadUrlForInactiveVerticalVariant(mUrl)) continue;
       await app.loadModelAndScene(mUrl, (progress) => {
         postLoading(progress);
       });
     }
     loadedAsModel = true;
+    app.setVerticalArraySceneModelAlias(verticalArraySceneModelName);
 
     // 业务默认：初始化加载 donghua03new 时先隐藏部件 lansheng02（后续由 C010H 驱动显隐）
     app.setNodesNamedUnderModelVisible(
@@ -1045,6 +1102,7 @@ export async function bootstrapAppDemo(opts: AppDemoBootstrapOptions): Promise<{
       clearInterval(cameraDebugTick);
       cameraDebugTick = null;
     }
+    verticalArraySceneModelName = '20new';
     clearVerticalArrayRuntimeArtifacts(app);
     resetVerticalArrayRuntimeState();
     app.removeRopeDemo(TOWED_ARRAY_ROPE_ID);
@@ -1145,6 +1203,15 @@ export function setupAppDemoChildBridge(): () => void {
           app.playAnimationReverse(animationName, false, modelName);
         } else if (raw === '2' || raw === '3') {
           app.playAnimation(animationName, false, modelName, 'forward');
+        }
+        return;
+      }
+
+      if (String((data as any).cmd ?? '') === 'C012H') {
+        try {
+          await handleVerticalArrayC012H(app, (data as any).param);
+        } catch (e) {
+          console.error('[C012H]', e);
         }
         return;
       }
