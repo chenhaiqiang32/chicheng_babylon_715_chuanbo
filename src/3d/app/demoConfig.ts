@@ -774,32 +774,6 @@ export const infoBoardAlarmBindConfig = {
           cmdKey: "sbdyObject.hxztRaw",
           cmdKeyBind: "sbdyObject.hxsszRaw",
         },
-        // 1#发射单元
-        {
-          cmdKey: "onefsdyObject.fgztRaw",
-          cmdKeyBind: "onefsdyObject.fgsszRaw",
-        },
-        {
-          cmdKey: "onefsdyObject.fyztRaw",
-          cmdKeyBind: "onefsdyObject.fysszRaw",
-        },
-        {
-          cmdKey: "onefsdyObject.hxztRaw",
-          cmdKeyBind: "onefsdyObject.hxsszRaw",
-        },
-        // 2#发射单元
-        {
-          cmdKey: "twofsdyObject.fgztRaw",
-          cmdKeyBind: "twofsdyObject.fgsszRaw",
-        },
-        {
-          cmdKey: "twofsdyObject.fyztRaw",
-          cmdKeyBind: "twofsdyObject.fysszRaw",
-        },  
-        {
-          cmdKey: "twofsdyObject.hxztRaw",
-          cmdKeyBind: "twofsdyObject.hxsszRaw",
-        },
         // 3#发射单元
         {
           cmdKey: "threefsdyObject.fgztRaw",
@@ -813,31 +787,57 @@ export const infoBoardAlarmBindConfig = {
           cmdKey: "threefsdyObject.hxztRaw",
           cmdKeyBind: "threefsdyObject.hxsszRaw",
         },
-        // 4#发射单元
+        // 8#发射单元
         {
-          cmdKey: "fourfsdyObject.fgztRaw",
-          cmdKeyBind: "fourfsdyObject.fgsszRaw",
+          cmdKey: "eightfsdyObject.fgztRaw",
+          cmdKeyBind: "eightfsdyObject.fgsszRaw",
         },
         {
-          cmdKey: "fourfsdyObject.fyztRaw",
-          cmdKeyBind: "fourfsdyObject.fysszRaw",
+          cmdKey: "eightfsdyObject.fyztRaw",
+          cmdKeyBind: "eightfsdyObject.fysszRaw",
+        },  
+        {
+          cmdKey: "eightfsdyObject.hxztRaw",
+          cmdKeyBind: "eightfsdyObject.hxsszRaw",
+        },
+        // 13#发射单元
+        {
+          cmdKey: "thirteenfsdyObject.fgztRaw",
+          cmdKeyBind: "thirteenfsdyObject.fgsszRaw",
         },
         {
-          cmdKey: "fourfsdyObject.hxztRaw",
-          cmdKeyBind: "fourfsdyObject.hxsszRaw",
-        },
-        // 5#发射单元
-        {
-          cmdKey: "fivefsdyObject.fgztRaw",
-          cmdKeyBind: "fivefsdyObject.fgsszRaw",
+          cmdKey: "thirteenfsdyObject.fyztRaw",
+          cmdKeyBind: "thirteenfsdyObject.fysszRaw",
         },
         {
-          cmdKey: "fivefsdyObject.fyztRaw",
-          cmdKeyBind: "fivefsdyObject.fysszRaw",
+          cmdKey: "thirteenfsdyObject.hxztRaw",
+          cmdKeyBind: "thirteenfsdyObject.hxsszRaw",
+        },
+        // 14#发射单元
+        {
+          cmdKey: "fourteenfsdyObject.fgztRaw",
+          cmdKeyBind: "fourteenfsdyObject.fgsszRaw",
         },
         {
-          cmdKey: "fivefsdyObject.hxztRaw",
-          cmdKeyBind: "fivefsdyObject.hxsszRaw",
+          cmdKey: "fourteenfsdyObject.fyztRaw",
+          cmdKeyBind: "fourteenfsdyObject.fysszRaw",
+        },
+        {
+          cmdKey: "fourteenfsdyObject.hxztRaw",
+          cmdKeyBind: "fourteenfsdyObject.hxsszRaw",
+        },
+        // 16#发射单元
+        {
+          cmdKey: "sixteenfsdyObject.fgztRaw",
+          cmdKeyBind: "sixteenfsdyObject.fgsszRaw",
+        },
+        {
+          cmdKey: "sixteenfsdyObject.fyztRaw",
+          cmdKeyBind: "sixteenfsdyObject.fysszRaw",
+        },
+        {
+          cmdKey: "sixteenfsdyObject.hxztRaw",
+          cmdKeyBind: "sixteenfsdyObject.hxsszRaw",
         },
       ],
     },
